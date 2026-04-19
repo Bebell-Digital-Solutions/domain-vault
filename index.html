@@ -1337,7 +1337,7 @@
 
             try {
                 if (isLoginMode) {
-                    const res = await apiCall('login', { email: email, password: pass }); // Calls logic in Code.gs
+                    const res = await apiCall('loginUser', { email: email, password: pass }); // Updated to loginUser
                     document.getElementById('authSubmitBtn').disabled = false;
                     if(res.success) {
                         currentUser = res.user;
@@ -1349,7 +1349,7 @@
                     }
                 } else {
                     const location = await fetchLocation();
-                    const res = await apiCall('register', { email: email, password: pass, phone: phone, location: location }); // Calls logic in Code.gs
+                    const res = await apiCall('registerUser', { email: email, password: pass, phone: phone, location: location }); // Updated to registerUser
                     document.getElementById('authSubmitBtn').disabled = false;
                     if(res.success) {
                         msgEl.style.color = 'var(--success)';
@@ -1381,12 +1381,11 @@
             document.getElementById('stat-domain-limit').textContent = `/ ${limit === Infinity ? '∞' : limit}`;
 
             apiCall('getUserData', { email: currentUser.email }).then(data => {
-                if(data.success) {
-                    domains = data.domains || [];
-                    providers = data.providers || [];
-                    if(data.settings) settings = data.settings;
-                    else settings.username = currentUser.email.split('@')[0];
-                }
+                domains = data.domains || [];
+                providers = data.providers || [];
+                if(data.settings) settings = data.settings;
+                else settings.username = currentUser.email.split('@')[0];
+                
                 applySettings();
                 setLanguage(settings.language);
                 setActivePage('dashboard');
