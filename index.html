@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOMAIN VAULT</title>
+    <!-- Lucide & Chart.js -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" href="https://bucket.mlcdn.com/a/3336/3336910/images/115f0fdbe1cc012228f0c234e8b4f909d2e7ab69.png">
+
+    <style>
+        /* ==========================================================================
+           CSS STYLES
+           ========================================================================== */
+        :root {
+            --primary: #ff5011;
+            --secondary: #333333;
+            --bg-dark: #000000;
+            --bg-darker: #050505;
+            --bg-card: #121212;
+            --bg-hover: #1a1a1a;
+            
+            --text-main: #f5f5f5;
+            --text-muted: #a0a0a0;
+            --border: rgba(255, 255, 255, 0.1);
+            
+            --success: #51cf66;
+            --warning: #ffd43b;
+            --danger: #ef4444;
+            
+            --shadow-glow: 0 0 30px rgba(255, 80, 17, 0.15);
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            
+            --font-primary: 'Inter', sans-serif;
+            --font-code: 'Fira Code', monospace;
+            --font-tech: 'Orbitron', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font-primary); background: var(--bg-dark); color: var(--text-muted); line-height: 1.7; display: flex; min-height: 100vh; overflow-x: hidden; }
+        h1, h2, h3, h4, h5, h6 { color: var(--text-main); font-family: var(--font-primary); }
+
+        /* AUTH OVERLAY STYLES */
+        #auth-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-dark); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .auth-card { width: 100%; max-width: 400px; padding: 40px !important; background: var(--bg-darker) !important; border: 1px solid var(--border) !important; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .auth-logo-container { width: 80px; height: 80px; margin: 0 auto 20px; position: relative; }
+        .auth-logo-container img { width: 100%; height: 100%; object-fit: contain; position: relative; z-index: 10; filter: drop-shadow(0 0 10px rgba(255,80,17,0.5)); }
+
+        .auth-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .auth-tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: 0.3s; }
+        .auth-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        /* Sidebar Styles */
+        .sidebar { width: 260px; background: var(--bg-darker); color: var(--text-main); border-right: 1px solid var(--border); transition: var(--transition); z-index: 1000; overflow-y: auto; display: flex; flex-direction: column; }
+        .sidebar-brand { text-align: center; padding: 25px 20px 15px; background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid var(--border); }
+        .sidebar-brand .logo-container { width: 96px; height: 96px; margin: 0 auto 15px; position: relative; }
+        .sidebar-brand img { width: 100%; height: 100%; object-fit: contain; position: relative; z-index: 10; filter: drop-shadow(0 0 10px rgba(255,80,17,0.5)); }
+        .sidebar-brand h1 { font-family: var(--font-tech); font-weight: 400; font-size: 1.2rem; color: var(--text-main); letter-spacing: 0.025em; margin-bottom: 5px; white-space: nowrap; }
+        .sidebar-brand p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.4; }
+        .sidebar-menu { padding: 10px 0; flex-grow: 1; }
+        .menu-item { padding: 12px 20px; display: flex; align-items: center; gap: 12px; transition: var(--transition); cursor: pointer; border-left: 4px solid transparent; position: relative; color: var(--text-muted); }
+        .menu-item:hover, .menu-item.active { background: var(--bg-hover); border-left: 4px solid var(--primary); color: var(--text-main); }
+        .menu-item i { width: 20px; height: 20px; stroke-width: 2; color: var(--primary); }
+        
+        .sidebar-footer { padding: 15px 20px; color: var(--text-muted); font-size: 13px; font-family: var(--font-code); text-align: center; margin-top: auto; }
+
+        .notification-badge { position: absolute; top: 10px; right: 15px; background-color: var(--primary); color: white; font-size: 10px; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        .notification-badge:empty { display: none; }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .top-header { background: var(--bg-darker); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 100; }
+        .menu-toggle { display: none; cursor: pointer; color: var(--text-main); }
+        .search-box { display: flex; align-items: center; background: var(--bg-hover); border: 1px solid var(--border); border-radius: 20px; padding: 5px 15px; width: 300px; }
+        .search-box input { border: none; background: transparent; color: var(--text-main); padding: 8px; width: 100%; outline: none; }
+        .search-box input::placeholder { color: var(--text-muted); }
+        .search-box i { margin-right: 8px; color: var(--text-muted); }
+
+        .user-profile { display: flex; align-items: center; gap: 15px; }
+        .header-icon { position: relative; cursor: pointer; color: var(--text-muted); transition: color 0.2s; display: flex; align-items: center; }
+        .header-icon:hover { color: var(--text-main); }
+        .header-icon .notification-badge { top: -5px; right: -8px; width: 16px; height: 16px; font-size: 9px; }
+        .plan-badge { background: rgba(255, 80, 17, 0.15); color: var(--primary); border: 1px solid rgba(255, 80, 17, 0.3); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-right: 10px;}
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; text-transform: uppercase; background-size: cover; background-position: center; }
+        .user-name { color: var(--text-main); }
+
+        .content { flex: 1; padding: 25px; overflow-y: auto; overflow-x: hidden; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .page-title { margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+        .page-title h2 { font-weight: 600; }
+
+        .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-primary); }
+        .btn-primary { background: var(--primary); color: white; text-decoration: none; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-glow); }
+        .btn-secondary { background: var(--bg-hover); color: var(--text-main); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-card); border-color: var(--primary); }
+        .btn-open-page { background: var(--secondary); color: white; text-decoration: none; }
+        .btn-open-page:hover { opacity: 0.9; }
+        .btn-credentials { background: var(--bg-darker); color: var(--text-main); border: 1px solid var(--border); }
+        .btn-credentials:hover { border-color: var(--primary); }
+        .btn-danger-outline { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+        .btn-danger-outline:hover { background: var(--danger); color: white; }
+        .btn-icon-only { padding: 10px; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; transition: var(--transition); min-width: 0; }
+        .stat-card:not(.flip-card):hover { transform: translateY(-5px); box-shadow: var(--shadow-glow); }
+        .stat-icon { width: 50px; height: 50px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255, 80, 17, 0.1); color: var(--primary); margin-bottom: 10px; border: 1px solid var(--border); }
+        .stat-icon i { width: 24px; height: 24px; }
+        .stat-value { font-size: 28px; font-weight: 700; margin-bottom: 5px; color: var(--text-main); font-family: var(--font-tech); }
+        .stat-label { color: var(--text-muted); font-size: 14px; }
+
+        /* Flip Card */
+        .flip-card { perspective: 1000px; cursor: pointer; padding: 0; }
+        .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flip-card.is-flipped .flip-card-inner { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back { width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; display: flex; flex-direction: column; padding: 20px; border-radius: 12px; background: var(--bg-card); }
+        .flip-card-front { position: relative; }
+        .flip-card-back { position: absolute; top: 0; left: 0; transform: rotateY(180deg); }
+
+        /* Charts and Tables */
+        .charts-container { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .card, .table-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 30px; min-width: 0; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-title { font-weight: 600; font-size: 1.1rem; }
+
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-main); font-weight: 600; font-size: 14px; }
+        td { font-size: 15px; }
+        tr:hover { background: var(--bg-hover); }
+
+        .status { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; letter-spacing: 0.5px; }
+        .status-active { background: rgba(81, 207, 102, 0.15); color: var(--success); border: 1px solid rgba(81, 207, 102, 0.3); }
+        .status-warning { background: rgba(255, 212, 59, 0.15); color: var(--warning); border: 1px solid rgba(255, 212, 59, 0.3); }
+        .status-expired { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .action-btn { padding: 5px; color: var(--text-muted); cursor: pointer; transition: var(--transition); margin: 0 4px; display: inline-flex; border-radius: 4px; }
+        .action-btn:hover { color: var(--primary); background: var(--bg-hover); }
+        .gcal-btn:hover { color: #DB4437; }
+        .ical-btn:hover { color: #34A853; }
+        .dns-btn:hover { color: var(--primary); }
+
+        /* Filter Tags */
+        .filter-tags { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+        .filter-tag { background: var(--bg-darker); color: var(--text-muted); border: 1px solid var(--border); padding: 6px 15px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: var(--transition); }
+        .filter-tag:hover { border-color: var(--primary); color: var(--text-main); }
+        .filter-tag.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Gallery/Grid Styles for Tools & Recs */
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-top: 15px; }
+        .recommendation-card { background: var(--bg-hover); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; transition: var(--transition); }
+        .recommendation-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-glow); border-color: var(--primary); }
+        .card-icon { font-size: 2rem; margin-bottom: 12px; color: var(--primary); }
+        .gallery-title { color: var(--text-main); font-weight: 600; margin-bottom: 5px; font-size: 1.1rem; }
+        .gallery-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; flex-grow: 1; }
+        .gallery-rating { color: var(--primary); margin-bottom: 15px; display: flex; gap: 2px; }
+        .gallery-rating i { width: 16px; height: 16px; }
+        .gallery-action { width: 100%; margin-top: auto; }
+
+        /* Modal Styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; width: 90%; max-width: 650px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); overflow: hidden; animation: modal-fade-in 0.3s ease; max-height: 90vh; display: flex; flex-direction: column; }
+        @keyframes modal-fade-in { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { padding: 15px 20px; background: var(--bg-darker); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 1.2rem; }
+        .modal-header .modal-close i { stroke-width: 2; color: var(--text-muted); }
+        .modal-header .modal-close:hover i { color: var(--danger); }
+        .modal-close { cursor: pointer; transition: 0.2s; }
+        .modal-body { padding: 25px; overflow-y: auto; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-main); font-size: 0.95rem; }
+        .form-control { width: 100%; padding: 12px 15px; background: var(--bg-darker); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; font-size: 16px; transition: var(--transition); }
+        .form-control:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(255, 80, 17, 0.15); }
+        .password-wrapper { position: relative; }
+        .password-wrapper .form-control { padding-right: 40px; }
+        .password-wrapper .toggle-password { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); }
+        .password-wrapper .toggle-password:hover { color: var(--text-main); }
+        .input-group { display: flex; gap: 10px; width: 100%; }
+        .input-group .form-control { flex: 1; min-width: 0; }
+        .input-group .btn { white-space: nowrap; flex-shrink: 0; }
+
+        .form-check { display: flex; align-items: center; gap: 10px; }
+        .form-check-input { appearance: none; width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-darker); cursor: pointer; position: relative; }
+        .form-check-input:checked { background: var(--primary); border-color: var(--primary); }
+        .form-check-input:checked::after { content: "✓"; position: absolute; color: white; font-size: 12px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        /* Mobile Nav */
+        .mobile-nav { position: fixed; top: 0; left: -100%; width: 80%; max-width: 300px; height: 100%; background: var(--bg-darker); border-right: 1px solid var(--border); z-index: 1500; transition: var(--transition); display: flex; flex-direction: column; box-shadow: 5px 0 25px rgba(0,0,0,0.5); }
+        .mobile-nav.open { left: 0; }
+        .nav-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); z-index: 1400; }
+        .nav-overlay.open { display: block; }
+        .mobile-nav-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border); }
+        .mobile-nav-close { color: var(--text-main); cursor: pointer; }
+
+        .main-footer { padding: 20px; text-align: center; color: var(--text-muted); font-size: 14px; border-top: 1px solid var(--border); margin-top: auto; }
+
+        /* Toast & Notifications */
+        .toast { position: fixed; bottom: 20px; right: 20px; background-color: var(--bg-hover); color: var(--text-main); padding: 15px 25px; border-left: 4px solid var(--primary); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 3000; opacity: 0; transform: translateY(20px); transition: var(--transition); font-weight: 500; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        #persistent-notifications-container { position: fixed; top: 80px; right: 20px; z-index: 2500; display: flex; flex-direction: column; gap: 10px; }
+        .persistent-notification { background-color: var(--bg-card); border: 1px solid var(--border); border-left: 5px solid var(--warning); padding: 15px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); width: 320px; display: flex; justify-content: space-between; align-items: center; animation: modal-fade-in 0.3s; color: var(--text-main); }
+        .persistent-notification.expired { border-left-color: var(--danger); }
+        .persistent-notification p { margin: 0; font-size: 14px; }
+        .persistent-notification p strong { color: var(--primary); }
+        .notification-dismiss-btn { background-color: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border); width: 25px; height: 25px; border-radius: 50%; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .notification-dismiss-btn:hover { background-color: var(--danger); color: white; border-color: var(--danger); }
+
+        #notificationsList .notification-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid var(--border); }
+        #notificationsList .notification-item:last-child { border-bottom: none; }
+        #notificationsList .notification-item p { margin: 0; }
+        #notificationsList .notification-item p strong { font-weight: 600; color: var(--primary); }
+        #notificationsList .notification-item.expired p { color: var(--danger); }
+        #notificationsList .placeholder { text-align: center; padding: 30px; color: var(--text-muted); }
+
+        /* Providers Page Styles */
+        .providers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .provider-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; transition: var(--transition); }
+        .provider-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-glow); }
+        .provider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .provider-info { display: flex; align-items: center; gap: 15px; }
+        .provider-header .actions { display: flex; gap: 5px; }
+        .provider-name { font-weight: 600; font-size: 1.1rem; color: var(--text-main); }
+        .provider-logo { width: 40px; height: 40px; border-radius: 8px; background-color: white; object-fit: contain; padding: 2px; }
+        .provider-stats { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .provider-stats p { font-size: 0.95rem; color: var(--text-muted); }
+        .provider-stats span { font-weight: 600; color: var(--text-main); }
+        .provider-actions { margin-top: auto; display: flex; gap: 10px; }
+        .provider-actions .btn { flex-grow: 1; padding: 8px 15px; }
+        .provider-banner-link { display: block; margin-top: 30px; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); transition: var(--transition); }
+        .provider-banner-link:hover { transform: translateY(-4px); box-shadow: var(--shadow-glow); border-color: var(--primary); }
+        .provider-banner-img { width: 100%; height: auto; display: block; }
+
+        /* Settings Page Styles */
+        .settings-grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        @media (min-width: 992px) { .settings-grid { grid-template-columns: 1fr 1fr; } }
+        .color-palette { display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap; }
+        .color-swatch { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .color-swatch.active { border-color: white; }
+        .profile-picture-controls { display: flex; align-items: center; gap: 20px; }
+        .profile-picture-controls .btn { margin-bottom: 10px; display: block; width: 150px; }
+
+        /* Calendar Page Styles */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .calendar-header h3 { font-weight: 600; min-width: 180px; text-align: center; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .calendar-day-name { font-weight: 600; text-align: center; color: var(--text-muted); font-size: 0.9em; padding-bottom: 10px; }
+        .calendar-day { background: var(--bg-hover); border-radius: 8px; padding: 10px; min-height: 120px; border: 1px solid var(--border); }
+        .calendar-day.other-month { opacity: 0.3; background: transparent; border-style: dashed; }
+        .calendar-day .day-number { font-weight: 600; margin-bottom: 5px; color: var(--text-main); }
+        .calendar-event { background-color: var(--primary); color: white; border-radius: 4px; padding: 3px 6px; font-size: 0.8em; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
+        /* DNS Records Loading */
+        .dns-loading { text-align: center; padding: 20px; color: var(--text-muted); }
+        .dns-badge { background: var(--bg-darker); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 12px; color: var(--primary); display: inline-block; min-width: 60px; text-align: center; }
+
+        .section-divider { margin: 30px 0 15px; padding-top: 20px; border-top: 1px dashed var(--border); }
+
+        @media (max-width: 992px) { .sidebar { display: none; } .menu-toggle { display: block; } .charts-container { grid-template-columns: 1fr; } }
+        @media (max-width: 576px) { .search-box { display: none; } .stats-grid { grid-template-columns: 1fr; } .user-profile .user-name { display: none; } .page-title { flex-direction: column; align-items: flex-start; } .gallery-grid { grid-template-columns: 1fr; } .input-group.responsive-group { flex-direction: column; } .input-group.responsive-group .btn { width: 100%; } }
+        @media (min-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 1280px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .lucide-spin { animation: spin 2s linear infinite; }
+    </style>
+</head>
+<body>
+
+    <!-- AUTHENTICATION OVERLAY -->
+    <div id="auth-overlay">
+        <div class="auth-card card">
+            <div class="auth-logo-container">
+                <img id="authDefaultBrandLogo" src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault Logo">
+                <div id="authThemeBrandLogoWrapper" style="display: none; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--primary); filter: drop-shadow(0 0 10px var(--primary));">
+                    <i data-lucide="vault" style="width: 85%; height: 85%; stroke-width: 1.5;"></i>
+                </div>
+            </div>
+            <h2 style="text-align:center; margin-bottom:20px; font-family:var(--font-tech)">DOMAIN VAULT</h2>
+            
+            <div class="auth-tabs">
+                <div class="auth-tab active" id="tab-login">Login</div>
+                <div class="auth-tab" id="tab-register">Register</div>
+            </div>
+
+            <form id="authForm">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="authEmail" class="form-control" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="authPassword" class="form-control" placeholder="••••••••" required>
+                        <i data-lucide="eye" class="toggle-password" id="toggleLoginPassword"></i>
+                    </div>
+                </div>
+                
+                <div id="registerFields" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">WhatsApp Number</label>
+                        <input type="tel" id="authPhone" class="form-control" placeholder="+1234567890">
+                        <small style="color:var(--text-muted); font-size: 11px;">Required for renewal reminders.</small>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px;">
+                    <button type="button" id="authSubmitBtn" class="btn btn-primary" style="width:100%;">Log In</button>
+                </div>
+                <p id="authMessage" style="margin-top:15px; text-align:center; display:none; font-size: 0.9em;"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar" id="sidebar-navigation">
+        <div style="display: flex; flex-direction: column; height: 100%;">
+            <div class="sidebar-brand">
+                <div class="logo-container">
+                    <img id="defaultBrandLogo" src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Dashboard Logo">
+                    <div id="themeBrandLogoWrapper" style="display: none; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--primary); filter: drop-shadow(0 0 10px var(--primary));">
+                        <i data-lucide="vault" style="width: 85%; height: 85%; stroke-width: 1.5;"></i>
+                    </div>
+                </div>
+                <h1 data-translate-key="brandName">DOMAIN VAULT</h1>
+                <p data-translate-key="brandSlogan">Secure Domain Portfolio</p>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-item active" data-page="dashboard"><i data-lucide="layout-dashboard"></i><span data-translate-key="dashboard">Dashboard</span></div>
+                <div class="menu-item" data-page="domains"><i data-lucide="globe"></i><span data-translate-key="allDomains">All Domains</span></div>
+                <div class="menu-item" data-page="providers"><i data-lucide="server"></i><span data-translate-key="domainProviders">Providers</span></div>
+                <div class="menu-item" data-page="tools"><i data-lucide="wrench"></i><span data-translate-key="toolsResources">Tools & Resources</span></div>
+                <div class="menu-item" data-page="calendar"><i data-lucide="calendar"></i><span data-translate-key="calendar">Calendar</span></div>
+                <div class="menu-item" data-page="notifications">
+                    <i data-lucide="bell"></i><span data-translate-key="notifications">Notifications</span>
+                    <span class="notification-badge"></span>
+                </div>
+                <div class="menu-item" data-page="settings"><i data-lucide="settings"></i><span data-translate-key="settings">Settings</span></div>
+            </div>
+            
+            <div class="sidebar-footer">>_ Version 2.0 (GAS API)</div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="top-header">
+            <div class="menu-toggle"><i data-lucide="menu"></i></div>
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" data-translate-key="searchPlaceholder" placeholder="Search domains..." id="searchInput">
+            </div>
+            <div class="user-profile">
+                <span class="plan-badge" id="userPlanBadge">Personal</span>
+                <div class="header-icon" id="translateBtn" title="Translate to Spanish/English"><i data-lucide="languages"></i></div>
+                <div class="header-icon" id="headerNotificationIcon">
+                    <i data-lucide="bell"></i>
+                    <span class="notification-badge header-badge"></span>
+                </div>
+                <div class="header-icon" id="logoutBtn" title="Sign Out" style="color: var(--danger)"><i data-lucide="log-out"></i></div>
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-name" id="userName">Loading...</div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <div class="page-title">
+                    <h2 data-translate-key="dashboardOverview">Dashboard Overview</h2>
+                    <button class="btn btn-primary" id="addDomainBtn">
+                        <i data-lucide="plus"></i> <span data-translate-key="addNewDomain">Add Domain</span>
+                    </button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                         <div class="stat-icon"><i data-lucide="globe"></i></div>
+                        <div class="stat-value" id="stat-total-domains">0 <span id="stat-domain-limit" style="font-size: 14px; color:var(--text-muted);">/ 5</span></div>
+                        <div class="stat-label" data-translate-key="totalDomains">Domains Registered</div>
+                    </div>
+                    <div class="stat-card">
+                         <div class="stat-icon"><i data-lucide="server"></i></div>
+                        <div class="stat-value" id="stat-domain-providers">0</div>
+                        <div class="stat-label" data-translate-key="domainProviders">Providers Used</div>
+                    </div>
+                    <div class="stat-card flip-card" id="cost-card">
+                        <div class="flip-card-inner">
+                            <div class="flip-card-front">
+                                <div class="stat-icon"><i data-lucide="wallet"></i></div>
+                                <div class="stat-value" id="stat-yearly-expenses">$0.00</div>
+                                <div class="stat-label" data-translate-key="annualCost">Annual Renewal Cost</div>
+                            </div>
+                            <div class="flip-card-back">
+                                <div class="stat-icon"><i data-lucide="piggy-bank"></i></div>
+                                <div class="stat-value" id="stat-total-investment">$0.00</div>
+                                <div class="stat-label" data-translate-key="totalInvestment">Total Investment</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                         <div class="stat-icon"><i data-lucide="timer"></i></div>
+                        <div class="stat-value" id="stat-expiring-soon">0</div>
+                        <div class="stat-label" data-translate-key="expiringSoon">Expiring in 30 Days</div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="card">
+                        <div class="card-header"><div class="card-title" data-translate-key="renewalCostsByMonth">Renewal Costs by Month</div></div>
+                        <canvas id="expensesChart"></canvas>
+                    </div>
+                    <div class="card mt-4">
+                        <div class="card-header"><div class="card-title" data-translate-key="urgentRenewals">Top Urgent Renewals</div></div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead><tr>
+                                    <th data-translate-key="domainName">Domain Name</th>
+                                    <th data-translate-key="renewalDate">Renewal Date</th>
+                                    <th data-translate-key="daysLeft">Days Left</th>
+                                    <th data-translate-key="price">Price</th>
+                                </tr></thead>
+                                <tbody id="urgentRenewalsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Domains Page -->
+            <div id="page-domains" class="page">
+                <div class="page-title">
+                     <h2 data-translate-key="allDomains">All Domains</h2>
+                     <button class="btn btn-primary" id="addDomainBtnSecondary">
+                        <i data-lucide="plus"></i> <span data-translate-key="addNewDomain">Add Domain</span>
+                    </button>
+                </div>
+                <div class="table-container">
+                    <div class="table-responsive">
+                         <table>
+                            <thead><tr>
+                                <th data-translate-key="domainName">Domain Name</th>
+                                <th data-translate-key="provider">Provider</th>
+                                <th data-translate-key="renewalDate">Renewal Date</th>
+                                <th data-translate-key="price">Price</th>
+                                <th data-translate-key="status">Status</th>
+                                <th data-translate-key="actions">Actions</th>
+                            </tr></thead>
+                            <tbody id="domainsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Providers Page -->
+            <div id="page-providers" class="page">
+                <div class="page-title">
+                    <h2 data-translate-key="domainProviders">Domain Providers</h2>
+                     <button class="btn btn-primary" id="addProviderBtn">
+                        <i data-lucide="plus"></i> <span data-translate-key="addNewProvider">Add Provider</span>
+                    </button>
+                </div>
+                <div class="providers-grid" id="providersGrid"></div>
+                
+                <a href="https://namecheap.pxf.io/bebelldigitalsolutions" target="_blank" class="provider-banner-link" id="providerPromoBanner">
+                    <img src="https://bucket.mlcdn.com/a/3336/3336910/images/63cbab869ab6b2aa44cdb6d95f760c7cd1dddef3.png" alt="Promotional Banner" class="provider-banner-img">
+                </a>
+            </div>
+
+            <!-- Tools & Resources Page -->
+            <div id="page-tools" class="page">
+                <div class="page-title">
+                    <h2 data-translate-key="toolsResources">Tools & Resources</h2>
+                </div>
+                
+                <div class="card" style="margin-bottom: 30px;">
+                    <h3 class="card-title" data-translate-key="quickDnsCheck" style="margin-bottom: 15px;">Quick DNS Check</h3>
+                    <div class="input-group responsive-group">
+                        <input type="text" id="quickDnsInput" class="form-control" data-translate-key="enterDomainName" placeholder="Enter domain name...">
+                        <button class="btn btn-primary" id="quickDnsBtn" data-translate-key="checkDns"><i data-lucide="network" style="width:18px;height:18px;"></i> Check DNS</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <p data-translate-key="toolsDesc" style="color: var(--text-muted); margin-bottom: 20px;">Explore our curated list of tools to help you manage your domains, check DNS records, and improve your online infrastructure.</p>
+                    
+                    <div class="filter-tags" id="toolsFilterTags">
+                        <button class="filter-tag active" data-tag="all">All</button>
+                        <button class="filter-tag" data-tag="domains">Domains</button>
+                        <button class="filter-tag" data-tag="dns">DNS</button>
+                        <button class="filter-tag" data-tag="hosting">Hosting</button>
+                        <button class="filter-tag" data-tag="email">Email</button>
+                        <button class="filter-tag" data-tag="ssl">SSL</button>
+                    </div>
+
+                    <div class="gallery-grid" id="toolsGridContainer"></div>
+                </div>
+            </div>
+
+            <!-- Calendar Page -->
+            <div id="page-calendar" class="page">
+                <div class="page-title">
+                     <h2 data-translate-key="calendar">Calendar</h2>
+                     <div class="calendar-actions" style="display:flex; gap:10px;">
+                         <button class="btn btn-secondary" id="syncGCalBtn"><i data-lucide="calendar-plus"></i> <span data-translate-key="syncAllGCal">Sync to Google</span></button>
+                         <button class="btn btn-secondary" id="downloadIcsBtn"><i data-lucide="download"></i> <span data-translate-key="downloadAllIcs">Download (.ics)</span></button>
+                     </div>
+                </div>
+                <div class="card">
+                     <div class="calendar-header">
+                         <button class="btn btn-secondary btn-icon-only" id="prevMonthBtn"><i data-lucide="chevron-left"></i></button>
+                         <h3 id="currentMonthYear"></h3>
+                         <button class="btn btn-secondary btn-icon-only" id="nextMonthBtn"><i data-lucide="chevron-right"></i></button>
+                     </div>
+                     <div class="calendar-grid" id="calendarDayNames"></div>
+                     <div class="calendar-grid" id="calendarGrid"></div>
+                </div>
+            </div>
+
+            <!-- Notifications Page -->
+            <div id="page-notifications" class="page">
+                <div class="page-title">
+                    <h2 data-translate-key="notifications">Notifications</h2>
+                </div>
+                <div class="card">
+                    <div id="notificationsList"></div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="page-settings" class="page">
+                <div class="page-title"><h2 data-translate-key="settings">Settings</h2></div>
+                <div class="settings-grid">
+                    <div class="card">
+                        <h3 class="card-title" data-translate-key="userProfile" style="margin-bottom:20px;">User Profile</h3>
+                        <form id="settingsProfileForm">
+                            <div class="form-group">
+                                <label class="form-label" data-translate-key="profilePicture">Profile Picture</label>
+                                <div class="profile-picture-controls">
+                                    <div id="settingsAvatarPreview" class="user-avatar" style="width: 80px; height: 80px; font-size: 2rem;">U</div>
+                                    <div>
+                                        <input type="file" id="profilePicUpload" accept="image/*" style="display: none;">
+                                        <button type="button" id="uploadPicBtn" class="btn btn-secondary" data-translate-key="changePicture">Change Picture</button>
+                                        <button type="button" id="removePicBtn" class="btn btn-danger-outline" data-translate-key="remove">Remove</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" data-translate-key="username">Username</label>
+                                <input type="text" id="settingUsername" class="form-control" data-translate-key="enterYourName" placeholder="Enter your name">
+                            </div>
+                            <button type="submit" class="btn btn-primary" data-translate-key="saveProfile">Save Profile</button>
+                        </form>
+                    </div>
+                    <div class="card">
+                         <h3 class="card-title" data-translate-key="appearance" style="margin-bottom:20px;">Appearance</h3>
+                         <form id="settingsAppearanceForm">
+                            <div class="form-group">
+                                <label class="form-label" data-translate-key="themeColor">Theme Accent Color</label>
+                                <div class="color-palette" id="colorPalette"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="customColorPicker" class="form-label" data-translate-key="customColor">Custom Accent Color</label>
+                                <input type="color" id="customColorPicker" class="form-control" value="#ff5011" style="height: 45px; padding: 5px;">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="main-footer">
+            <p data-translate-key="footer">Powered by Project Freedom ✊</p>
+        </footer>
+    </div>
+
+    <div id="persistent-notifications-container"></div>
+
+    <!-- Mobile Navigation -->
+    <div class="nav-overlay" id="navOverlay"></div>
+    <div class="mobile-nav" id="mobileNav">
+        <div class="mobile-nav-header">
+            <h3 style="font-family: var(--font-tech); font-weight: 400;" data-translate-key="brandName">DOMAIN VAULT</h3>
+            <div class="mobile-nav-close"><i data-lucide="x"></i></div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+
+    <!-- Domain Modal -->
+    <div class="modal" id="domainModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle" data-translate-key="addNewDomain">Add New Domain</h3>
+                <div class="modal-close"><i data-lucide="x"></i></div>
+            </div>
+            <div class="modal-body">
+                <form id="domainForm">
+                    <input type="hidden" id="domainId">
+                    <div class="form-group">
+                        <label class="form-label" data-translate-key="domainName">Domain Name</label>
+                        <div class="input-group">
+                            <input type="text" id="domainName" class="form-control" placeholder="example.com" required>
+                            <button type="button" class="btn btn-secondary btn-icon-only" id="fetchWhoisBtn" title="Auto-fill via WHOIS">
+                                <i data-lucide="search"></i>
+                            </button>
+                        </div>
+                        <small id="whoisStatus" style="color: var(--primary); display: none; margin-top: 5px;"></small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-translate-key="provider">Provider</label>
+                        <select id="domainProvider" class="form-control" required></select>
+                    </div>
+                    <div class="form-group" id="otherProviderGroup" style="display: none;">
+                        <label class="form-label" data-translate-key="otherProviderName">Other Provider Name</label>
+                        <input type="text" id="otherProvider" class="form-control" data-translate-key="specifyProvider" placeholder="Specify provider">
+                    </div>
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="form-group">
+                            <label class="form-label" data-translate-key="purchaseDate">Purchase Date</label>
+                            <input type="date" id="purchaseDate" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-translate-key="renewalDate">Renewal Date</label>
+                            <input type="date" id="renewalDate" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                         <div class="form-group">
+                            <label class="form-label" data-translate-key="purchasePrice">Purchase Price</label>
+                            <input type="number" step="0.01" id="purchasePrice" class="form-control" placeholder="$" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" data-translate-key="annualRenewalPrice">Renewal Price</label>
+                            <input type="number" step="0.01" id="renewalPrice" class="form-control" placeholder="$" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group form-check">
+                        <input type="checkbox" id="domainAutoRenew" class="form-check-input">
+                        <label class="form-check-label" for="domainAutoRenew" data-translate-key="autoRenewalOn" style="cursor: pointer; color: var(--text-main);">Automatic Renewal is On</label>
+                    </div>
+                    <button type="submit" id="formSubmitBtn" class="btn btn-primary" style="width: 100%; font-size: 1rem; padding: 12px;" data-translate-key="addDomain">Save Domain</button>
+                </form>
+
+                <div class="section-divider"></div>
+                <h4 data-translate-key="recommendedProviders" style="color: var(--text-main); margin-bottom: 10px;">Recommended Providers</h4>
+                <div class="gallery-grid" id="modalDomainRecsGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Provider Modal -->
+    <div class="modal" id="providerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="providerModalTitle" data-translate-key="addNewProvider">Add New Provider</h3>
+                <div class="modal-close"><i data-lucide="x"></i></div>
+            </div>
+            <div class="modal-body">
+                <form id="providerForm">
+                    <input type="hidden" id="providerId">
+                    <div class="form-group">
+                        <label class="form-label" data-translate-key="providerName">Provider Name</label>
+                        <input type="text" id="providerName" class="form-control" placeholder="e.g., GoDaddy" required>
+                    </div>
+                     <div class="form-group">
+                        <label class="form-label" data-translate-key="homepageUrl">Provider Homepage URL</label>
+                        <input type="url" id="providerUrl" class="form-control" placeholder="https://www.godaddy.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-translate-key="emailUsername">Email / Username</label>
+                        <input type="text" id="providerUser" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-translate-key="password">Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="providerPass" class="form-control">
+                            <i data-lucide="eye" class="toggle-password" id="toggleProviderPassword"></i>
+                        </div>
+                    </div>
+                     <div class="form-group">
+                        <label class="form-label" data-translate-key="userIdOptional">User ID (optional)</label>
+                        <input type="text" id="providerUid" class="form-control">
+                    </div>
+                    <button type="submit" id="providerFormSubmitBtn" class="btn btn-primary" style="width: 100%; font-size: 1rem; padding: 12px;" data-translate-key="addProvider">Save Provider</button>
+                </form>
+
+                <div class="section-divider"></div>
+                <h4 data-translate-key="recommendedProviders" style="color: var(--text-main); margin-bottom: 10px;">Recommended Providers</h4>
+                <div class="gallery-grid" id="modalProviderRecsGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Credentials Modal -->
+    <div class="modal" id="credentialsModal">
+         <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 id="credentialsModalTitle" data-translate-key="providerCredentials">Provider Credentials</h3>
+                <div class="modal-close"><i data-lucide="x"></i></div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" data-translate-key="emailUsername">Email / Username</label>
+                    <p id="credUser" class="form-control" style="background:var(--bg-hover);"></p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-translate-key="password">Password</label>
+                    <p id="credPass" class="form-control" style="background:var(--bg-hover); font-family:var(--font-code);"></p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" data-translate-key="userId">User ID</label>
+                    <p id="credUid" class="form-control" style="background:var(--bg-hover);"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DNS Records Modal -->
+    <div class="modal" id="dnsModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="dnsModalTitle"><span data-translate-key="dnsRecords">DNS Records</span>: <span id="dnsDomainLabel" style="color:var(--primary);"></span></h3>
+                <div class="modal-close"><i data-lucide="x"></i></div>
+            </div>
+            <div class="modal-body">
+                <div id="dnsLoading" class="dns-loading" style="display: none;">
+                    <i data-lucide="loader-2" class="lucide-spin"></i>
+                    <p data-translate-key="fetching" style="margin-top:10px;">Fetching live records...</p>
+                </div>
+                <div class="table-responsive" id="dnsTableWrapper" style="display: none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-translate-key="recordType">Type</th>
+                                <th data-translate-key="recordValue">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dnsTableBody"></tbody>
+                    </table>
+                </div>
+                <p id="dnsError" class="dns-loading" style="display: none; color: var(--danger);"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           JAVASCRIPT LOGIC
+           ========================================================================== */
+
+        // REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL
+        const API_URL = "https://script.google.com/macros/s/AKfycbzNunJ_PonXh6Yeuj0AXRH4VobBZC2av97qzHeosg3DPbnDkysGXx4kUhghqo4VDSSb-w/exec";
+
+        const PLAN_LIMITS = {
+            'Personal': 5,
+            'Start-up': 20,
+            'Business': 50,
+            'Agency': Infinity
+        };
+
+        // --- TRANSLATION DATA ---
+        const translations = {
+            en: {
+                domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Secure Domain Portfolio Manager",
+                dashboard: "Dashboard", allDomains: "All Domains", domainProviders: "Domain Providers", toolsResources: "Tools & Resources",
+                calendar: "Calendar", notifications: "Notifications", settings: "Settings", searchPlaceholder: "Search domains...",
+                dashboardOverview: "Dashboard Overview", addNewDomain: "Add New Domain", totalDomains: "Total Domains",
+                annualCost: "Annual Cost", expiringSoon: "Expiring Soon", renewalCostsByMonth: "Renewal Costs by Month",
+                providersDistribution: "Providers Distribution", domainName: "Domain Name", provider: "Provider",
+                renewalDate: "Renewal Date", price: "Price", status: "Status", actions: "Actions", addNewProvider: "Add New Provider",
+                userProfile: "User Profile", profilePicture: "Profile Picture", changePicture: "Change Picture", remove: "Remove",
+                username: "Username", enterYourName: "Enter your name", saveProfile: "Save Profile", appearance: "Appearance",
+                themeColor: "Theme Accent Color", customColor: "Custom Accent Color", footer: "Powered by Project Freedom ✊",
+                addDomain: "Add Domain", editDomain: "Edit Domain", selectProvider: "Select Provider", otherProviderName: "Other Provider Name",
+                specifyProvider: "Specify provider", purchaseDate: "Purchase Date", purchasePrice: "Purchase Price", annualRenewalPrice: "Renewal Price",
+                providerName: "Provider Name", homepageUrl: "Provider Homepage URL", emailUsername: "Email / Username", password: "Password",
+                userIdOptional: "User ID (optional)", autoRenewalOn: "Automatic Renewal is On", addProvider: "Add Provider",
+                editProvider: "Edit Provider", providerCredentials: "Provider Credentials", userId: "User ID", domainsRegistered: "Domains Registered",
+                autoRenewal: "Auto Renewal", on: "On", off: "Off", openPage: "Website", viewCredentials: "Credentials", statusActive: "Active",
+                statusExpiringIn: "Expiring in {days}d", statusExpired: "Expired", noDomainsFound: "No domains found.", noNotifications: "No notifications right now.",
+                totalInvestment: "Total Investment", syncAllGCal: "Sync to Google", downloadAllIcs: "Download (.ics)",
+                dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], urgentRenewals: "Top 5 Urgent Renewals", daysLeft: "Days Left",
+                dnsRecords: "DNS Records", recordType: "Type", recordValue: "Value", autoFillWhois: "Auto-fill using WHOIS", fetching: "Fetching live records...",
+                noDnsFound: "No DNS records found.", whoisSuccess: "Data loaded from WHOIS!", whoisError: "Could not fetch WHOIS data.",
+                toolsDesc: "Explore our curated list of tools to help you manage your domains, check DNS records, and improve your online infrastructure.",
+                recommendedProviders: "Recommended Providers", getDeal: "Get Deal", visitTool: "Visit Tool", recommendations: "Recommendations",
+                searchRecommendations: "Search hosting, email...", quickDnsCheck: "Quick DNS Check", enterDomainName: "Enter domain name...", checkDns: "Check DNS", others: "Others", other: "Other"
+            },
+            es: {
+                domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Gestor Seguro de Dominios",
+                dashboard: "Tablero", allDomains: "Todos los Dominios", domainProviders: "Proveedores", toolsResources: "Herramientas",
+                calendar: "Calendario", notifications: "Notificaciones", settings: "Configuración", searchPlaceholder: "Buscar dominios...",
+                dashboardOverview: "Resumen del Tablero", addNewDomain: "Añadir Dominio", totalDomains: "Dominios Totales",
+                annualCost: "Costo Anual", expiringSoon: "Próximos a Vencer", renewalCostsByMonth: "Costos de Renovación por Mes",
+                providersDistribution: "Distribución de Proveedores", domainName: "Nombre de Dominio", provider: "Proveedor",
+                renewalDate: "Fecha de Renovación", price: "Precio", status: "Estado", actions: "Acciones", addNewProvider: "Añadir Proveedor",
+                userProfile: "Perfil de Usuario", profilePicture: "Foto de Perfil", changePicture: "Cambiar Foto", remove: "Eliminar",
+                username: "Nombre de usuario", enterYourName: "Introduce tu nombre", saveProfile: "Guardar Perfil", appearance: "Apariencia",
+                themeColor: "Color de Acento", customColor: "Color Personalizado", footer: "Desarrollado por Project Freedom ✊",
+                addDomain: "Guardar Dominio", editDomain: "Editar Dominio", selectProvider: "Seleccionar Proveedor", otherProviderName: "Nombre de Otro Proveedor",
+                specifyProvider: "Especificar proveedor", purchaseDate: "Fecha de Compra", purchasePrice: "Precio de Compra", annualRenewalPrice: "Precio de Renovación",
+                providerName: "Nombre del Proveedor", homepageUrl: "URL de la Página", emailUsername: "Correo / Usuario", password: "Contraseña",
+                userIdOptional: "ID de Usuario (opcional)", autoRenewalOn: "Renovación Automática Activada", addProvider: "Guardar Proveedor",
+                editProvider: "Editar Proveedor", providerCredentials: "Credenciales", userId: "ID de Usuario", domainsRegistered: "Dominios Registrados",
+                autoRenewal: "Renovación Automática", on: "Activado", off: "Desactivado", openPage: "Sitio Web", viewCredentials: "Credenciales", statusActive: "Activo",
+                statusExpiringIn: "Vence en {days}d", statusExpired: "Vencido", noDomainsFound: "No se encontraron dominios.", noNotifications: "No hay notificaciones en este momento.",
+                totalInvestment: "Inversión Total", syncAllGCal: "Sincronizar a Google", downloadAllIcs: "Descargar (.ics)",
+                dayNames: ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"], urgentRenewals: "Top 5 Próximas Renovaciones", daysLeft: "Días Restantes",
+                dnsRecords: "Registros DNS", recordType: "Tipo", recordValue: "Valor", autoFillWhois: "Autocompletar usando WHOIS", fetching: "Obteniendo registros...",
+                noDnsFound: "No se encontraron registros DNS.", whoisSuccess: "¡Datos cargados vía WHOIS!", whoisError: "No se pudo obtener datos WHOIS.",
+                toolsDesc: "Explora nuestra lista seleccionada de herramientas para ayudarte a gestionar tus dominios y verificar registros DNS.",
+                recommendedProviders: "Proveedores Recomendados", getDeal: "Obtener Oferta", visitTool: "Visitar Herramienta", recommendations: "Recomendaciones",
+                searchRecommendations: "Buscar hosting, correo...", quickDnsCheck: "Comprobación Rápida DNS", enterDomainName: "Ingrese nombre de dominio...", checkDns: "Comprobar DNS", others: "Otros", other: "Otro"
+            }
+        };
+
+        // --- DATA ARRAYS FOR TOOLS & RECOMMENDATIONS ---
+        const recommendedProvidersData = [
+            { name: "Namecheap", desc: "Best for budget domains", rating: 5, url: "https://namecheap.com/", icon: "tag", tags: ["domains"] },
+            { name: "Porkbun", desc: "Great UI & pricing", rating: 5, url: "https://porkbun.com/", icon: "piggy-bank", tags: ["domains"] },
+            { name: "Hostinger", desc: "Domain + Hosting bundles", rating: 4.5, url: "https://hostinger.com/", icon: "server", tags: ["domains", "hosting"] }
+        ];
+        const expandedRecommendationsData = [
+            ...recommendedProvidersData,
+            { name: "Google Workspace", desc: "Professional email & collaboration.", rating: 5, url: "https://workspace.google.com/", icon: "mail", tags: ["email"] },
+            { name: "ProtonMail", desc: "Privacy-focused secure email.", rating: 4.5, url: "https://proton.me/mail", icon: "shield", tags: ["email"] },
+            { name: "DigitalOcean", desc: "Developer-friendly cloud hosting.", rating: 4.5, url: "https://digitalocean.com/", icon: "cloud", tags: ["hosting"] },
+            { name: "Vercel", desc: "Simple scalable deployment for frontend apps.", rating: 5, url: "https://vercel.com/", icon: "triangle", tags: ["hosting"] }
+        ];
+        const toolsData = [
+            { name: "MXToolbox", desc: "Comprehensive DNS & Email diagnostics", rating: 5, url: "https://mxtoolbox.com", icon: "mail-search", tags: ["dns", "email"] },
+            { name: "DNSChecker", desc: "Global DNS propagation check", rating: 5, url: "https://dnschecker.org", icon: "globe-2", tags: ["dns"] },
+            { name: "Whois.com", desc: "Domain lookup & registration info", rating: 4, url: "https://whois.com", icon: "search", tags: ["domains"] },
+            { name: "Cloudflare", desc: "Free DNS management & fast CDN", rating: 5, url: "https://cloudflare.com", icon: "cloud-lightning", tags: ["dns", "hosting"] },
+            { name: "ICANN Lookup", desc: "Official domain registration data", rating: 4.5, url: "https://lookup.icann.org/", icon: "building-2", tags: ["domains"] },
+            { name: "SSL Checker", desc: "Verify SSL certificate installation", rating: 4.5, url: "https://www.sslshopper.com/ssl-checker.html", icon: "shield-check", tags: ["ssl"] }
+        ];
+
+        // --- APP STATE ---
+        let currentUser = null;
+        let domains = [];
+        let providers = [];
+        let notifications = [];
+        let settings = { username: 'User', language: 'en', theme: 'orange' };
+        let expensesChart = null;
+        let isLoginMode = true;
+        let currentCalendarDate = new Date();
+        let currentToolFilter = 'all';
+
+        const colorThemes = {
+            orange: { primary: '#ff5011' }, cyan: { primary: '#17A2B8' }, green: { primary: '#51cf66' },
+            purple: { primary: '#9370DB' }, pink: { primary: '#DF1783' }
+        };
+
+        // --- CORE INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            Chart.defaults.color = 'hsl(242, 8%, 70%)';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+
+            // Setup Auth Overlay UI
+            document.getElementById('tab-login').addEventListener('click', () => switchAuthMode(true));
+            document.getElementById('tab-register').addEventListener('click', () => switchAuthMode(false));
+            document.getElementById('authSubmitBtn').addEventListener('click', handleAuthSubmit);
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+            // Modals & Navigation
+            document.getElementById('addDomainBtn').addEventListener('click', () => {
+                const limit = PLAN_LIMITS[currentUser?.plan || 'Personal'] || 5;
+                if (domains.length >= limit) {
+                    showToast(`Limit reached! Your plan allows up to ${limit} domains.`, 'danger');
+                    return;
+                }
+                openModal('domainModal', 'addNewDomain', 'addDomain', {});
+            });
+            document.getElementById('addDomainBtnSecondary').addEventListener('click', () => document.getElementById('addDomainBtn').click());
+            document.getElementById('addProviderBtn').addEventListener('click', () => openModal('providerModal', 'addNewProvider', 'addProvider', {}));
+            
+            document.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', (e) => closeModal(e.target.closest('.modal')));
+            });
+            window.addEventListener('click', (e) => {
+                if (e.target.classList.contains('modal')) closeModal(e.target);
+            });
+
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const page = e.currentTarget.dataset.page;
+                    setActivePage(page);
+                });
+            });
+
+            // Forms
+            document.getElementById('domainForm').addEventListener('submit', saveDomain);
+            document.getElementById('providerForm').addEventListener('submit', saveProvider);
+            document.getElementById('settingsProfileForm').addEventListener('submit', saveSettings);
+            document.getElementById('domainProvider').addEventListener('change', function() {
+                document.getElementById('otherProviderGroup').style.display = this.value === 'other' ? 'block' : 'none';
+            });
+
+            // Tools Filter
+            const toolFilterBtns = document.querySelectorAll('#toolsFilterTags .filter-tag');
+            toolFilterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    toolFilterBtns.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentToolFilter = e.target.dataset.tag;
+                    renderToolsPage();
+                    lucide.createIcons();
+                });
+            });
+
+            // Header Actions
+            document.getElementById('translateBtn').addEventListener('click', async () => {
+                settings.language = settings.language === 'en' ? 'es' : 'en';
+                setLanguage(settings.language);
+                if (currentUser) await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+            });
+
+            document.getElementById('headerNotificationIcon').addEventListener('click', () => setActivePage('notifications'));
+            
+            // Password Toggles
+            ['toggleLoginPassword', 'toggleProviderPassword'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.addEventListener('click', function() {
+                        const input = this.previousElementSibling;
+                        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                        input.setAttribute('type', type);
+                        this.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+                        lucide.createIcons();
+                    });
+                }
+            });
+
+            // API specific actions
+            document.getElementById('fetchWhoisBtn').addEventListener('click', fetchWhoisData);
+            document.getElementById('quickDnsBtn').addEventListener('click', () => {
+                const domain = document.getElementById('quickDnsInput').value.trim();
+                if(domain) fetchDnsRecords(domain); else showToast('Please enter a domain.', 'warning');
+            });
+
+            // Action Buttons delegation
+            document.body.addEventListener('click', async (e) => { 
+                const actionBtn = e.target.closest('.action-btn');
+                if (!actionBtn) return;
+                const domainId = actionBtn.dataset.id;
+                
+                if (actionBtn.title === 'Edit' || actionBtn.title === 'Editar Dominio') { 
+                    const domain = domains.find(d => String(d.id) === String(domainId));
+                    if(domain) openModal('domainModal', 'editDomain', 'addDomain', domain); 
+                } 
+                else if (actionBtn.title === 'Delete' || actionBtn.title === 'Eliminar') { 
+                    deleteDomain(domainId);
+                } 
+                else if (actionBtn.title === 'Edit Provider' || actionBtn.title === 'Editar Proveedor') {
+                    const provider = providers.find(p => String(p.id) === String(domainId));
+                    if(provider) openModal('providerModal', 'editProvider', 'addProvider', provider);
+                } 
+                else if (actionBtn.title === 'Delete Provider') {
+                    deleteProvider(domainId);
+                } 
+                else if (actionBtn.classList.contains('dns-btn')) {
+                    const domain = domains.find(d => String(d.id) === String(domainId));
+                    if (domain) fetchDnsRecords(domain.name);
+                } 
+                else if (actionBtn.classList.contains('gcal-btn')) {
+                    const domain = domains.find(d => String(d.id) === String(domainId));
+                    window.open(generateGoogleCalendarLink(domain), '_blank');
+                } 
+                else if (actionBtn.classList.contains('ical-btn')) {
+                    const domain = domains.find(d => String(d.id) === String(domainId));
+                    generateICal([domain]);
+                } 
+                else if (actionBtn.title === 'Delete Notification') {
+                    notifications = notifications.filter(n => String(n.id) !== String(domainId));
+                    renderNotificationsPage(); 
+                    updateNotificationBadge();
+                    showToast('Notification cleared.');
+                }
+            });
+
+            document.getElementById('providersGrid').addEventListener('click', (e) => {
+                const target = e.target.closest('.credentials-btn');
+                if (target) {
+                    const provider = providers.find(p => String(p.id) === String(target.dataset.id));
+                    openModal('credentialsModal', 'providerCredentials', '', provider);
+                }
+            });
+
+            // Calendar Navigation
+            document.getElementById('prevMonthBtn').addEventListener('click', () => {
+                currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+                renderCalendar();
+            });
+            document.getElementById('nextMonthBtn').addEventListener('click', () => {
+                currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+                renderCalendar();
+            });
+            document.getElementById('downloadIcsBtn').addEventListener('click', () => {
+                const y = currentCalendarDate.getFullYear(), m = currentCalendarDate.getMonth();
+                const renewals = domains.filter(d => {
+                    const rd = new Date(d.renewalDate + 'T00:00:00');
+                    return rd.getFullYear() === y && rd.getMonth() === m;
+                });
+                if (renewals.length > 0) generateICal(renewals, true);
+                else showToast('No renewals this month to export.', 'danger');
+            });
+            document.getElementById('syncGCalBtn').addEventListener('click', () => showToast('Google Calendar bulk sync coming soon.', 'warning'));
+
+            // Mobile Nav
+            document.querySelector('.menu-toggle').addEventListener('click', () => { document.getElementById('mobileNav').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); lucide.createIcons(); });
+            document.querySelector('.mobile-nav-close').addEventListener('click', () => { document.getElementById('mobileNav').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); });
+            document.getElementById('navOverlay').addEventListener('click', () => { document.getElementById('mobileNav').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); });
+        });
+
+        // --- API & AUTH LOGIC ---
+        
+        function switchAuthMode(login) {
+            isLoginMode = login;
+            document.getElementById('tab-login').classList.toggle('active', login);
+            document.getElementById('tab-register').classList.toggle('active', !login);
+            document.getElementById('registerFields').style.display = login ? 'none' : 'block';
+            document.getElementById('authSubmitBtn').textContent = login ? 'Log In' : 'Register Account';
+            document.getElementById('authMessage').style.display = 'none';
+        }
+
+        async function apiCall(action, payload = {}) {
+            if (API_URL === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
+                showToast("Please configure the API_URL in the code first.", "danger");
+                throw new Error("API_URL not configured");
+            }
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: action, ...payload })
+                });
+                return await response.json();
+            } catch (error) {
+                console.error("API Error:", error);
+                showToast("Network error. Check console.", "danger");
+                throw error;
+            }
+        }
+
+        async function fetchLocation() {
+            try {
+                const res = await fetch('https://ipapi.co/json/');
+                const data = await res.json();
+                return `${data.city}, ${data.country_name}`;
+            } catch (e) {
+                return Intl.DateTimeFormat().resolvedOptions().timeZone;
+            }
+        }
+
+        async function handleAuthSubmit() {
+            const email = document.getElementById('authEmail').value;
+            const pass = document.getElementById('authPassword').value;
+            const phone = document.getElementById('authPhone').value;
+            const msgEl = document.getElementById('authMessage');
+
+            if(!email || !pass) return showToast("Email and password required.", "warning");
+
+            msgEl.style.display = 'block';
+            msgEl.style.color = 'var(--text-muted)';
+            msgEl.textContent = 'Processing...';
+            document.getElementById('authSubmitBtn').disabled = true;
+
+            try {
+                if (isLoginMode) {
+                    const res = await apiCall('loginUser', { email: email, password: pass });
+                    document.getElementById('authSubmitBtn').disabled = false;
+                    if(res.success) {
+                        currentUser = res.user;
+                        document.getElementById('auth-overlay').style.display = 'none';
+                        loadDashboardData();
+                    } else {
+                        msgEl.style.color = 'var(--danger)';
+                        msgEl.textContent = res.message;
+                    }
+                } else {
+                    const location = await fetchLocation();
+                    const res = await apiCall('registerUser', { email: email, password: pass, phone: phone, location: location });
+                    document.getElementById('authSubmitBtn').disabled = false;
+                    if(res.success) {
+                        msgEl.style.color = 'var(--success)';
+                        msgEl.textContent = res.message;
+                        setTimeout(() => switchAuthMode(true), 3000);
+                    } else {
+                        msgEl.style.color = 'var(--danger)';
+                        msgEl.textContent = res.message;
+                    }
+                }
+            } catch (err) {
+                document.getElementById('authSubmitBtn').disabled = false;
+                msgEl.style.color = 'var(--danger)';
+                msgEl.textContent = "Connection error.";
+            }
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            document.getElementById('auth-overlay').style.display = 'flex';
+            document.getElementById('authForm').reset();
+            document.getElementById('authMessage').style.display = 'none';
+            domains = []; providers = []; notifications = [];
+        }
+
+        function loadDashboardData() {
+            document.getElementById('userPlanBadge').textContent = currentUser.plan.toUpperCase();
+            const limit = PLAN_LIMITS[currentUser.plan] || 5;
+            document.getElementById('stat-domain-limit').textContent = `/ ${limit === Infinity ? '∞' : limit}`;
+
+            apiCall('getUserData', { email: currentUser.email }).then(data => {
+                domains = data.domains || [];
+                providers = data.providers || [];
+                if(data.settings) settings = data.settings;
+                else settings.username = currentUser.email.split('@')[0];
+                
+                applySettings();
+                setLanguage(settings.language);
+                setActivePage('dashboard');
+                renderAll();
+            }).catch(err => {
+                showToast("Failed to load dashboard data.", "danger");
+            });
+        }
+
+        // --- RENDERING & UI ---
+
+        const setLanguage = (lang) => {
+            document.querySelectorAll('[data-translate-key]').forEach(el => {
+                const key = el.dataset.translateKey;
+                const translation = translations[lang][key];
+                if (translation) {
+                    if (el.placeholder) {
+                        el.placeholder = translation;
+                    } else {
+                        const icon = el.querySelector('i');
+                        if (icon && (el.classList.contains('btn') || el.parentElement.classList.contains('btn'))) {
+                            const textNode = Array.from(el.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+                            if (textNode) textNode.textContent = ` ${translation}`;
+                        } else {
+                            el.textContent = translation;
+                        }
+                    }
+                }
+            });
+            renderAll();
+            lucide.createIcons();
+        };
+
+        const renderGallery = (containerId, data, btnTranslateKey) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            const lang = settings.language;
+            
+            data.forEach(item => {
+                let starsHtml = '';
+                for(let i=0; i<Math.floor(item.rating); i++) starsHtml += '<i data-lucide="star" style="fill: var(--primary); color: var(--primary);"></i>';
+                if(item.rating % 1 !== 0) starsHtml += '<i data-lucide="star-half" style="fill: var(--primary); color: var(--primary);"></i>';
+
+                container.innerHTML += `
+                    <div class="recommendation-card">
+                        <i data-lucide="${item.icon}" class="card-icon"></i>
+                        <div class="gallery-info" style="flex-grow:1;">
+                            <div class="gallery-title">${item.name}</div>
+                            <div class="gallery-subtitle">${item.desc}</div>
+                        </div>
+                        <div class="gallery-rating">${starsHtml}</div>
+                        <div class="gallery-action">
+                            <a href="${item.url}" target="_blank" class="btn btn-secondary" style="width:100%; font-size: 0.9em; white-space:nowrap;">
+                                ${translations[lang][btnTranslateKey] || 'Visit'} <i data-lucide="external-link" style="width: 14px; margin-left: 4px;"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+        };
+
+        const renderToolsPage = () => {
+            const combinedResources = [...expandedRecommendationsData, ...toolsData];
+            const filtered = currentToolFilter === 'all' 
+                ? combinedResources 
+                : combinedResources.filter(item => item.tags && item.tags.includes(currentToolFilter));
+            renderGallery('toolsGridContainer', filtered, 'visitTool');
+        };
+
+        function renderAll() {
+            renderDomains();
+            renderProviders();
+            updateStats();
+            renderToolsPage();
+            renderGallery('modalDomainRecsGrid', recommendedProvidersData, 'getDeal');
+            renderGallery('modalProviderRecsGrid', recommendedProvidersData, 'getDeal');
+            renderCalendar();
+            updateNotifications();
+            lucide.createIcons();
+        }
+
+        const setActivePage = (pageId) => {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            document.querySelectorAll('.menu-item').forEach(m => {
+                m.classList.toggle('active', m.dataset.page === pageId);
+            });
+            if(pageId === 'calendar') renderCalendar();
+            lucide.createIcons();
+            document.getElementById('mobileNav').classList.remove('open');
+            document.getElementById('navOverlay').classList.remove('open');
+        };
+
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+
+        function applySettings() {
+            if (settings.theme === 'custom' && settings.customColor) {
+                document.documentElement.style.setProperty('--primary', settings.customColor);
+            } else {
+                const theme = colorThemes[settings.theme] || colorThemes.orange;
+                document.documentElement.style.setProperty('--primary', theme.primary);
+            }
+
+            document.getElementById('userName').textContent = settings.username || 'User';
+            const initials = (settings.username || 'User').split(' ').map(n => n[0]).join('').substring(0,2);
+            
+            [document.getElementById('userAvatar'), document.getElementById('settingsAvatarPreview')].forEach(avatar => {
+                if (settings.profilePicture) {
+                    avatar.style.backgroundImage = `url(${settings.profilePicture})`;
+                    avatar.textContent = '';
+                } else {
+                    avatar.style.backgroundImage = '';
+                    avatar.textContent = initials;
+                }
+            });
+
+            document.getElementById('settingUsername').value = settings.username || '';
+            
+            const colorPalette = document.getElementById('colorPalette');
+            colorPalette.innerHTML = '';
+            Object.keys(colorThemes).forEach(key => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = colorThemes[key].primary;
+                swatch.dataset.theme = key;
+                if (key === settings.theme && settings.theme !== 'custom') swatch.classList.add('active');
+                
+                swatch.addEventListener('click', async () => {
+                    settings.theme = key; settings.customColor = null;
+                    applySettings();
+                    if(expensesChart) updateStats();
+                    if(currentUser) await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+                });
+                colorPalette.appendChild(swatch);
+            });
+            if (settings.customColor) document.getElementById('customColorPicker').value = settings.customColor;
+        }
+
+        function renderDomains() {
+            const tbody1 = document.getElementById('domainsTableBody');
+            const tbody2 = document.getElementById('urgentRenewalsBody');
+            tbody1.innerHTML = ''; tbody2.innerHTML = '';
+            const lang = settings.language;
+            
+            const now = new Date(); now.setHours(0,0,0,0);
+            let sorted = [...domains].sort((a,b) => new Date(a.renewalDate) - new Date(b.renewalDate));
+
+            if (sorted.length === 0) {
+                tbody1.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">${translations[lang].noDomainsFound}</td></tr>`;
+                tbody2.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">${translations[lang].noDomainsFound}</td></tr>`;
+                return;
+            }
+
+            sorted.forEach((d, index) => {
+                const diffDays = Math.ceil((new Date(d.renewalDate + 'T00:00:00') - now) / 86400000);
+                let statusCls = diffDays < 0 ? 'status-expired' : (diffDays <= 30 ? 'status-warning' : 'status-active');
+                let statusTxt = diffDays < 0 ? translations[lang].statusExpired : (diffDays <= 30 ? translations[lang].statusExpiringIn.replace('{days}', diffDays) : translations[lang].statusActive);
+
+                const tr = `<tr>
+                    <td><strong>${escapeHTML(d.name)}</strong></td>
+                    <td>${escapeHTML(d.provider)}</td>
+                    <td>${d.renewalDate.split('T')[0]}</td>
+                    <td>$${parseFloat(d.renewalPrice||0).toFixed(2)}</td>
+                    <td><span class="status ${statusCls}">${statusTxt}</span></td>
+                    <td>
+                        <span class="action-btn dns-btn" data-id="${d.id}" title="Check DNS"><i data-lucide="network"></i></span>
+                        <span class="action-btn gcal-btn" data-id="${d.id}" title="Add to Google Calendar"><i data-lucide="calendar-plus"></i></span>
+                        <span class="action-btn ical-btn" data-id="${d.id}" title="Download iCal Event"><i data-lucide="download"></i></span>
+                        <span class="action-btn" data-id="${d.id}" title="Edit"><i data-lucide="pencil"></i></span>
+                        <span class="action-btn" data-id="${d.id}" title="Delete"><i data-lucide="trash-2"></i></span>
+                    </td>
+                </tr>`;
+                tbody1.innerHTML += tr;
+
+                if (index < 5) {
+                    tbody2.innerHTML += `<tr>
+                        <td><strong>${escapeHTML(d.name)}</strong></td>
+                        <td>${d.renewalDate.split('T')[0]}</td>
+                        <td style="color:${diffDays<0?'var(--danger)':'var(--warning)'}">${diffDays < 0 ? translations[lang].statusExpired : diffDays}</td>
+                        <td>$${parseFloat(d.renewalPrice||0).toFixed(2)}</td>
+                    </tr>`;
+                }
+            });
+        }
+
+        function renderProviders() {
+            const tbody = document.getElementById('providersTableBody');
+            const grid = document.getElementById('providersGrid');
+            if(tbody) tbody.innerHTML = '';
+            if(grid) grid.innerHTML = '';
+            const lang = settings.language;
+
+            providers.forEach(p => {
+                const count = domains.filter(d => d.provider.toLowerCase() === p.name.toLowerCase()).length;
+                const autoRenewCount = domains.filter(d => d.provider.toLowerCase() === p.name.toLowerCase() && d.autoRenew).length;
+                
+                if(tbody) {
+                    tbody.innerHTML += `<tr>
+                        <td><strong>${escapeHTML(p.name)}</strong></td>
+                        <td><a href="${escapeHTML(p.url)}" target="_blank" style="color:var(--primary)">${escapeHTML(p.url)}</a></td>
+                        <td>${escapeHTML(p.user)}</td>
+                        <td>${count}</td>
+                        <td>
+                            <span class="action-btn" data-id="${p.id}" title="Edit Provider"><i data-lucide="pencil"></i></span>
+                            <span class="action-btn" data-id="${p.id}" title="Delete Provider"><i data-lucide="trash-2"></i></span>
+                        </td>
+                    </tr>`;
+                }
+
+                if(grid) {
+                    grid.innerHTML += `
+                        <div class="provider-card">
+                            <div class="provider-header">
+                                <div class="provider-info">
+                                    <img src="https://www.google.com/s2/favicons?sz=64&domain_url=${escapeHTML(p.url)}" onerror="this.onerror=null;this.src='https://placehold.co/64x64/333/999?text=${escapeHTML(p.name).substring(0,2)}';" class="provider-logo">
+                                    <h3 class="provider-name">${escapeHTML(p.name)}</h3>
+                                </div>
+                                <div class="actions">
+                                    <span class="action-btn" data-id="${p.id}" title="Edit Provider"><i data-lucide="pencil"></i></span>
+                                    <span class="action-btn" data-id="${p.id}" title="Delete Provider"><i data-lucide="trash-2"></i></span>
+                                </div>
+                            </div>
+                            <div class="provider-stats">
+                                <p>${translations[lang].domainsRegistered}: <span>${count}</span></p>
+                                <p>${translations[lang].autoRenewal}: <span>${autoRenewCount}/${count}</span></p>
+                            </div>
+                            <div class="provider-actions">
+                                 <a href="${escapeHTML(p.url)}" target="_blank" class="btn btn-open-page"><i data-lucide="external-link"></i> ${translations[lang].openPage}</a>
+                                 <button class="btn btn-credentials credentials-btn" data-id="${p.id}"><i data-lucide="key-round"></i> ${translations[lang].viewCredentials}</button>
+                            </div>
+                        </div>`;
+                }
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('stat-total-domains').innerHTML = `${domains.length} <span id="stat-domain-limit" style="font-size: 14px; color:var(--text-muted);">/ ${PLAN_LIMITS[currentUser?.plan || 'Personal'] === Infinity ? '∞' : PLAN_LIMITS[currentUser?.plan || 'Personal']}</span>`;
+            
+            const uniqueProviders = [...new Set(domains.map(d => d.provider))].length;
+            document.getElementById('stat-domain-providers').textContent = uniqueProviders;
+
+            const totalExp = domains.reduce((s,d) => s + parseFloat(d.renewalPrice||0), 0);
+            const totalInv = domains.reduce((s,d) => s + parseFloat(d.purchasePrice||0), 0);
+            document.getElementById('stat-yearly-expenses').textContent = `$${totalExp.toFixed(2)}`;
+            const invEl = document.getElementById('stat-total-investment');
+            if(invEl) invEl.textContent = `$${totalInv.toFixed(2)}`;
+
+            const now = new Date(); now.setHours(0,0,0,0);
+            const expSoon = domains.filter(d => {
+                const diffDays = Math.ceil((new Date(d.renewalDate+'T00:00:00') - now)/86400000);
+                return diffDays >= 0 && diffDays <= 30;
+            }).length;
+            document.getElementById('stat-expiring-soon').textContent = expSoon;
+
+            // Charts
+            const monthly = Array(12).fill(0);
+            domains.forEach(d => {
+                const m = new Date(d.renewalDate+'T00:00:00').getMonth();
+                monthly[m] += parseFloat(d.renewalPrice||0);
+            });
+
+            let primaryColor = document.documentElement.style.getPropertyValue('--primary').trim() || '#ff5011';
+            
+            if(expensesChart) expensesChart.destroy();
+            expensesChart = new Chart(document.getElementById('expensesChart').getContext('2d'), { 
+                type: 'line', 
+                data: { 
+                    labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], 
+                    datasets: [{ label: 'Renewal Cost', data: monthly, backgroundColor: 'rgba(255, 80, 17, 0.1)', borderColor: primaryColor, borderWidth: 2, fill: true, tension: 0.3 }] 
+                }, 
+                options: { responsive: true, plugins: { legend: { display: false } } } 
+            });
+
+            // Providers Chart
+            const pChartCanvas = document.getElementById('providersChart');
+            if(pChartCanvas) {
+                const providerCounts = domains.reduce((acc, d) => { acc[d.provider] = (acc[d.provider] || 0) + 1; return acc; }, {});
+                const sortedProviders = Object.entries(providerCounts).sort(([,a],[,b]) => b-a);
+                let pLabels = [], pData = [];
+                if (sortedProviders.length > 3) {
+                    sortedProviders.slice(0, 3).forEach(([n, c]) => { pLabels.push(n); pData.push(c); });
+                    const oCount = sortedProviders.slice(3).reduce((sum, [, c]) => sum + c, 0);
+                    if(oCount > 0) { pLabels.push('Others'); pData.push(oCount); }
+                } else {
+                    sortedProviders.forEach(([n, c]) => { pLabels.push(n); pData.push(c); });
+                }
+                const pColors = Object.values(colorThemes).map(t => t.primary).concat(['#ffd43b', '#51cf66']);
+                
+                if(window.providersChartInst) window.providersChartInst.destroy();
+                window.providersChartInst = new Chart(pChartCanvas.getContext('2d'), { 
+                    type: 'doughnut', 
+                    data: { labels: pLabels, datasets: [{ data: pData, backgroundColor: pColors, borderWidth: 1, borderColor: 'var(--bg-card)' }] }, 
+                    options: { responsive: true, plugins: { legend: { position: 'bottom', labels:{color:'#fff'} } } } 
+                });
+            }
+        }
+
+        const renderCalendar = () => {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            const lang = settings.language;
+
+            document.getElementById('currentMonthYear').textContent = new Date(year, month).toLocaleDateString(lang, { month: 'long', year: 'numeric' });
+            const calGrid = document.getElementById('calendarGrid');
+            const dayNamesEl = document.getElementById('calendarDayNames');
+            calGrid.innerHTML = ''; dayNamesEl.innerHTML = '';
+
+            translations[lang].dayNames.forEach(day => { dayNamesEl.innerHTML += `<div class="calendar-day-name">${day}</div>`; });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for(let i = 0; i < firstDay; i++) calGrid.innerHTML += `<div class="calendar-day other-month"></div>`;
+
+            for(let day = 1; day <= daysInMonth; day++) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day';
+                dayEl.innerHTML = `<div class="day-number">${day}</div>`;
+                
+                const renewals = domains.filter(d => {
+                    const rd = new Date(d.renewalDate + 'T00:00:00');
+                    return rd.getFullYear() === year && rd.getMonth() === month && rd.getDate() === day;
+                });
+
+                renewals.forEach(d => {
+                    dayEl.innerHTML += `<div class="calendar-event"><i data-lucide="globe" style="width: 12px; height: 12px;"></i>${escapeHTML(d.name)}</div>`;
+                });
+                calGrid.appendChild(dayEl);
+            }
+        };
+
+        const updateNotifications = () => {
+            const now = new Date(); now.setHours(0,0,0,0);
+            const lang = settings.language;
+            const expiringDomains = domains.filter(d => Math.ceil((new Date(d.renewalDate+'T00:00:00') - now) / 86400000) <= 30);
+            const expIds = expiringDomains.map(d => String(d.id));
+            
+            notifications = notifications.filter(n => expIds.includes(String(n.domainId)));
+            const notifIds = notifications.map(n => String(n.domainId));
+            const newNotifs = [];
+
+            expiringDomains.forEach(d => {
+                if (!notifIds.includes(String(d.id))) {
+                    const diff = Math.ceil((new Date(d.renewalDate+'T00:00:00') - now) / 86400000);
+                    let msg = diff <= 0 ? `<strong>${d.name}</strong> ${translations[lang].statusExpired}!` : `<strong>${d.name}</strong> ${translations[lang].statusExpiringIn.replace('{days}', diff)}`;
+                    const n = { id: Date.now()+d.id, domainId: String(d.id), message: msg, type: diff <= 0 ? 'expired' : 'expiring' };
+                    notifications.push(n);
+                    newNotifs.push(n);
+                }
+            });
+
+            renderNotificationsPage();
+            updateNotificationBadge();
+            if(newNotifs.length > 0) renderPopUpNotifications(newNotifs);
+        };
+
+        const renderNotificationsPage = () => {
+            const list = document.getElementById('notificationsList');
+            if(!list) return;
+            list.innerHTML = '';
+            if(notifications.length === 0) {
+                list.innerHTML = `<p class="placeholder">${translations[settings.language].noNotifications}</p>`;
+                return;
+            }
+            notifications.forEach(n => {
+                list.innerHTML += `<div class="notification-item ${n.type}">
+                    <p>${n.message}</p><span class="action-btn" data-id="${n.id}" title="Delete Notification"><i data-lucide="trash-2"></i></span>
+                </div>`;
+            });
+            lucide.createIcons();
+        };
+
+        const renderPopUpNotifications = (arr) => {
+            const c = document.getElementById('persistent-notifications-container');
+            c.innerHTML = ''; 
+            arr.forEach(n => {
+                const el = document.createElement('div');
+                el.className = `persistent-notification ${n.type}`;
+                el.innerHTML = `<p>${n.message}</p><button class="notification-dismiss-btn">&times;</button>`;
+                el.querySelector('button').addEventListener('click', () => el.remove());
+                c.appendChild(el);
+            });
+        };
+
+        const updateNotificationBadge = () => {
+            document.querySelectorAll('.notification-badge').forEach(b => b.textContent = notifications.length > 0 ? notifications.length : '');
+        };
+
+        // --- EXTERNAL APIs ---
+        
+        async function fetchWhoisData() {
+            const domain = document.getElementById('domainName').value.trim();
+            const status = document.getElementById('whoisStatus');
+            const lang = settings.language;
+            if (!domain) return showToast('Please enter a domain name first.', 'warning');
+            
+            status.style.display = 'block'; status.style.color = 'var(--text-muted)';
+            status.textContent = translations[lang].fetching;
+            
+            try {
+                const res = await fetch(`https://networkcalc.com/api/dns/whois/${domain}`);
+                const data = await res.json();
+                if (data.status === 'OK' && Object.keys(data.whois).length > 0) {
+                    if (data.whois.creation_date) document.getElementById('purchaseDate').value = new Date(data.whois.creation_date).toISOString().substring(0, 10);
+                    if (data.whois.expiry_date) document.getElementById('renewalDate').value = new Date(data.whois.expiry_date).toISOString().substring(0, 10);
+                    if (data.whois.registrar) {
+                        const sel = document.getElementById('domainProvider');
+                        const rName = data.whois.registrar.toLowerCase();
+                        let match = Array.from(sel.options).find(o => o.value && rName.includes(o.value.toLowerCase()));
+                        if(match) sel.value = match.value;
+                        else {
+                            sel.value = 'other';
+                            document.getElementById('otherProviderGroup').style.display = 'block';
+                            document.getElementById('otherProvider').value = data.whois.registrar;
+                        }
+                    }
+                    status.style.color = 'var(--success)'; status.textContent = translations[lang].whoisSuccess;
+                } else {
+                    status.style.color = 'var(--danger)'; status.textContent = translations[lang].whoisError;
+                }
+            } catch(e) {
+                status.style.color = 'var(--danger)'; status.textContent = translations[lang].whoisError;
+            }
+        }
+
+        async function fetchDnsRecords(domain) {
+            document.getElementById('dnsDomainLabel').textContent = domain;
+            document.getElementById('dnsModal').style.display = 'flex';
+            document.getElementById('dnsTableWrapper').style.display = 'none';
+            document.getElementById('dnsError').style.display = 'none';
+            document.getElementById('dnsLoading').style.display = 'block';
+            
+            try {
+                const types = ['A', 'AAAA', 'MX', 'TXT', 'CNAME', 'NS'];
+                const results = await Promise.all(types.map(t => fetch(`https://dns.google/resolve?name=${domain}&type=${t}`).then(r => r.json())));
+                
+                document.getElementById('dnsLoading').style.display = 'none';
+                let answers = [];
+                results.forEach(d => { if(d.Answer) answers = answers.concat(d.Answer); });
+                
+                if (answers.length > 0) {
+                    const tbody = document.getElementById('dnsTableBody');
+                    tbody.innerHTML = '';
+                    const map = { 1: 'A', 2: 'NS', 5: 'CNAME', 15: 'MX', 16: 'TXT', 28: 'AAAA' };
+                    answers.sort((a, b) => a.type - b.type).forEach(r => {
+                        tbody.innerHTML += `<tr><td><span class="dns-badge">${map[r.type]||'Type '+r.type}</span></td><td style="word-break: break-all;">${escapeHTML(r.data)}</td></tr>`;
+                    });
+                    document.getElementById('dnsTableWrapper').style.display = 'block';
+                } else {
+                    document.getElementById('dnsError').style.display = 'block';
+                    document.getElementById('dnsError').textContent = translations[settings.language].noDnsFound;
+                }
+            } catch(e) {
+                document.getElementById('dnsLoading').style.display = 'none';
+                document.getElementById('dnsError').style.display = 'block';
+                document.getElementById('dnsError').textContent = "Error connecting to DNS API.";
+            }
+        }
+
+        // --- CRUD LOGIC ---
+
+        function openModal(id, titleKey, btnTextKey, data) {
+            const m = document.getElementById(id);
+            const lang = settings.language;
+            
+            if(id === 'domainModal') {
+                m.querySelector('#modalTitle').textContent = translations[lang][titleKey];
+                m.querySelector('#formSubmitBtn').textContent = translations[lang][btnTextKey];
+                document.getElementById('domainId').value = data.id || '';
+                document.getElementById('domainName').value = data.name || '';
+                document.getElementById('purchaseDate').value = data.purchaseDate ? data.purchaseDate.split('T')[0] : '';
+                document.getElementById('renewalDate').value = data.renewalDate ? data.renewalDate.split('T')[0] : '';
+                document.getElementById('purchasePrice').value = data.purchasePrice || '';
+                document.getElementById('renewalPrice').value = data.renewalPrice || '';
+                document.getElementById('domainAutoRenew').checked = data.autoRenew || false;
+                document.getElementById('whoisStatus').style.display = 'none';
+
+                const sel = document.getElementById('domainProvider');
+                sel.innerHTML = `<option value="">${translations[lang].selectProvider || 'Select Provider'}</option>`;
+                providers.forEach(p => sel.appendChild(new Option(p.name, p.name)));
+                sel.appendChild(new Option(`${translations[lang].other || 'Other'}...`, 'other'));
+                sel.value = data.provider || '';
+                document.getElementById('otherProviderGroup').style.display = sel.value === 'other' ? 'block' : 'none';
+            } else if(id === 'providerModal') {
+                m.querySelector('#providerModalTitle').textContent = translations[lang][titleKey];
+                m.querySelector('#providerFormSubmitBtn').textContent = translations[lang][btnTextKey];
+                document.getElementById('providerId').value = data.id || '';
+                document.getElementById('providerName').value = data.name || '';
+                document.getElementById('providerUrl').value = data.url || '';
+                document.getElementById('providerUser').value = data.user || '';
+                document.getElementById('providerPass').value = data.pass || '';
+                document.getElementById('providerUid').value = data.uid || '';
+            } else if(id === 'credentialsModal') {
+                m.querySelector('#credentialsModalTitle').textContent = `${data.name} ${translations[lang].providerCredentials}`;
+                document.getElementById('credUser').textContent = data.user || 'Not set';
+                document.getElementById('credPass').textContent = data.pass ? '••••••••' : 'Not set';
+                document.getElementById('credUid').textContent = data.uid || 'Not set';
+            }
+            m.style.display = 'flex';
+        }
+
+        function closeModal(m) {
+            m.style.display = 'none';
+            if (m.querySelector('form')) m.querySelector('form').reset();
+            if (m.id === 'domainModal') document.getElementById('otherProviderGroup').style.display = 'none';
+        }
+        
+        async function saveDomain(e) {
+            e.preventDefault();
+            let pName = document.getElementById('domainProvider').value;
+            if (pName === 'other') {
+                const oName = document.getElementById('otherProvider').value.trim();
+                if (oName && !providers.some(p => p.name.toLowerCase() === oName.toLowerCase())) {
+                    providers.push({ id: Date.now(), name: oName, url: '', user: '', pass: '', uid: '' });
+                }
+                pName = oName;
+            }
+
+            const id = document.getElementById('domainId').value || crypto.randomUUID();
+            const domain = {
+                id: id,
+                name: document.getElementById('domainName').value,
+                provider: pName,
+                purchaseDate: document.getElementById('purchaseDate').value,
+                renewalDate: document.getElementById('renewalDate').value,
+                purchasePrice: parseFloat(document.getElementById('purchasePrice').value || 0),
+                renewalPrice: parseFloat(document.getElementById('renewalPrice').value || 0),
+                autoRenew: document.getElementById('domainAutoRenew').checked
+            };
+
+            const idx = domains.findIndex(d => String(d.id) === String(id));
+            if (idx > -1) domains[idx] = domain; else domains.push(domain);
+
+            closeModal(document.getElementById('domainModal'));
+            renderAll();
+            showToast("Syncing with Google Sheets...", "warning");
+            
+            try {
+                await apiCall('saveDomains', { domains: domains, email: currentUser.email });
+                showToast("Saved to Database!", "success");
+            } catch (err) {
+                showToast("Failed to save to database.", "danger");
+            }
+        }
+
+        async function deleteDomain(id) {
+            if(confirm("Delete this domain?")) {
+                domains = domains.filter(d => String(d.id) !== String(id));
+                renderAll();
+                try {
+                    await apiCall('saveDomains', { domains: domains, email: currentUser.email });
+                    showToast("Domain deleted.");
+                } catch (err) {
+                    showToast("Failed to sync deletion.", "danger");
+                }
+            }
+        }
+
+        async function saveProvider(e) {
+            e.preventDefault();
+            const id = document.getElementById('providerId').value || crypto.randomUUID();
+            const newName = document.getElementById('providerName').value;
+            const provider = {
+                id: id, name: newName,
+                url: document.getElementById('providerUrl').value,
+                user: document.getElementById('providerUser').value,
+                pass: document.getElementById('providerPass').value,
+                uid: document.getElementById('providerUid').value
+            };
+
+            const idx = providers.findIndex(p => String(p.id) === String(id));
+            if (idx > -1) {
+                const oldName = providers[idx].name;
+                if(oldName !== newName) domains.forEach(d => { if(d.provider === oldName) d.provider = newName; });
+                providers[idx] = provider;
+            } else {
+                providers.push(provider);
+            }
+
+            closeModal(document.getElementById('providerModal'));
+            renderAll();
+            
+            try {
+                await apiCall('saveProviders', { providers: providers, email: currentUser.email });
+                if(idx > -1) await apiCall('saveDomains', { domains: domains, email: currentUser.email });
+                showToast("Provider saved.");
+            } catch (err) {
+                showToast("Failed to save provider.", "danger");
+            }
+        }
+
+        async function deleteProvider(id) {
+            const p = providers.find(x => String(x.id) === String(id));
+            if(domains.some(d => d.provider === p.name)) return showToast('Cannot delete a provider with active domains.', 'danger');
+            
+            if(confirm(`Delete ${p.name}?`)) {
+                providers = providers.filter(x => String(x.id) !== String(id));
+                renderProviders();
+                try {
+                    await apiCall('saveProviders', { providers: providers, email: currentUser.email });
+                    showToast("Provider deleted.");
+                } catch (err) {
+                    showToast("Failed to sync deletion.", "danger");
+                }
+            }
+        }
+
+        async function saveSettings(e) {
+            e.preventDefault();
+            settings.username = document.getElementById('settingUsername').value;
+            
+            // Handle Profile Picture
+            const fileInput = document.getElementById('profilePicUpload');
+            if (fileInput.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    settings.profilePicture = event.target.result;
+                    applySettings();
+                    try {
+                        await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+                        showToast("Settings and Picture saved.");
+                    } catch (err) { showToast("Failed to save settings.", "danger"); }
+                }
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                applySettings();
+                try {
+                    await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+                    showToast("Settings saved.");
+                } catch (err) { showToast("Failed to save settings.", "danger"); }
+            }
+        }
+
+        const generateGoogleCalendarLink = (d) => {
+            const text = encodeURIComponent(`Renew domain: ${d.name}`);
+            const date = new Date(d.renewalDate).toISOString().slice(0, 10).replace(/-/g, '');
+            const details = encodeURIComponent(`Reminder to renew ${d.name} with ${d.provider}. Annual cost: $${d.renewalPrice}.`);
+            return `https://www.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${date}/${date}&details=${details}`;
+        };
+
+        const generateICal = (arr, bulk = false) => {
+            let ical = `BEGIN:VCALENDAR\nVERSION:2.0\n`;
+            arr.forEach(d => {
+                const date = new Date(d.renewalDate).toISOString().slice(0, 10).replace(/-/g, '');
+                ical += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${date}\nDTEND;VALUE=DATE:${date}\nSUMMARY:Renew domain: ${d.name}\nDESCRIPTION:Reminder to renew ${d.name} with ${d.provider}. Annual cost: $${d.renewalPrice}.\nEND:VEVENT\n`;
+            });
+            ical += `END:VCALENDAR`;
+            const blob = new Blob([ical], { type: 'text/calendar' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = bulk ? 'all_renewals.ics' : `renew_${arr[0].name}.ics`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        };
+
+        // Utility
+        document.getElementById('removePicBtn').addEventListener('click', async () => {
+            settings.profilePicture = null;
+            applySettings();
+            if(currentUser) await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+            showToast("Profile picture removed.");
+        });
+        document.getElementById('uploadPicBtn').addEventListener('click', () => document.getElementById('profilePicUpload').click());
+        document.getElementById('profilePicUpload').addEventListener('change', () => document.getElementById('settingsProfileForm').dispatchEvent(new Event('submit')));
+    </script>
+</body>
+</html>
