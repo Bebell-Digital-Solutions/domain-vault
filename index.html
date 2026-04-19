@@ -692,15 +692,15 @@
     <div class="modal" id="upgradeModal">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
             <div class="modal-header">
-                <h3 data-translate-key="upgradeTitle">🔒 Upgrade Your Plan</h3>
+                <h3 data-translate-key="upgradeTitle">🔒  Upgrade Your Plan</h3>
                 <div class="modal-close"><i data-lucide="x"></i></div>
             </div>
             <div class="modal-body">
                 <img src="https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612" alt="Domain Vault" style="width: 84px; height: 84px; object-fit: contain; margin: 0 auto 15px; filter: drop-shadow(0 0 10px var(--primary));">
-                <p style="margin-bottom: 20px; color: var(--text-main); font-size: 1.1rem;">Your Current Plan: <strong id="upgradeCurrentPlan" style="color: var(--primary);"></strong></p>
+                <p style="margin-bottom: 20px; color: var(--text-main); font-size: 1.1rem;"><span data-translate-key="currentPlan">Your Current Plan:</span> <strong id="upgradeCurrentPlan" style="color: var(--primary);"></strong></p>
                 
                 <div class="form-group" style="text-align: left;">
-                    <label class="form-label">Select New Plan</label>
+                    <label class="form-label" data-translate-key="selectNewPlan">Select New Plan</label>
                     <select id="upgradePlanSelect" class="form-control">
                         <option value="Start-up">Start-up (Up to 20 domains)</option>
                         <option value="Business">Business (Up to 50 domains)</option>
@@ -848,6 +848,10 @@
         </div>
     </div>
 
+
+
+    
+
     <!-- DNS Records Modal -->
     <div class="modal" id="dnsModal">
         <div class="modal-content" style="max-width: 700px;">
@@ -912,7 +916,7 @@
         // --- TRANSLATION DATA ---
         const translations = {
             en: {
-                domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Secure Domain Portfolio Manager",
+                domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Secure Domain Manager",
                 dashboard: "Dashboard", allDomains: "All Domains", domainProviders: "Domain Providers", toolsResources: "Tools & Resources",
                 calendar: "Calendar", notifications: "Notifications", settings: "Settings", searchPlaceholder: "Search domains...",
                 dashboardOverview: "Dashboard Overview", addNewDomain: "Add New Domain", totalDomains: "Total Domains",
@@ -937,7 +941,8 @@
                 recommendedProviders: "Recommended Providers", getDeal: "Get Deal", visitTool: "Visit Tool", recommendations: "Recommendations",
                 searchRecommendations: "Search hosting, email...", quickDnsCheck: "Quick DNS Check", enterDomainName: "Enter domain name...", checkDns: "Check DNS", others: "Others", other: "Other",
                 upgradeTitle: "🔒 Upgrade Required", upgradeDesc: "Upgrade your account to add more domains and unlock premium features.", contactAdmin: "Contact Admin to Upgrade", maybeLater: "Maybe Later",
-                reports: "Reports", applyFilter: "Apply Filter", emailReport: "Email Report", downloadCsv: "Download CSV", startDate: "Start Date", endDate: "End Date"
+                reports: "Reports", applyFilter: "Apply Filter", emailReport: "Email Report", downloadCsv: "Download CSV", startDate: "Start Date", endDate: "End Date",
+                currentPlan: "Your Current Plan:", selectNewPlan: "Select New Plan"
             },
             es: {
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Gestor Seguro de Dominios",
@@ -965,7 +970,8 @@
                 recommendedProviders: "Proveedores Recomendados", getDeal: "Obtener Oferta", visitTool: "Visitar Herramienta", recommendations: "Recomendaciones",
                 searchRecommendations: "Buscar hosting, correo...", quickDnsCheck: "Comprobación Rápida DNS", enterDomainName: "Ingrese nombre de dominio...", checkDns: "Comprobar DNS", others: "Otros", other: "Otro",
                 upgradeTitle: "🔒 Actualización Requerida", upgradeDesc: "Actualice su cuenta para agregar más dominios y desbloquear funciones premium.", contactAdmin: "Contactar Admin para Actualizar", maybeLater: "Quizás Más Tarde",
-                reports: "Reportes", applyFilter: "Aplicar Filtro", emailReport: "Enviar por Correo", downloadCsv: "Descargar CSV", startDate: "Fecha de Inicio", endDate: "Fecha de Fin"
+                reports: "Reportes", applyFilter: "Aplicar Filtro", emailReport: "Enviar por Correo", downloadCsv: "Descargar CSV", startDate: "Fecha de Inicio", endDate: "Fecha de Fin",
+                currentPlan: "Tu Plan Actual:", selectNewPlan: "Seleccionar Nuevo Plan"
             }
         };
 
@@ -975,8 +981,6 @@
             { name: "Porkbun", desc: "Great UI & pricing", rating: 5, url: "https://porkbun.com/", icon: "piggy-bank", tags: ["domains"] },
             { name: "Hostinger", desc: "Domain + Hosting bundles", rating: 4.5, url: "https://hostinger.com/", icon: "server", tags: ["domains", "hosting"] }
         ];
-
-        
         const expandedRecommendationsData = [
             ...recommendedProvidersData,
             { name: "Google Workspace", desc: "Professional email & collaboration.", rating: 5, url: "https://workspace.google.com/", icon: "mail", tags: ["email"] },
@@ -1383,10 +1387,13 @@
             document.getElementById('stat-domain-limit').textContent = `/ ${limit === Infinity ? '∞' : limit}`;
 
             apiCall('getUserData', { email: currentUser.email }).then(data => {
-                domains = data.domains || [];
-                providers = data.providers || [];
-                if(data.settings) settings = data.settings;
-                else settings.username = currentUser.email.split('@')[0];
+                // Check if data exists directly, as the backend returns the raw arrays without a "success" flag
+                if(data && !data.error) {
+                    domains = data.domains || [];
+                    providers = data.providers || [];
+                    if(data.settings) settings = data.settings;
+                    else settings.username = currentUser.email.split('@')[0];
+                }
                 
                 applySettings();
                 setLanguage(settings.language);
