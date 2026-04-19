@@ -1,0 +1,286 @@
+/**
+ * ============================================================================
+ * DOMAIN VAULT - GOOGLE APPS SCRIPT API BACKEND
+ * ============================================================================
+ */
+
+// --- CONFIGURATION ---
+const ADMIN_EMAIL = "admin@yourdomain.com"; // Change to your email
+const ADMIN_PHONE = "+1234567890"; // Admin's WhatsApp number
+
+// WhatsApp Cloud API Configuration (Meta)
+const WHATSAPP_ACCESS_TOKEN = "YOUR_META_WHATSAPP_ACCESS_TOKEN";
+const WHATSAPP_PHONE_NUMBER_ID = "YOUR_PHONE_NUMBER_ID";
+
+// --- API ROUTING (Required for external frontends like GitHub Pages) ---
+
+function doPost(e) {
+  try {
+    const params = JSON.parse(e.postData.contents);
+    const action = params.action;
+    let result = {};
+
+    switch (action) {
+      case 'registerUser':
+        result = registerUser(params.email, params.password, params.phone, params.location);
+        break;
+      case 'loginUser':
+        result = loginUser(params.email, params.password);
+        break;
+      case 'getUserData':
+        result = getUserData(params.email);
+        break;
+      case 'saveDomains':
+        result = saveDomains(params.domains, params.email);
+        break;
+      case 'saveProviders':
+        result = saveProviders(params.providers, params.email);
+        break;
+      case 'saveSettings':
+        result = saveSettings(params.settings, params.email);
+        break;
+      default:
+        result = { success: false, message: 'Unknown API action' };
+    }
+
+    // Set JSON headers and return the response
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// Return a basic health check if someone visits the API URL in a browser
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ status: "Domain Vault API is running" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doOptions(e) {
+  // Pass-through for preflight CORS requests
+  return ContentService.createTextOutput('')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+
+// --- CORE FUNCTIONS & DATABASE SETUP ---
+
+function setupDatabase() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = {
+    'Users': ['ID', 'Email', 'Password', 'Phone', 'Location', 'Status', 'Plan', 'CreatedAt'],
+    'Domains': ['ID', 'UserEmail', 'Name', 'Provider', 'PurchaseDate', 'RenewalDate', 'PurchasePrice', 'RenewalPrice', 'AutoRenew'],
+    'Providers': ['ID', 'UserEmail', 'Name', 'URL', 'User', 'Pass', 'UID'],
+    'Settings': ['UserEmail', 'Theme', 'Language', 'Username', 'ProfilePic'],
+    'Notifications': ['ID', 'UserEmail', 'DomainId', 'DomainName', 'DiffDays', 'Type']
+  };
+
+  for (let sheetName in sheets) {
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.appendRow(sheets[sheetName]);
+      sheet.getRange(1, 1, 1, sheets[sheetName].length).setFontWeight("bold");
+      sheet.setFrozenRows(1);
+    }
+  }
+  Logger.log("Database Setup Complete!");
+}
+
+function getSheet(sheetName) {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+}
+
+// --- AUTHENTICATION ---
+
+function registerUser(email, password, phone, location) {
+  const sheet = getSheet('Users');
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1].toLowerCase() === email.toLowerCase()) {
+      return { success: false, message: "Email already registered." };
+    }
+  }
+
+  const userId = Utilities.getUuid();
+  const date = new Date().toISOString();
+  
+  sheet.appendRow([userId, email, password, phone, location, 'Pending', 'Personal', date]);
+  
+  MailApp.sendEmail({
+    to: ADMIN_EMAIL,
+    subject: "New User Registration - Domain Vault",
+    htmlBody: `<h3>New User Registration</h3>
+               <p><b>Email:</b> ${email}</p>
+               <p><b>Phone:</b> ${phone}</p>
+               <p><b>Location:</b> ${location}</p>
+               <p><b>Date:</b> ${date}</p>
+               <p><i>Please go to your Google Sheet ('Users' tab) to change their status to 'Active'.</i></p>`
+  });
+
+  MailApp.sendEmail({
+    to: email,
+    subject: "Welcome to Domain Vault!",
+    htmlBody: `<h3>Welcome to Domain Vault!</h3>
+               <p>Your account has been successfully created and is currently pending activation by our administrators.</p>`
+  });
+
+  sendWhatsApp(ADMIN_PHONE, `New User Registration: ${email} from ${location}. Please activate in Google Sheets.`);
+  sendWhatsApp(phone, `Welcome to Domain Vault! Your account is created and pending activation.`);
+
+  return { success: true, message: "Account created! Pending admin activation." };
+}
+
+function loginUser(email, password) {
+  const sheet = getSheet('Users');
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1].toLowerCase() === email.toLowerCase()) {
+      if (data[i][2] === password) {
+        if (data[i][5] === 'Active') {
+          return { 
+            success: true, 
+            user: { id: data[i][0], email: data[i][1], phone: data[i][3], plan: data[i][6] } 
+          };
+        } else {
+          return { success: false, message: "Account pending activation by Admin." };
+        }
+      } else {
+        return { success: false, message: "Invalid password." };
+      }
+    }
+  }
+  return { success: false, message: "User not found." };
+}
+
+// --- DATA FETCHING & SAVING ---
+
+function getUserData(email) {
+  const fetchSheetData = (sheetName) => {
+    const data = getSheet(sheetName).getDataRange().getValues();
+    const headers = data[0];
+    const rows = [];
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][1] === email || (sheetName === 'Settings' && data[i][0] === email)) {
+        let obj = {};
+        headers.forEach((h, index) => obj[h] = data[i][index]);
+        rows.push(obj);
+      }
+    }
+    return rows;
+  };
+
+  const settingsData = fetchSheetData('Settings');
+  return {
+    domains: fetchSheetData('Domains').map(d => ({...d, id: d.ID, name: d.Name, provider: d.Provider, purchaseDate: d.PurchaseDate, renewalDate: d.RenewalDate, purchasePrice: d.PurchasePrice, renewalPrice: d.RenewalPrice, autoRenew: d.AutoRenew})),
+    providers: fetchSheetData('Providers').map(p => ({...p, id: p.ID, name: p.Name, url: p.URL, user: p.User, pass: p.Pass, uid: p.UID})),
+    settings: settingsData.length > 0 ? {
+      theme: settingsData[0].Theme,
+      language: settingsData[0].Language,
+      username: settingsData[0].Username,
+      profilePicture: settingsData[0].ProfilePic
+    } : null
+  };
+}
+
+function saveDomains(domainsArray, email) {
+  const sheet = getSheet('Domains');
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][1] === email) sheet.deleteRow(i + 1);
+  }
+  domainsArray.forEach(d => {
+    sheet.appendRow([d.id, email, d.name, d.provider, d.purchaseDate, d.renewalDate, d.purchasePrice, d.renewalPrice, d.autoRenew]);
+  });
+  return { success: true };
+}
+
+function saveProviders(providersArray, email) {
+  const sheet = getSheet('Providers');
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][1] === email) sheet.deleteRow(i + 1);
+  }
+  providersArray.forEach(p => {
+    sheet.appendRow([p.id, email, p.name, p.url, p.user, p.pass, p.uid]);
+  });
+  return { success: true };
+}
+
+function saveSettings(settingsObj, email) {
+  const sheet = getSheet('Settings');
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][0] === email) sheet.deleteRow(i + 1);
+  }
+  sheet.appendRow([email, settingsObj.theme, settingsObj.language, settingsObj.username, settingsObj.profilePicture]);
+  return { success: true };
+}
+
+// --- AUTOMATION (Run Daily via Triggers) ---
+
+function checkRenewalsAndNotify() {
+  const domainData = getSheet('Domains').getDataRange().getValues();
+  const usersData = getSheet('Users').getDataRange().getValues();
+  
+  const users = {};
+  for(let i=1; i<usersData.length; i++) {
+    users[usersData[i][1]] = usersData[i][3]; 
+  }
+
+  const now = new Date();
+  now.setHours(0,0,0,0);
+
+  for(let i=1; i<domainData.length; i++) {
+    const email = domainData[i][1];
+    const domainName = domainData[i][2];
+    const renewalDateStr = domainData[i][5];
+    const renewalDate = new Date(renewalDateStr + 'T00:00:00');
+    
+    const diffDays = Math.ceil((renewalDate - now) / (1000 * 60 * 60 * 24));
+    
+    if(diffDays === 30 || diffDays === 7 || diffDays === 1) {
+      const phone = users[email];
+      if(phone) {
+        sendWhatsApp(phone, `Reminder: Your domain ${domainName} expires in ${diffDays} days.`);
+      }
+      MailApp.sendEmail({
+        to: email,
+        subject: `Domain Renewal Reminder: ${domainName}`,
+        body: `Your domain ${domainName} is set to expire in ${diffDays} days. Please log into Domain Vault to manage your renewals.`
+      });
+    }
+  }
+}
+
+// --- WHATSAPP HELPER ---
+function sendWhatsApp(phone, message) {
+  if(!WHATSAPP_ACCESS_TOKEN || WHATSAPP_ACCESS_TOKEN.includes("YOUR_")) return; 
+  
+  const url = `https://graph.facebook.com/v17.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  const payload = {
+    messaging_product: "whatsapp",
+    to: phone.replace(/[^0-9]/g, ''), 
+    type: "text",
+    text: { body: message }
+  };
+  
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "Authorization": `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+  
+  try {
+    UrlFetchApp.fetch(url, options);
+  } catch(e) {
+    Logger.log("WhatsApp Error: " + e.toString());
+  }
+}
