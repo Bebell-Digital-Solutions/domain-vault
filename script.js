@@ -3,8 +3,6 @@
            JAVASCRIPT LOGIC
            ========================================================================== */
 
-        // REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL
-        const API_URL = "https://script.google.com/macros/s/AKfycbzNunJ_PonXh6Yeuj0AXRH4VobBZC2av97qzHeosg3DPbnDkysGXx4kUhghqo4VDSSb-w/exec";
 
         const PLAN_LIMITS = {
             'Personal': 5,
@@ -183,6 +181,16 @@
 
             // Start Matrix Effect
             initMatrix();
+
+            // Restore a previous session, if there is one. The old build logged
+            // you out on every refresh.
+            window.DomainVaultAPI.restore().then(function (user) {
+                if (!user) return;
+                currentUser = user;
+                document.getElementById('auth-overlay').style.display = 'none';
+                if (matrixInterval) clearInterval(matrixInterval);
+                loadDashboardData();
+            });
 
             // Setup Auth Overlay UI
             document.getElementById('tab-login').addEventListener('click', () => switchAuthMode(true));
@@ -463,23 +471,16 @@
             document.getElementById('authMessage').style.display = 'none';
         }
 
+        // Transport lives in backend/web/api.js. It attaches the signed JWT,
+        // refreshes it when it expires, and keeps the session across reloads.
+        // Identity is taken from that token server-side, so the email these
+        // call sites still pass is ignored.
         async function apiCall(action, payload = {}) {
-            if (API_URL === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
-                showToast("Please configure the API_URL in the code first.", "danger");
-                throw new Error("API_URL not configured");
+            if (!window.DomainVaultAPI) {
+                showToast("backend/web/api.js did not load.", "danger");
+                throw new Error("DomainVaultAPI missing");
             }
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: action, ...payload })
-                });
-                return await response.json();
-            } catch (error) {
-                console.error("API Error:", error);
-                showToast("Network error. Check console.", "danger");
-                throw error;
-            }
+            return window.DomainVaultAPI.call(action, payload);
         }
 
         async function fetchLocation() {
@@ -539,6 +540,7 @@
         }
 
         function handleLogout() {
+            window.DomainVaultAPI.signOut();
             currentUser = null;
             document.getElementById('auth-overlay').style.display = 'flex';
             document.getElementById('authForm').reset();
@@ -1151,12 +1153,16 @@
                 document.getElementById('providerName').value = data.name || '';
                 document.getElementById('providerUrl').value = data.url || '';
                 document.getElementById('providerUser').value = data.user || '';
-                document.getElementById('providerPass').value = data.pass || '';
+                // The stored password is never sent to the browser. Leaving this
+                // blank keeps whatever is stored; typing replaces it.
+                document.getElementById('providerPass').value = '';
+                document.getElementById('providerPass').placeholder =
+                    data.hasPassword ? '•••••••• (unchanged)' : 'No password stored';
                 document.getElementById('providerUid').value = data.uid || '';
             } else if(id === 'credentialsModal') {
                 m.querySelector('#credentialsModalTitle').textContent = `${data.name} ${translations[lang].providerCredentials}`;
                 document.getElementById('credUser').textContent = data.user || 'Not set';
-                document.getElementById('credPass').textContent = data.pass ? '••••••••' : 'Not set';
+                document.getElementById('credPass').textContent = data.hasPassword ? '••••••••' : 'Not set';
                 document.getElementById('credUid').textContent = data.uid || 'Not set';
             }
             m.style.display = 'flex';
