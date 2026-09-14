@@ -1,0 +1,22 @@
+{
+  "name": "domain-vault-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Supabase/Postgres backend for Domain Vault",
+  "scripts": {
+    "import": "node scripts/import-from-sheets.mjs",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "serve": "supabase functions serve --env-file .env",
+    "deploy": "supabase functions deploy api lookup billing-webhook reminders",
+    "smoke": "node scripts/smoke-test.mjs",
+    "test": "./supabase/tests/run-tests.sh"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  },
+  "devDependencies": {
+    "supabase": "^2.117.0"
+  }
+}

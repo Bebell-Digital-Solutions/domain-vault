@@ -1,0 +1,10 @@
+# Secrets — never commit. .env holds the service role key and the credential
+# encryption key; either one is a full compromise.
+.env
+.env.*
+!.env.example
+
+node_modules/
+supabase/.temp/
+supabase/.branches/
+export.json
