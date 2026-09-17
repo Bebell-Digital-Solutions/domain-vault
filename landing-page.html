@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Vault | Secure Domain Portfolio Command Center</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* ==========================================================================
+           CSS VARIABLES (From Dashboard)
+           ========================================================================== */
+        :root {
+            --primary: #ff5011;
+            --secondary: #333333;
+            --bg-dark: #000000;
+            --bg-darker: #050505;
+            --bg-card: #121212;
+            --bg-hover: #1a1a1a;
+            
+            --text-main: #f5f5f5;
+            --text-muted: #a0a0a0;
+            --border: rgba(255, 255, 255, 0.1);
+            
+            --success: #51cf66;
+            --warning: #ffd43b;
+            --danger: #ef4444;
+            
+            --shadow-glow: 0 0 30px rgba(255, 80, 17, 0.15);
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            
+            --font-primary: 'Inter', sans-serif;
+            --font-code: 'Fira Code', monospace;
+            --font-tech: 'Orbitron', monospace;
+        }
+
+        /* ==========================================================================
+           GLOBAL & RESET
+           ========================================================================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: var(--font-primary); 
+            background: var(--bg-dark); 
+            color: var(--text-muted); 
+            line-height: 1.7; 
+            overflow-x: hidden; 
+            min-height: 100vh;
+        }
+        
+        h1, h2, h3, h4, h5, h6 { 
+            color: var(--text-main); 
+            font-family: var(--font-tech); 
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        
+        a { text-decoration: none; color: inherit; }
+
+        /* ==========================================================================
+           STRUCTURAL LAYOUT (Vengence UI / OpenCode Style)
+           ========================================================================== */
+        .layout-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            /* The left and right border lines */
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            background: var(--bg-darker);
+            min-height: 100vh;
+        }
+
+        /* Top and bottom border lines for each section */
+        .grid-section {
+            position: relative;
+            padding: 80px 40px;
+        }
+
+        .full-width-line {
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100vw;
+            height: 1px;
+            background-color: var(--border);
+            z-index: 5;
+        }
+
+        .full-width-line.top {
+            bottom: auto;
+            top: 0;
+        }
+
+        /* Crosshairs (+) at the border intersections for that tech blueprint feel */
+        .grid-section::before, .grid-section::after {
+            content: '+';
+            position: absolute;
+            color: var(--text-muted);
+            font-family: var(--font-code);
+            font-size: 14px;
+            bottom: -9px;
+            line-height: 1;
+            z-index: 10;
+        }
+        .grid-section::before { left: -5px; }
+        .grid-section::after { right: -5px; }
+
+        /* ==========================================================================
+           NAVBAR
+           ========================================================================== */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            position: sticky;
+            top: 0;
+            background: rgba(5, 5, 5, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+        }
+
+        .navbar::before, .navbar::after {
+            content: '+';
+            position: absolute;
+            color: var(--text-muted);
+            font-family: var(--font-code);
+            font-size: 14px;
+            bottom: -9px;
+            line-height: 1;
+            z-index: 10;
+        }
+        .navbar::before { left: -5px; }
+        .navbar::after { right: -5px; }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--font-tech);
+            font-size: 1.2rem;
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        .brand i { color: var(--primary); }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-links a {
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .nav-links a:hover { color: var(--primary); }
+
+        /* ==========================================================================
+           BUTTONS & COMPONENTS (From Dashboard)
+           ========================================================================== */
+        .btn {
+            padding: 10px 24px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: var(--font-primary);
+            font-size: 0.95rem;
+        }
+        .btn-primary { 
+            background: var(--primary); 
+            color: white; 
+            box-shadow: 0 0 15px rgba(255, 80, 17, 0.2);
+        }
+        .btn-primary:hover { 
+            transform: translateY(-2px); 
+            box-shadow: var(--shadow-glow); 
+        }
+        .btn-secondary { 
+            background: var(--bg-hover); 
+            color: var(--text-main); 
+            border: 1px solid var(--border); 
+        }
+        .btn-secondary:hover { 
+            background: var(--bg-card); 
+            border-color: var(--primary); 
+            color: var(--primary);
+        }
+
+        .highlight { color: var(--primary); }
+        .code-text { font-family: var(--font-code); font-size: 0.85rem; color: var(--text-muted); }
+
+        /* ==========================================================================
+           HERO SECTION (With Matrix Grid)
+           ========================================================================== */
+        .hero {
+            position: relative;
+            padding: 120px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        /* Sentinel Matrix Animated Background */
+        .sentinel-grid {
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--primary) 1px, transparent 1px), 
+                              linear-gradient(90deg, var(--primary) 1px, transparent 1px);
+            background-size: 40px 40px; 
+            opacity: 0.03; 
+            animation: gridMove 20s linear infinite;
+            z-index: 0;
+        }
+        .sentinel-scan {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(135deg, var(--primary) 0%, transparent 100%); 
+            box-shadow: 0 0 20px var(--primary); 
+            animation: scanDown 4s linear infinite;
+            opacity: 0.3;
+            z-index: 1;
+        }
+        @keyframes gridMove { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, 40px); } }
+        @keyframes scanDown { 0% { top: -2px; opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            max-width: 800px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 80, 17, 0.1);
+            border: 1px solid rgba(255, 80, 17, 0.3);
+            color: var(--primary);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-family: var(--font-code);
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            line-height: 1.1;
+            margin-bottom: 25px;
+            text-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        /* Interactive Dashboard Simulation */
+        .interactive-dashboard {
+            margin-top: 60px;
+            width: 100%;
+            max-width: 1050px;
+            aspect-ratio: 5 / 3;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255, 80, 17, 0.1);
+            position: relative;
+            z-index: 20;
+            text-align: left;
+            animation: float 6s ease-in-out infinite;
+            display: flex;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        
+        .interactive-dashboard::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            z-index: 30;
+        }
+
+        /* Simulator Sidebar */
+        .sim-sidebar {
+            width: 250px;
+            background: var(--bg-darker);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+        .sim-brand {
+            padding: 25px 20px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .sim-brand img { width: 56px; height: 56px; filter: drop-shadow(0 0 8px rgba(255,80,17,0.5)); margin-bottom: 10px; }
+        .sim-brand span.sim-title { font-family: var(--font-tech); color: var(--text-main); font-size: 1.05rem; font-weight: 600; letter-spacing: 0.025em; }
+        .sim-brand span.sim-subtitle { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+        
+        .sim-menu { padding: 15px 0; overflow-y: auto; flex: 1; }
+        .sim-menu::-webkit-scrollbar, .dash-body::-webkit-scrollbar { width: 4px; }
+        .sim-menu::-webkit-scrollbar-thumb, .dash-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        
+        .sim-menu-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .sim-menu-item:hover, .sim-menu-item.active {
+            background: var(--bg-hover);
+            color: var(--text-main);
+            border-left-color: var(--primary);
+        }
+        .sim-menu-item i { width: 18px; height: 18px; color: var(--primary); }
+
+        /* Simulator Main Content */
+        .sim-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); overflow: hidden; }
+        
+        .dash-header {
+            background: var(--bg-darker);
+            padding: 15px 25px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .sim-header-right { display: flex; align-items: center; gap: 15px; }
+
+        .dash-search {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 260px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .sim-badge {
+            font-size: 0.7rem;
+            background: rgba(255,80,17,0.15);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,80,17,0.3);
+            font-weight: 600;
+            text-transform: uppercase;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .sim-badge .status-dot {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 5px var(--success);
+        }
+        .sim-avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: var(--primary);
+            display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: bold;
+        }
+
+        .dash-body { padding: 25px; overflow-y: auto; flex: 1; }
+        .sim-page-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .sim-page-title h3 { font-size: 1.2rem; font-family: var(--font-primary); font-weight: 600; }
+        
+        .dash-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.2); }
+        .dash-table th, .dash-table td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+        .dash-table th { color: var(--text-main); font-weight: 600; font-size: 0.8rem; background: var(--bg-darker); }
+        .dash-table tr:hover td { background: var(--bg-hover); }
+        .dash-table tr:last-child td { border-bottom: none; }
+        .dash-domain { color: var(--text-main); font-weight: 600; font-size: 0.95rem; }
+        
+        .dash-status { padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+        .dash-status.warning { background: rgba(255, 212, 59, 0.1); color: var(--warning); border: 1px solid rgba(255, 212, 59, 0.3); }
+        .dash-status.good { background: rgba(81, 207, 102, 0.1); color: var(--success); border: 1px solid rgba(81, 207, 102, 0.3); }
+
+        .dash-btn {
+            background: rgba(255, 80, 17, 0.1); color: var(--primary); border: 1px solid rgba(255, 80, 17, 0.3);
+            padding: 8px 16px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: var(--transition);
+            display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-primary); font-weight: 500;
+        }
+        .dash-btn:hover { background: var(--primary); color: white; box-shadow: 0 0 10px rgba(255,80,17,0.4); transform: translateY(-1px); }
+        .dash-btn.success { background: rgba(81, 207, 102, 0.1); color: var(--success); border-color: rgba(81, 207, 102, 0.3); cursor: default; box-shadow: none; transform: none; }
+
+        /* ==========================================================================
+           STATS / DASHBOARD PREVIEW
+           ========================================================================== */
+        .dashboard-preview {
+            position: relative;
+            z-index: 10;
+            margin-top: 60px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .stat-card { 
+            background: var(--bg-card); 
+            border: 1px solid var(--border); 
+            border-radius: 12px; 
+            padding: 25px; 
+            display: flex; 
+            flex-direction: column; 
+            transition: var(--transition);
+            position: relative;
+            text-align: left;
+            overflow: hidden;
+        }
+
+        /* The Animated Line / Glow injection */
+        .stat-card::before, .feature-card::before, .pricing-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0;
+            transition: var(--transition);
+            z-index: 5;
+        }
+
+        .stat-card:hover, .feature-card:hover, .pricing-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: var(--shadow-glow); 
+            border-color: rgba(255, 80, 17, 0.3);
+            background: var(--bg-hover);
+        }
+        
+        .stat-card:hover::before, .feature-card:hover::before, .pricing-card:hover::before { opacity: 1; }
+
+        .stat-icon { 
+            width: 50px; height: 50px; 
+            border-radius: 10px; 
+            display: flex; align-items: center; justify-content: center; 
+            background: rgba(255, 80, 17, 0.1); 
+            color: var(--primary); 
+            margin-bottom: 15px; 
+            border: 1px solid rgba(255, 80, 17, 0.2); 
+        }
+        
+        .stat-value { 
+            font-size: 32px; 
+            font-weight: 700; 
+            margin-bottom: 5px; 
+            color: var(--text-main); 
+            font-family: var(--font-tech); 
+        }
+        
+        .stat-label { color: var(--text-muted); font-size: 14px; }
+
+        /* ==========================================================================
+           FEATURES SECTION
+           ========================================================================== */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 40px 30px;
+            border-radius: 12px;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .feature-card p {
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+        }
+
+        .feature-card .icon-wrapper {
+            color: var(--primary);
+        }
+
+        /* ==========================================================================
+           PRICING SECTION
+           ========================================================================== */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 50px;
+        }
+
+        .pricing-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 40px 30px;
+            border-radius: 12px;
+            position: relative;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pricing-card.popular {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(255, 80, 17, 0.1);
+        }
+        .pricing-card.popular::before {
+            opacity: 1; /* Always show the top line for the popular card */
+        }
+
+        .pricing-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .pricing-name {
+            font-family: var(--font-code);
+            color: var(--primary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .pricing-price {
+            font-size: 2.5rem;
+            font-family: var(--font-tech);
+            color: var(--text-main);
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+        }
+
+        .pricing-price span {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-family: var(--font-primary);
+        }
+
+        .pricing-features {
+            list-style: none;
+            margin-bottom: 30px;
+            flex-grow: 1;
+        }
+
+        .pricing-features li {
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pricing-features li i {
+            color: var(--success);
+            width: 16px; height: 16px;
+        }
+
+        /* ==========================================================================
+           FOOTER
+           ========================================================================== */
+        .footer {
+            padding: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-tech);
+            color: var(--text-muted);
+        }
+        .footer-logo i { color: var(--primary); }
+
+        /* ==========================================================================
+           RESPONSIVE
+           ========================================================================== */
+        @media (max-width: 992px) {
+            .hero h1 { font-size: 2.8rem; }
+            .dashboard-preview { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: 1fr; }
+            .pricing-grid { grid-template-columns: 1fr; }
+            .sim-sidebar { display: none; } /* Hide simulator sidebar on mobile */
+        }
+
+        @media (max-width: 768px) {
+            .layout-container {
+                border-left: none;
+                border-right: none;
+            }
+            .grid-section::before, .grid-section::after { display: none; }
+            .navbar::before, .navbar::after { display: none; }
+            .nav-links { display: none; } /* Simplified for mobile */
+            .hero { padding: 80px 20px; }
+            .grid-section { padding: 60px 20px; }
+            .footer { flex-direction: column; gap: 20px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="layout-container">
+        
+        <!-- NAVBAR -->
+        <nav class="navbar">
+            <div class="full-width-line"></div>
+            <div class="brand">
+                <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault Logo" style="height: 28px; filter: drop-shadow(0 0 8px rgba(255,80,17,0.5));"> DOMAIN VAULT
+            </div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#dashboard">Dashboard</a>
+                <a href="#pricing">Pricing</a>
+            </div>
+            <div>
+                <button class="btn btn-secondary" style="margin-right: 10px;">Log In</button>
+                <button class="btn btn-primary">Start Free</button>
+            </div>
+        </nav>
+        
+        
+        
+        
+        
+        
+        
+        
+
+        <!-- HERO SECTION -->
+        <main class="hero grid-section" id="hero">
+            <div class="full-width-line"></div>
+            <div class="sentinel-grid"></div>
+            <div class="sentinel-scan"></div>
+
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 8px var(--primary);"></span>
+                    v2.0.26-BETA is Live
+                </div>
+                <h1>Secure Your <span class="highlight">Domain Portfolio</span></h1>
+                <p>The ultimate command center for all your domains, DNS records, and renewal calendars in one dark, unified vault. Never lose a domain to expiration again.</p>
+                
+                <div class="hero-actions">
+                    <button class="btn btn-primary" style="padding: 15px 30px; font-size: 1.1rem;">
+                        <i data-lucide="zap"></i> Open The Vault
+                    </button>
+                    <button class="btn btn-secondary" style="padding: 15px 30px; font-size: 1.1rem;">
+                        <i data-lucide="github"></i> View Documentation
+                    </button>
+                </div>
+            </div>
+
+            <!-- Interactive Dashboard Simulation -->
+            <div class="interactive-dashboard">
+                
+                <div class="sim-sidebar">
+                    <div class="sim-brand">
+                        <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Logo">
+                        <span class="sim-title">DOMAIN VAULT</span>
+                        <span class="sim-subtitle">Secure Domain Portfolio</span>
+                    </div>
+                    <div class="sim-menu">
+                        <div class="sim-menu-item active"><i data-lucide="layout-dashboard"></i> Dashboard</div>
+                        <div class="sim-menu-item"><i data-lucide="globe"></i> All Domains</div>
+                        <div class="sim-menu-item"><i data-lucide="server"></i> Domain Providers</div>
+                        <div class="sim-menu-item"><i data-lucide="wrench"></i> Tools & Resources</div>
+                        <div class="sim-menu-item"><i data-lucide="calendar"></i> Calendar</div>
+                        <div class="sim-menu-item"><i data-lucide="bar-chart-2"></i> Reports</div>
+                        <div style="margin: 15px 20px; border-top: 1px solid var(--border);"></div>
+                        <div class="sim-menu-item"><i data-lucide="settings"></i> Settings</div>
+                    </div>
+                </div>
+
+                <div class="sim-main">
+                    <div class="dash-header">
+                        <div class="dash-search"><i data-lucide="search"></i> Search domains...</div>
+                        <div class="sim-header-right">
+                            <div class="sim-badge"><span class="status-dot"></span> Personal</div>
+                            <i data-lucide="languages" style="color: var(--text-muted); cursor: pointer; width: 18px; height: 18px;"></i>
+                            <i data-lucide="bell" style="color: var(--text-muted); cursor: pointer; width: 18px; height: 18px;"></i>
+                            <div class="sim-avatar">U</div>
+                        </div>
+                    </div>
+                    
+                    <div class="dash-body">
+                        <div class="sim-page-title">
+                            <h3>Dashboard Overview</h3>
+                            <button class="dash-btn" style="background:var(--primary); color:white; border:none; box-shadow:0 0 10px rgba(255,80,17,0.3);"><i data-lucide="plus" style="width:16px;height:16px;"></i> Add Domain</button>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px; font-family: var(--font-primary); font-weight: 600; color: var(--text-main); font-size: 0.95rem;">Top Urgent Renewals</div>
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th>DOMAIN NAME</th>
+                                    <th>PROVIDER</th>
+                                    <th>STATUS</th>
+                                    <th>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="dash-domain">startup-idea.io</td>
+                                    <td><span style="color:var(--text-muted); display:flex; align-items:center; gap:8px;"><img src="https://logo.clearbit.com/namecheap.com" style="width:18px; height:18px; border-radius:4px; background: white;" onerror="this.style.display='none'">Namecheap</span></td>
+                                    <td><span class="dash-status warning"><i data-lucide="alert-circle" style="width:14px;height:14px;"></i> Expires in 3 days</span></td>
+                                    <td><button class="dash-btn" onclick="this.innerHTML='<i data-lucide=\'check-circle-2\' style=\'width:16px;height:16px;\'></i> Secured'; this.classList.add('success'); this.closest('tr').querySelector('.dash-status').className='dash-status good'; this.closest('tr').querySelector('.dash-status').innerHTML='<i data-lucide=\'shield-check\' style=\'width:14px;height:14px;\'></i> Active'; setTimeout(() => lucide.createIcons(), 10);">1-Click Renew</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="dash-domain">nextbigthing.ai</td>
+                                    <td><span style="color:var(--text-muted); display:flex; align-items:center; gap:8px;"><img src="https://logo.clearbit.com/cloudflare.com" style="width:18px; height:18px; border-radius:4px; background: white;" onerror="this.style.display='none'">Cloudflare</span></td>
+                                    <td><span class="dash-status warning"><i data-lucide="triangle-alert" style="width:14px;height:14px;"></i> DNS Warning</span></td>
+                                    <td><button class="dash-btn" onclick="this.innerHTML='<i data-lucide=\'check-circle-2\' style=\'width:16px;height:16px;\'></i> Propagated'; this.classList.add('success'); this.closest('tr').querySelector('.dash-status').className='dash-status good'; this.closest('tr').querySelector('.dash-status').innerHTML='<i data-lucide=\'shield-check\' style=\'width:14px;height:14px;\'></i> Healthy'; setTimeout(() => lucide.createIcons(), 10);">Fix Records</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="dash-domain">myportfolio.com</td>
+                                    <td><span style="color:var(--text-muted); display:flex; align-items:center; gap:8px;"><img src="https://logo.clearbit.com/godaddy.com" style="width:18px; height:18px; border-radius:4px; background: white;" onerror="this.style.display='none'">GoDaddy</span></td>
+                                    <td><span class="dash-status good"><i data-lucide="shield-check" style="width:14px;height:14px;"></i> Auto-Renew</span></td>
+                                    <td><button class="dash-btn" style="background:transparent; border-color:var(--border); color:var(--text-muted); box-shadow: none;">Manage</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+
+        </main>
+        
+ 
+        
+
+        <!-- FEATURES SECTION -->
+        <section class="grid-section" id="features">
+            <div class="full-width-line"></div>
+            <div style="text-align: center; margin-bottom: 50px;">
+                <span class="code-text" style="color: var(--primary);">// CORE MODULES</span>
+                <h2>Engineered for Scale</h2>
+                <p style="margin-top: 15px; max-width: 500px; margin-inline: auto;">Replace messy spreadsheets with a high-performance system designed for domain investors and agencies.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3><span class="icon-wrapper"><i data-lucide="calendar-clock"></i></span> Automated Renewals Calendar</h3>
+                    <p>Sync expiration dates directly to Google Calendar or download .ics files. Get persistent dashboard notifications before you lose valuable digital real estate.</p>
+                    <a href="#" class="code-text" style="color: var(--text-main);">Explore Calendar &rarr;</a>
+                </div>
+                
+                <div class="feature-card">
+                    <h3><span class="icon-wrapper"><i data-lucide="server"></i></span> Multi-Provider Management</h3>
+                    <p>Store secure credentials for GoDaddy, Namecheap, Cloudflare, and custom registrars in one encrypted vault. Fast-copy access when you need it.</p>
+                    <a href="#" class="code-text" style="color: var(--text-main);">View Supported Providers &rarr;</a>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="icon-wrapper"><i data-lucide="network"></i></span> Live DNS Inspector</h3>
+                    <p>Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard. Verify propagation and structural integrity without opening a terminal.</p>
+                    <a href="#" class="code-text" style="color: var(--text-main);">Try DNS Tool &rarr;</a>
+                </div>
+
+                <div class="feature-card">
+                    <h3><span class="icon-wrapper"><i data-lucide="bar-chart-2"></i></span> Financial Reporting</h3>
+                    <p>Analyze your annual expenses, pinpoint expensive renewals, and export comprehensive CSV reports to hand off to your accounting team.</p>
+                    <a href="#" class="code-text" style="color: var(--text-main);">View Analytics &rarr;</a>
+                </div>
+            </div>
+        </section>
+
+
+
+
+
+
+
+
+        <!-- PRICING SECTION -->
+        <section class="grid-section" id="pricing">
+            <div class="full-width-line"></div>
+            <div style="text-align: center; margin-bottom: 50px;">
+                <span class="code-text" style="color: var(--primary);">// ACCESS PROTOCOL</span>
+                <h2>Select Your License</h2>
+                <p style="margin-top: 15px;">Simple, transparent pricing to secure your infrastructure.</p>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- Start-up Plan -->
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <div class="pricing-name">Start-up</div>
+                        <div class="pricing-price">$9 <span>/mo</span></div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i data-lucide="check-circle-2"></i> Track up to 20 domains</li>
+                        <li><i data-lucide="check-circle-2"></i> 3 Provider Connections</li>
+                        <li><i data-lucide="check-circle-2"></i> Standard Calendar Sync</li>
+                        <li><i data-lucide="check-circle-2"></i> Basic DNS Checks</li>
+                    </ul>
+                    <button class="btn btn-secondary" style="width: 100%;">Initialize</button>
+                </div>
+
+                <!-- Business Plan (Popular) -->
+                <div class="pricing-card popular">
+                    <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 2px 12px; border-radius: 12px; font-size: 0.75rem; font-family: var(--font-code); font-weight: bold; letter-spacing: 1px;">RECOMMENDED</div>
+                    <div class="pricing-header">
+                        <div class="pricing-name">Business</div>
+                        <div class="pricing-price">$29 <span>/mo</span></div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i data-lucide="check-circle-2"></i> Track up to 50 domains</li>
+                        <li><i data-lucide="check-circle-2"></i> Unlimited Providers</li>
+                        <li><i data-lucide="check-circle-2"></i> Premium Calendar Sync</li>
+                        <li><i data-lucide="check-circle-2"></i> Live DNS Inspector</li>
+                        <li><i data-lucide="check-circle-2"></i> WhatsApp Reminders</li>
+                    </ul>
+                    <button class="btn btn-primary" style="width: 100%;">Upgrade Plan</button>
+                </div>
+
+                <!-- Agency Plan -->
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <div class="pricing-name">Agency</div>
+                        <div class="pricing-price">$99 <span>/mo</span></div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i data-lucide="check-circle-2"></i> Unlimited domains</li>
+                        <li><i data-lucide="check-circle-2"></i> Unlimited Providers</li>
+                        <li><i data-lucide="check-circle-2"></i> White-label CSV Exports</li>
+                        <li><i data-lucide="check-circle-2"></i> Priority API Access</li>
+                        <li><i data-lucide="check-circle-2"></i> 24/7 Priority Support</li>
+                    </ul>
+                    <button class="btn btn-secondary" style="width: 100%;">Contact Sales</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="footer">
+            <div class="full-width-line top"></div>
+            <div class="footer-logo">
+                <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault Logo" style="height: 24px; opacity: 0.8; filter: drop-shadow(0 0 5px rgba(255,80,17,0.3));">
+                DOMAIN VAULT
+            </div>
+            <div class="code-text" style="color: var(--text-muted);">
+                &copy; 2026 Project Freedom ✊. System Online.
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Initialize Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
