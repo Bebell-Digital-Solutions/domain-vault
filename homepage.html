@@ -1,1 +1,1133 @@
 
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Vault | Secure Domain Portfolio Command Center</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+     <!-- Favicon -->
+    <link rel="icon" href="https://bucket.mlcdn.com/a/3336/3336910/images/115f0fdbe1cc012228f0c234e8b4f909d2e7ab69.png">   
+
+<link rel="stylesheet" href="path/to/font-awesome/css/font-awesome.min.css">   
+    
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        code: ['Fira Code', 'monospace'],
+                        tech: ['Orbitron', 'monospace'],
+                    },
+                    colors: {
+                        black: '#000000',
+                        brand: {
+                            primary: '#ff5011', 
+                            secondary: '#333333',
+                            bgDark: '#000000',
+                            bgDarker: '#050505',
+                            card: '#121212',
+                            hover: '#1a1a1a',
+                            textMain: '#f5f5f5',
+                            muted: '#a0a0a0',
+                            border: 'rgba(255, 255, 255, 0.1)',
+                            success: '#51cf66',
+                            warning: '#ffd43b',
+                            danger: '#ef4444',
+                        }
+                    },
+                    boxShadow: {
+                        'glow': '0 0 30px rgba(255, 80, 17, 0.15)',
+                    },
+                    letterSpacing: {
+                        tight: '-0.02em',
+                    },
+                    animation: {
+                        'marquee': 'marquee 30s linear infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        marquee: {
+                            '0%': { transform: 'translateX(0%)' },
+                            '100%': { transform: 'translateX(-100%)' },
+                        },
+                        float: {
+                            '0%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                            '100%': { transform: 'translateY(0px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    
+    
+
+    <style>
+        /* Custom scrollbar for webkit to match the dark aesthetic */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #262626; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #404040; }
+
+        body { background-color: #000000; color: #A3A3A3; }
+        
+        
+        
+.logo-swap {
+    background-image: url('https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png');
+    transition: background-image 0.3s ease, transform 0.3s ease;
+}
+.logo-swap:hover {
+    background-image: url('YOUR_HOVER_IMAGE_URL_HERE');
+    transform: scale(1.1);
+}        
+        
+        
+
+        /* Smooth height transition for FAQ Accordion */
+        .faq-answer {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease-out;
+        }
+        .faq-answer.open {
+            grid-template-rows: 1fr;
+        }
+        .faq-answer-inner { overflow: hidden; }
+
+        /* Ensure canvas doesnt block interactions */
+        #matrix-canvas { pointer-events: none; }
+    </style>
+    
+    
+    
+    <style>
+.icon-tilt {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: center;
+}
+.group:hover .icon-tilt {
+    transform: scale(1.15) rotate(-8deg);
+}
+</style>
+    
+    
+    
+    
+    
+</head>
+
+
+
+
+<body class="font-sans antialiased selection:bg-brand-primary selection:text-white flex flex-col min-h-screen bg-brand-bgDark text-brand-muted">
+
+    <nav class="sticky top-0 z-50 w-full backdrop-blur-md bg-brand-bgDark/80 border-b border-brand-border transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        
+        
+            <!-- Left: Brand -->
+<div class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight group">
+
+    <div class="relative w-9 h-9">
+        <!-- Default logo -->
+        <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" 
+             alt="Domain Vault Logo" 
+             class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 group-hover:opacity-0" />
+             
+        <!-- Hover logo -->
+        <img src="https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612" 
+             alt="Domain Vault Logo Hover" 
+             class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100" />
+    </div>
+    Domain Vault
+</div>
+            
+            
+            
+            
+            
+
+            <!-- Center: Muted Links (Hidden on mobile) -->
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-brand-muted">
+                <a href="#features" class="hover:text-brand-textMain transition-colors duration-300">Features</a>
+                <a href="#integration" class="hover:text-brand-textMain transition-colors duration-300">Integrations</a>
+                <a href="#pricing" class="hover:text-brand-textMain transition-colors duration-300">Pricing</a>
+                <a href="#download" class="hover:text-brand-textMain transition-colors duration-300">Download</a>
+                <a href="#faq" class="hover:text-brand-textMain transition-colors duration-300">FAQ</a>
+            </div>
+
+            <!-- Right: Primary CTA -->
+            <div class="flex items-center gap-4">
+                <a href="#" class="hidden sm:block text-sm font-medium text-brand-muted hover:text-brand-textMain transition-colors duration-300">Log in</a>
+                <a href="#pricing" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <header class="relative pt-24 pb-16 md:pt-32 md:pb-24 flex flex-col items-center text-center border-b border-brand-border px-6 overflow-hidden">
+
+        <!-- Animated Matrix Background Canvas (Increased opacity here too) -->
+        <canvas id="matrix-canvas" class="absolute inset-0 z-0 opacity-80"></canvas>
+
+        <!-- Gradient Overlay: Adjusted opacities to let the matrix shine through more -->
+        <div class="absolute inset-0 z-[1] bg-gradient-to-b from-brand-bgDark/20 via-brand-bgDark/60 to-brand-bgDark pointer-events-none"></div>
+        <div class="absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-brand-bgDark/40 to-brand-bgDark pointer-events-none"></div>
+
+        <!-- Hero Content Wrapper (Z-index ensures it sits above the matrix) -->
+        <div class="relative z-10 flex flex-col items-center w-full">
+            <!-- Pill Badge -->
+            <div class="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-bgDark/50 backdrop-blur-sm px-3 py-1 mb-8">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-primary shadow-[0_0_8px_rgba(255,80,17,0.8)]"></span>
+                <span class="text-xs font-medium text-brand-muted uppercase tracking-wider font-tech">v2.0.26-BETA is Live</span>
+            </div>
+
+            <!-- Headline & Subtitle -->
+            <h1 class="text-4xl md:text-6xl font-semibold tracking-tight text-brand-textMain mb-6 max-w-4xl leading-tight">
+                Secure Your <span class="text-brand-primary drop-shadow-[0_0_15px_rgba(255,80,17,0.3)]">Domain Portfolio</span>
+            </h1>
+            <p class="text-base md:text-lg text-brand-muted leading-relaxed max-w-2xl mb-10">
+                The ultimate command center for all your domains, DNS records, and renewal calendars in one dark, unified vault. Never lose a domain to expiration again.
+            </p>
+
+            <!-- Inline CTA Flex Container -->
+            <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                <button class="w-full sm:w-auto bg-brand-primary hover:bg-[#e6460f] text-white rounded-md px-6 py-3 font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-glow">
+                    Open The Vault <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+                <button class="w-full sm:w-auto bg-brand-bgDark/50 backdrop-blur-sm border border-brand-secondary hover:border-brand-muted text-brand-textMain rounded-md px-6 py-3 font-medium transition-colors duration-300 flex items-center justify-center gap-2">
+                    View Documentation
+                </button>
+            </div>
+
+
+
+            <!-- Interactive Dashboard Simulation -->
+            <div class="mt-20 w-full max-w-[1050px] aspect-[5/3] bg-brand-card border border-brand-border rounded-xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(255,80,17,0.15)] relative z-20 text-left flex mx-auto animate-float">
+
+                <!-- Top glowing line -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-30"></div>
+
+                <!-- Simulator Sidebar -->
+                <div class="hidden md:flex flex-col w-[250px] bg-brand-bgDarker border-r border-brand-border z-10">
+                    <div class="pt-[25px] pb-[15px] px-[20px] flex flex-col items-center border-b border-brand-border bg-black/20 text-center">
+                        <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Logo" class="w-14 h-14 mb-2.5 drop-shadow-[0_0_8px_rgba(255,80,17,0.5)]">
+                        <span class="font-tech text-brand-textMain text-[1.05rem] font-semibold tracking-wide">DOMAIN VAULT</span>
+                        <span class="text-xs text-brand-muted mt-1">Secure Domain Portfolio</span>
+                    </div>
+
+                    <div class="py-[15px] overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-brand-border scrollbar-track-transparent">
+                        <div class="px-[20px] py-[12px] flex items-center gap-3 text-[0.85rem] cursor-pointer transition-colors duration-300 bg-brand-hover text-brand-textMain border-l-4 border-brand-primary">
+                            <i data-lucide="layout-dashboard" class="w-[18px] h-[18px] text-brand-primary"></i> Dashboard
+                        </div>
+                        <div class="px-[20px] py-[12px] flex items-center gap-3 text-[0.85rem] text-brand-muted hover:bg-brand-hover hover:text-brand-textMain border-l-4 border-transparent hover:border-brand-primary transition-colors cursor-pointer">
+                            <i data-lucide="globe" class="w-[18px] h-[18px] text-brand-primary"></i> All Domains
+                        </div>
+                        <div class="px-[20px] py-[12px] flex items-center gap-3 text-[0.85rem] text-brand-muted hover:bg-brand-hover hover:text-brand-textMain border-l-4 border-transparent hover:border-brand-primary transition-colors cursor-pointer">
+                            <i data-lucide="server" class="w-[18px] h-[18px] text-brand-primary"></i> Domain Providers
+                        </div>
+                        <div class="px-[20px] py-[12px] flex items-center gap-3 text-[0.85rem] text-brand-muted hover:bg-brand-hover hover:text-brand-textMain border-l-4 border-transparent hover:border-brand-primary transition-colors cursor-pointer">
+                            <i data-lucide="wrench" class="w-[18px] h-[18px] text-brand-primary"></i> Tools & Resources
+                        </div>
+                        <div class="px-[20px] py-[12px] flex items-center gap-3 text-[0.85rem] text-brand-muted hover:bg-brand-hover hover:text-brand-textMain border-l-4 border-transparent hover:border-brand-primary transition-colors cursor-pointer">
+                            <i data-lucide="calendar" class="w-[18px] h-[18px] text-brand-primary"></i> Calendar
+                        </div>
+                        <div class="px-[20px] py-[12px] flex items-center gap-3 text-[0.85rem] text-brand-muted hover:bg-brand-hover hover:text-brand-textMain border-l-4 border-transparent hover:border-brand-primary transition-colors cursor-pointer">
+                            <i data-lucide="bar-chart-2" class="w-[18px] h-[18px] text-brand-primary"></i> Reports
+                        </div>
+                        <div class="my-[15px] mx-[20px] border-t border-brand-border"></div>
+                        <div class="px-[20px] py-[12px] flex items-center gap-3 text-[0.85rem] text-brand-muted hover:bg-brand-hover hover:text-brand-textMain border-l-4 border-transparent hover:border-brand-primary transition-colors cursor-pointer">
+                            <i data-lucide="settings" class="w-[18px] h-[18px] text-brand-primary"></i> Settings
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulator Main Content -->
+                <div class="flex-1 flex flex-col bg-brand-card overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-brand-bgDarker px-[25px] py-[15px] border-b border-brand-border flex items-center justify-between">
+                        <div class="bg-brand-hover border border-brand-border rounded-full py-2 px-[15px] flex items-center gap-2.5 w-[260px] text-[0.85rem] text-brand-muted">
+                            <i data-lucide="search" class="w-4 h-4"></i> Search domains...
+                        </div>
+
+                        <div class="flex items-center gap-[15px]">
+                            <div class="text-[0.7rem] bg-brand-primary/15 text-brand-primary py-1 px-3 rounded-full border border-brand-primary/30 font-semibold uppercase flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-brand-success shadow-[0_0_5px_var(--success)]"></span> Personal
+                            </div>
+                            <i data-lucide="languages" class="text-brand-muted cursor-pointer w-[18px] h-[18px]"></i>
+                            <i data-lucide="bell" class="text-brand-muted cursor-pointer w-[18px] h-[18px]"></i>
+                            <div class="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center text-white text-[0.85rem] font-bold">U</div>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-[25px] overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-brand-border scrollbar-track-transparent">
+                        <div class="flex justify-between items-center mb-[25px]">
+                            <h3 class="text-[1.2rem] font-sans font-semibold text-brand-textMain">Dashboard Overview</h3>
+                            <button class="bg-brand-primary text-white border-none shadow-[0_0_10px_rgba(255,80,17,0.3)] py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:-translate-y-px flex items-center gap-1.5 font-medium">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Add Domain
+                            </button>
+                        </div>
+
+                        <div class="mb-[20px] font-sans font-semibold text-brand-textMain text-[0.95rem]">Top Urgent Renewals</div>
+
+                        <table class="w-full border-collapse bg-brand-card border border-brand-border rounded-xl overflow-hidden shadow-[0_5px_25px_rgba(0,0,0,0.2)]">
+                            <thead>
+                                <tr class="bg-brand-bgDarker">
+                                    <th class="p-[15px] text-left text-brand-textMain font-semibold text-[0.8rem] border-b border-brand-border">DOMAIN NAME</th>
+                                    <th class="p-[15px] text-left text-brand-textMain font-semibold text-[0.8rem] border-b border-brand-border">PROVIDER</th>
+                                    <th class="p-[15px] text-left text-brand-textMain font-semibold text-[0.8rem] border-b border-brand-border">STATUS</th>
+                                    <th class="p-[15px] text-left text-brand-textMain font-semibold text-[0.8rem] border-b border-brand-border">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="hover:bg-brand-hover transition-colors group">
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem] text-brand-textMain font-semibold">startup-idea.io</td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="text-brand-muted flex items-center gap-2">
+                                            <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Namecheap-icon.png" class="w-[18px] h-[18px] rounded bg-white" onerror="this.style.display='none'">Namecheap
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="bg-brand-warning/10 text-brand-warning border border-brand-warning/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5">
+                                            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Expires in 3 days
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <button class="bg-brand-primary/10 text-brand-primary border border-brand-primary/30 py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:bg-brand-primary hover:text-white hover:shadow-[0_0_10px_rgba(255,80,17,0.4)] hover:-translate-y-px inline-flex items-center gap-1.5 font-medium" onclick="this.innerHTML='<i data-lucide=\'check-circle-2\' class=\'w-4 h-4\'></i> Secured'; this.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-2 px-4 rounded-md text-[0.8rem] cursor-default inline-flex items-center gap-1.5 font-medium'; const statusSpan = this.closest('tr').querySelector('td:nth-child(3) span'); statusSpan.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5'; statusSpan.innerHTML='<i data-lucide=\'shield-check\' class=\'w-3.5 h-3.5\'></i> Active'; setTimeout(() => lucide.createIcons(), 10);">
+                                            Renew Domain
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-brand-hover transition-colors group">
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem] text-brand-textMain font-semibold">nextbigthing.ai</td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="text-brand-muted flex items-center gap-2">
+                                            <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Cloudflare-icon.png" class="w-[18px] h-[18px] rounded bg-white" onerror="this.style.display='none'">Cloudflare
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="bg-brand-warning/10 text-brand-warning border border-brand-warning/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5">
+                                            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Expires in 10 days
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <button class="bg-brand-primary/10 text-brand-primary border border-brand-primary/30 py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:bg-brand-primary hover:text-white hover:shadow-[0_0_10px_rgba(255,80,17,0.4)] hover:-translate-y-px inline-flex items-center gap-1.5 font-medium" onclick="this.innerHTML='<i data-lucide=\'check-circle-2\' class=\'w-4 h-4\'></i> Propagated'; this.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-2 px-4 rounded-md text-[0.8rem] cursor-default inline-flex items-center gap-1.5 font-medium'; const statusSpan = this.closest('tr').querySelector('td:nth-child(3) span'); statusSpan.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5'; statusSpan.innerHTML='<i data-lucide=\'shield-check\' class=\'w-3.5 h-3.5\'></i> Healthy'; setTimeout(() => lucide.createIcons(), 10);">
+                                            Renew Domain
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-brand-hover transition-colors group">
+                                    <td class="p-[15px] text-left text-[0.85rem] text-brand-textMain font-semibold">myportfolio.com</td>
+                                    <td class="p-[15px] text-left text-[0.85rem]">
+                                        <span class="text-brand-muted flex items-center gap-2">
+                                            <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/godaddy-icon.png" class="w-[18px] h-[18px] rounded bg-white" onerror="this.style.display='none'">GoDaddy
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left text-[0.85rem]">
+                                        <span class="bg-brand-success/10 text-brand-success border border-brand-success/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5">
+                                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Auto-Renew
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left text-[0.85rem]">
+                                        <button class="bg-transparent text-brand-muted border border-brand-border py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:bg-brand-card hover:border-brand-primary hover:text-brand-primary inline-flex items-center gap-1.5 font-medium shadow-none">
+                                            Manage
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <section class="py-12 border-b border-brand-border bg-brand-bgDarker overflow-hidden flex flex-col items-center">
+        <p class="text-brand-muted text-sm uppercase tracking-widest font-tech mb-8">Integrated seamlessly with</p>
+
+        <!-- Marquee Container with fade gradient masks on the sides -->
+        <div class="w-full overflow-hidden [mask-image:_linear-gradient(to_right,transparent_0,_black_128px,_black_calc(100%-128px),transparent_100%)]">
+            <!-- Group container for marquee to pause entirely on hover -->
+            <div class="inline-flex flex-nowrap animate-marquee hover:[animation-play-state:paused] w-max">
+                <ul class="flex items-center justify-center md:justify-start [&_li]:mx-10 [&_img]:max-w-none [&_img]:h-8 [&_img]:grayscale [&_img]:opacity-50">
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/cloudflare.png" alt="Cloudflare" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/godaddy.png" alt="GoDaddy" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/porkbun.png" alt="Namecheap" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/hostinger.png" alt="IONOS" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/namecheap.png" alt="AWS" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                </ul>
+                <!-- Duplicated list for seamless infinite scroll -->
+                <ul class="flex items-center justify-center md:justify-start [&_li]:mx-10 [&_img]:max-w-none [&_img]:h-8 [&_img]:grayscale [&_img]:opacity-50" aria-hidden="true">
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/cloudflare.png" alt="Cloudflare" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/godaddy.png" alt="GoDaddy" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/porkbun.png" alt="Namecheap" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/hostinger.png" alt="IONOS" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                    <li><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/namecheap.png" alt="AWS" class="hover:grayscale-0 hover:opacity-100 transition-all duration-300"></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <section class="py-24 border-b border-brand-border px-6" id="integration">
+        <div class="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-16">
+            <!-- Left Text -->
+            <div class="flex-1 lg:pr-12">
+                <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-brand-textMain mb-4">
+                    Connect everywhere. <span class="text-brand-primary drop-shadow-[0_0_15px_rgba(255,80,17,0.3)]">Control from here.</span>
+                </h2>
+                <p class="text-brand-muted leading-relaxed mb-8 text-lg">
+                    Store secure API credentials for GoDaddy, Namecheap, Cloudflare, AWS, and custom registrars in one encrypted vault. We pull your entire portfolio into a single interface automatically.
+                </p>
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-center gap-3 text-sm text-brand-muted">
+                        <i data-lucide="check" class="w-5 h-5 text-brand-primary"></i>
+                        AES-256 encrypted credential storage
+                    </li>
+                    <li class="flex items-center gap-3 text-sm text-brand-muted">
+                        <i data-lucide="check" class="w-5 h-5 text-brand-primary"></i>
+                        Automated daily portfolio sync
+                    </li>
+                    <li class="flex items-center gap-3 text-sm text-brand-muted">
+                        <i data-lucide="check" class="w-5 h-5 text-brand-primary"></i>
+                        Unified 1-click login portals
+                    </li>
+                </ul>
+                <button class="bg-brand-card border border-brand-border text-brand-textMain hover:border-brand-muted rounded-md px-5 py-2.5 font-medium transition-colors">
+                    View Supported Providers
+                </button>
+            </div>
+
+            <!-- Right UI Snippet -->
+            <div class="flex-1 w-full relative">
+
+                <!-- Top glowing line -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-30"></div>                     
+            
+                <div class="rounded-xl border border-brand-border bg-brand-card p-6 shadow-none">
+                    <div class="text-xs font-medium text-brand-muted uppercase tracking-wider mb-4 border-b border-brand-border pb-2 font-tech">Active Connections</div>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-lg p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded bg-whit p-0 flex items-center justify-center">
+                                    <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/cloudflare-button.webp" alt="CF" class="w-full" onerror="this.style.display='none'">
+                                </div>
+                                <div>
+                                    <div class="text-brand-textMain text-sm font-medium">Cloudflare</div>
+                                    <div class="text-brand-muted text-xs">Last sync: 2 mins ago</div>
+                                </div>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 text-xs text-brand-success"><span class="w-1.5 h-1.5 rounded-full bg-brand-success"></span> Connected</span>
+                        </div>
+                        
+                        
+                        
+                        
+
+                        <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-lg p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded bg-whit p-0 flex items-center justify-center">
+                                    <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/namecheap-button.webp" alt="NC" class="w-full" onerror="this.style.display='none'">
+                                </div>
+                                <div>
+                                    <div class="text-brand-textMain text-sm font-medium">Namecheap</div>
+                                    <div class="text-brand-muted text-xs">Last sync: 1 hour ago</div>
+                                </div>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 text-xs text-brand-success"><span class="w-1.5 h-1.5 rounded-full bg-brand-success"></span> Connected</span>
+                        </div>
+
+                        <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-lg p-4 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded bg-brand-hover border border-brand-border flex items-center justify-center">
+                                    <i data-lucide="plus" class="w-5 h-5 text-brand-muted"></i>
+                                </div>
+                                <div class="text-brand-muted text-sm font-medium">Add Provider</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <section class="py-24 border-b border-brand-border px-6" id="features">
+        <div class="max-w-6xl mx-auto">
+            <!-- Full Width Header -->
+            <div class="mb-16 md:w-2/3">
+                <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-brand-textMain mb-4">
+                    Everything Domain Vault does.
+                </h2>
+                <p class="text-brand-muted leading-relaxed text-lg">
+                    Replace messy spreadsheets with a high-performance system designed specifically for domain investors, agencies, and IT administrators.
+                </p>
+            </div>
+
+            <!-- Standard CSS Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- Card 1 -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <!-- Top glowing line on hover -->
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <!-- Matrix Background -->
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="calendar-clock" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Automated Renewal Calendar</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Sync expiration dates directly to Google Calendar or Apple Calendar. Get dashboard notifications before you lose valuable digital real estate.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <!-- Top glowing line on hover -->
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <!-- Matrix Background -->
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="network" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Live DNS Inspector</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard. Verify propagation and structural integrity without opening a terminal.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <!-- Top glowing line on hover -->
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <!-- Matrix Background -->
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="bar-chart-2" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Financial Reporting</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Analyze your annual expenses, pinpoint expensive renewals, and export comprehensive CSV reports to hand off to your accounting team.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+<section class="py-24 border-b border-brand-border px-6 bg-brand-bgDarker" id="download">
+    <div class="max-w-5xl mx-auto text-center">
+        <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-brand-textMain mb-4">
+            Up and running in a minute.
+        </h2>
+        <p class="text-brand-muted leading-relaxed mb-12">
+            Deploy the Vault locally or use our secure cloud. Desktop clients are available for all major platforms.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            <!-- Mac Card -->
+            <div class="bg-brand-card border border-brand-border rounded-xl p-6 hover:border-brand-secondary transition-colors group relative overflow-hidden">
+                <!-- Top glowing line on hover -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <!-- Replaced lucide/apple icon with mac.webp image -->
+                    <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/mac.webp" 
+                         alt="macOS" 
+                         class="w-8 h-8 object-contain icon-tilt" />
+                    <div class="text-lg font-semibold text-brand-textMain">macOS</div>
+                </div>
+                <div class="text-sm text-brand-muted mb-6">Requires macOS 11.0 or later. Apple Silicon (M1/M2/M3) natively supported.</div>
+                <button class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow">
+                    Download for Mac
+                </button>
+            </div>
+
+            <!-- Windows Card -->
+            <div class="bg-brand-card border border-brand-border rounded-xl p-6 hover:border-brand-secondary transition-colors group relative overflow-hidden">
+                <!-- Top glowing line on hover -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <!-- Replaced SVG with windows.webp image -->
+                    <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/windows.webp" 
+                         alt="Windows" 
+                         class="w-8 h-8 object-contain icon-tilt" />
+                    <div class="text-lg font-semibold text-brand-textMain">Windows</div>
+                </div>
+                <div class="text-sm text-brand-muted mb-6">Requires Windows 10 or 11. 64-bit architecture required.</div>
+                <button class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow">
+                    Download for Windows
+                </button>
+            </div>
+
+            <!-- Linux Card -->
+            <div class="bg-brand-card border border-brand-border rounded-xl p-6 hover:border-brand-secondary transition-colors group relative overflow-hidden">
+                <!-- Top glowing line on hover -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <!-- Replaced lucide terminal icon with windows.webp image (as provided) -->
+                    <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/windows.webp" 
+                         alt="Linux" 
+                         class="w-8 h-8 object-contain icon-tilt" />
+                    <div class="text-lg font-semibold text-brand-textMain">Linux</div>
+                </div>
+                <div class="text-sm text-brand-muted mb-6">Available as AppImage, Snap, or Debian package (.deb) for Ubuntu/Debian.</div>
+                <button class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow">
+                    Download for Linux
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <section class="py-24 border-b border-brand-border px-6 bg-brand-bgDark" id="pricing">
+
+    
+        <div class="max-w-6xl mx-auto">
+
+            <!-- Pricing Header & Explanation -->
+            <div class="max-w-3xl mx-auto text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-brand-textMain mb-6">
+                    Transparent, powerful pricing.
+                </h2>
+                
+                
+                
+                
+                
+                
+                <div class="bg-brand-card/50 border border-brand-border rounded-lg p-6 inline-block text-left">
+                        
+            
+                
+                    <div class="flex items-start gap-4">
+                        <div class="mt-1 bg-brand-bgDarker rounded-full p-2 border border-brand-border">
+                        
+                        
+                        
+                        
+                            <i data-lucide="info" class="w-5 h-5 text-brand-primary"></i>
+                            
+                            
+                        </div>
+                        <div>
+                            <h4 class="text-brand-textMain font-medium mb-1">Why an annual subscription?</h4>
+                            <p class="text-brand-muted text-sm leading-relaxed max-w-2xl">
+                                Your yearly fee doesn't just unlock the app—it covers continuous AES-256 encrypted cloud backups for your vault, sustains daily automated synchronization with multiple provider APIs, and supports ongoing active development of new registrar integrations and critical security updates.
+                            </p>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3 Column Pricing Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+                <!-- Personal Plan -->
+                <div class="bg-brand-card border border-brand-border rounded-xl p-8 flex flex-col hover:border-brand-secondary transition-colors group relative overflow-hidden">
+                    <!-- Top glowing line on hover -->
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                    <h3 class="text-xl font-semibold text-brand-textMain mb-2">Personal</h3>
+                    <p class="text-brand-muted text-sm mb-6 h-10">Perfect for individuals and small hobbyist portfolios.</p>
+                    <div class="flex items-baseline gap-1 mb-8">
+                        <span class="text-4xl font-bold text-brand-textMain">$29</span>
+                        <span class="text-brand-muted text-sm">/year</span>
+                    </div>
+                    <ul class="space-y-4 mb-8 flex-1">
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Track up to <strong>5 Domains</strong>
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> 2 Connected Providers
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Basic Calendar Sync
+                        </li>
+                    </ul>
+                    <button class="w-full bg-brand-bgDark border border-brand-border hover:border-brand-muted text-brand-textMain rounded-md py-2.5 font-medium transition-colors">
+                        Get Personal
+                    </button>
+                </div>
+
+                <!-- Start-up Plan (Highlighted) -->
+                <div class="bg-brand-card border border-brand-primary/50 relative rounded-xl p-8 flex flex-col shadow-[0_0_30px_rgba(255,80,17,0.1)] transform md:-translate-y-2 group">
+                    <!-- Top glowing line on hover -->
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 rounded-t-xl"></div>
+
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-primary text-white text-xs font-bold uppercase tracking-wider py-1 px-3 rounded-full z-40">
+                        Most Popular
+                    </div>
+                    <h3 class="text-xl font-semibold text-brand-textMain mb-2">Start-up</h3>
+                    <p class="text-brand-muted text-sm mb-6 h-10">Ideal for growing projects and small SaaS teams.</p>
+                    <div class="flex items-baseline gap-1 mb-8">
+                        <span class="text-4xl font-bold text-brand-textMain">$48</span>
+                        <span class="text-brand-muted text-sm">/year</span>
+                    </div>
+                    <ul class="space-y-4 mb-8 flex-1">
+                        <li class="flex items-center gap-3 text-sm text-brand-textMain font-medium">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Track up to <strong>20 Domains</strong>
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> 5 Connected Providers
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> DNS Inspector Tools
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Priority Email Support
+                        </li>
+                    </ul>
+                    <button class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors shadow-glow">
+                        Get Start-up
+                    </button>
+                </div>
+
+                <!-- Business Plan -->
+                <div class="bg-brand-card border border-brand-border rounded-xl p-8 flex flex-col hover:border-brand-secondary transition-colors group relative overflow-hidden">
+                    <!-- Top glowing line on hover -->
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                    <h3 class="text-xl font-semibold text-brand-textMain mb-2">Business</h3>
+                    <p class="text-brand-muted text-sm mb-6 h-10">Serious capability for established businesses.</p>
+                    <div class="flex items-baseline gap-1 mb-8">
+                        <span class="text-4xl font-bold text-brand-textMain">$79</span>
+                        <span class="text-brand-muted text-sm">/year</span>
+                    </div>
+                    <ul class="space-y-4 mb-8 flex-1">
+                        <li class="flex items-center gap-3 text-sm text-brand-textMain font-medium">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Track up to <strong>50 Domains</strong>
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Unlimited Providers
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Financial Export Reports
+                        </li>
+                        <li class="flex items-center gap-3 text-sm text-brand-muted">
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Webhook Integrations
+                        </li>
+                    </ul>
+                    <button class="w-full bg-brand-bgDark border border-brand-border hover:border-brand-muted text-brand-textMain rounded-md py-2.5 font-medium transition-colors">
+                        Get Business
+                    </button>
+                </div>
+            </div>
+
+            <!-- Horizontal Agency Card -->
+            <div class="w-full bg-brand-bgDarker border border-brand-border hover:border-brand-primary/50 transition-colors rounded-xl p-8 flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden group">
+                <!-- Top glowing line on hover -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+
+                <!-- Decorative background elements -->
+                <div class="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-brand-primary/5 to-transparent pointer-events-none"></div>
+                <i data-lucide="infinity" class="absolute -right-8 -bottom-8 w-64 h-64 text-brand-primary/5 pointer-events-none transform -rotate-12"></i>
+
+                <div class="relative z-10 flex-1">
+                    <div class="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-bgDark px-3 py-1 mb-4">
+                        <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+                        <span class="text-xs font-medium text-brand-muted uppercase tracking-wider font-tech">Ultimate Scale</span>
+                    </div>
+                    <h3 class="text-2xl font-semibold text-brand-textMain mb-3">Agency</h3>
+                    <p class="text-brand-muted text-sm leading-relaxed max-w-2xl">
+                        Designed for domain investors, digital agencies, and large IT departments. Track an <strong class="text-brand-textMain">infinite number of domains</strong> across all your accounts. Includes dedicated onboarding, bulk import tools, and early access to beta features.
+                    </p>
+                </div>
+
+                <div class="relative z-10 flex flex-col sm:flex-row items-center gap-6 w-full lg:w-auto">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-4xl font-bold text-brand-textMain">$98</span>
+                        <span class="text-brand-muted text-sm">/year</span>
+                    </div>
+                    <button class="w-full sm:w-auto bg-brand-textMain text-black hover:bg-white rounded-md px-8 py-3 font-medium transition-colors flex items-center justify-center gap-2">
+                        Get Agency <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <section class="py-24 border-b border-brand-border px-6" id="faq">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-12">
+            <!-- Left Sticky Column (30%) -->
+            <div class="w-full md:w-1/3">
+                <div class="sticky top-24">
+                    <h2 class="text-2xl font-semibold tracking-tight text-brand-textMain mb-2">
+                        Things you might ask
+                    </h2>
+                    <p class="text-brand-muted text-sm leading-relaxed">
+                        Answers to the most common questions about security, integration, and pricing.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Accordion Column (70%) -->
+            <div class="w-full md:w-2/3 flex flex-col">
+
+                <!-- FAQ Item 1 -->
+                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+                        How secure are my API keys?
+                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+                            We use AES-256 encryption at rest and TLS 1.3 in transit. Your API keys are encrypted client-side before ever touching our servers. Only your authenticated session can decrypt them.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 2 -->
+                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+                        Do I need a paid plan to use the app?
+                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+                            No, the core functionality including tracking up to 20 domains and syncing with 3 providers is entirely free forever. Paid tiers are only required for agency-level scaling and advanced DNS automation tools.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 3 -->
+                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+                        Can I export my data if I want to leave?
+                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+                            Absolutely. You are not locked in. You can export your entire portfolio, complete with custom notes and historical data, as a CSV or JSON file at any time directly from the settings menu.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 4 -->
+                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+                        Which domain registrars are currently supported?
+                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+                            We currently offer native 1-click API integration for Cloudflare, GoDaddy, Namecheap, AWS Route 53, IONOS, Porkbun, and Google Domains. For unsupported registrars, you can manually add domains and track them via WHOIS lookups.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 5 -->
+                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+                        How often does Domain Vault sync my portfolio?
+                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+                            By default, the Vault runs a secure background sync every 24 hours to check for status changes, upcoming renewals, and DNS modifications. Paid tiers allow you to force manual syncs at any time directly from the dashboard.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ Item 6 -->
+                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+                        Do you offer a refund if I'm not satisfied?
+                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+                    </div>
+                    <div class="faq-answer">
+                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+                            Yes, all our annual plans come with a 14-day money-back guarantee. If you realize Domain Vault isn't the right fit for your workflow within your first two weeks, just reach out to support and we'll issue a full refund, no questions asked.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <footer class="py-12 px-6 mt-auto bg-brand-bgDarker">
+        <!-- Main Footer Content Wrapper - Changed to a grid layout to accommodate the support card nicely -->
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+            
+            <!-- Left Info (Brand & Copyright) - Takes up 3 cols on desktop -->
+            <div class="flex flex-col gap-2 md:col-span-3">
+                <div class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight text-sm">
+                    <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault Logo" class="w-8 h-8 object-contain">
+                    Domain Vault
+                </div>
+                <div class="text-xs text-brand-muted">
+                    &copy; 2026 Project Vault. All rights reserved.
+                </div>
+            </div>
+
+            <!-- Center Links - Takes up 5 cols on desktop -->
+            <div class="flex flex-wrap gap-12 text-sm md:col-span-5 md:justify-center">
+                <div class="flex flex-col gap-3">
+                    <div class="text-brand-textMain font-medium mb-1">Product</div>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Download</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Pricing</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Changelog</a>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <div class="text-brand-textMain font-medium mb-1">Resources</div>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Documentation</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">API Reference</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Status</a>
+                </div>
+                <div class="flex flex-col gap-3">
+                    <div class="text-brand-textMain font-medium mb-1">Legal</div>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Privacy</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Terms</a>
+                </div>
+            </div>
+
+            <!-- Right Column (Support Card) - Takes up 4 cols on desktop -->
+            <div class="md:col-span-4 mt-6 md:mt-0 w-full flex justify-center md:justify-end">
+            
+  
+                <!-- Support Card using aspect-[3/2] for responsive full-width scaling on mobile while capping max-width on larger screens -->
+                <div class="w-full max-w-full sm:max-w-[360px] aspect-[3/2] bg-brand-card rounded-2xl p-5 sm:p-6 relative overflow-hidden flex flex-col justify-center shadow-lg border border-brand-border hover:border-brand-primary/50 transition-colors group">
+                
+                
+             
+                <!-- Top glowing line -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-30"></div>              
+                           
+                
+                    <div class="relative z-10 w-[65%] sm:w-3/4 lg:w-2/3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h4 class="text-brand-textMain font-bold text-lg sm:text-xl">Soporte Online</h4>
+                            <span class="bg-brand-primary/20 text-brand-primary border border-brand-primary/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">24/7</span>
+                        </div>
+                        <p class="text-brand-muted text-xs sm:text-sm mb-4 leading-snug">Contáctenos si tiene alguna pregunta. Nuestro equipo está aquí para atenderte.</p>
+                        <button onclick="window.open('https://wa.me/18296203970?text=%C2%A1Hola!%20%F0%9F%91%8B%20Tengo%20una%20pregunta%20sobre%20Domain%20Vault.', '_blank')" class="bg-brand-bgDark hover:bg-brand-hover text-brand-textMain text-xs sm:text-sm font-semibold py-2 px-3 rounded-lg flex items-center gap-2 transition-colors border border-brand-border shadow-sm w-fit">
+                            <i data-lucide="headset" class="w-4 h-4 text-brand-primary"></i>
+                            Escríbanos
+                        </button>
+                    </div>
+                    <img 
+                        src="https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/assets/support-agent.webp" 
+                        alt="Soporte 24/7" 
+                        class="absolute bottom-0 right-0 w-32 sm:w-36 lg:w-40 object-contain z-0 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" 
+                    />
+                </div>
+            </div>
+
+         </div>
+    </footer>
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // FAQ Toggle Logic
+        function toggleFaq(element) {
+            const answer = element.querySelector('.faq-answer');
+            const icon = element.querySelector('[data-lucide="plus"]') || element.querySelector('[data-lucide="minus"]');
+
+            // Toggle open state
+            answer.classList.toggle('open');
+
+            // Rotate icon based on state
+            if (answer.classList.contains('open')) {
+                icon.style.transform = 'rotate(45deg)';
+            } else {
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // ==========================================
+        // Matrix Background Animation Logic
+        // ==========================================
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        const header = canvas.parentElement;
+
+        // Resize Canvas to fit the header dynamically
+        function resizeCanvas() {
+            canvas.width = header.offsetWidth;
+            canvas.height = header.offsetHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // The Characters for Matrix Effect (Katakana + Latin + Digits)
+        const matrixChars = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレゲゼデベペオォコソトノホモヨョロゴゾドボポヴッン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const characters = matrixChars.split('');
+
+        const fontSize = 16;
+        let columns = canvas.width / fontSize;
+        let drops = [];
+
+        // Initialize drop positions for each column
+        for (let x = 0; x < columns; x++) {
+            drops[x] = Math.random() * canvas.height; // Randomize start heights
+        }
+
+        function drawMatrix() {
+            // Re-calculate columns if window resized
+            if (drops.length < canvas.width / fontSize) {
+                const oldLength = drops.length;
+                columns = canvas.width / fontSize;
+                for (let x = oldLength; x < columns; x++) {
+                    drops[x] = Math.random() * canvas.height;
+                }
+            }
+
+            // Draw translucent black background over everything to create trail effect
+            // Reduced fade opacity (was 0.08, now 0.05) to make trails longer and brighter
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.font = fontSize + 'px "Fira Code", monospace';
+            ctx.textAlign = 'center';
+
+            // Loop over all drops
+            for (let i = 0; i < drops.length; i++) {
+                // Get a random character
+                const text = characters[Math.floor(Math.random() * characters.length)];
+
+                // Randomly highlight some letters to bright white/orange
+                // Increased opacity on the base orange color from 0.7 to 0.95
+                if (Math.random() > 0.95) {
+                     ctx.fillStyle = '#ffffff'; // Occasional bright white character
+                } else if (Math.random() > 0.8) {
+                     ctx.fillStyle = '#ff7b47'; // Lighter orange for variation
+                } else {
+                     ctx.fillStyle = 'rgba(255, 80, 17, 0.95)'; // Base brand primary orange
+                }
+
+                // x = i * fontSize, y = value of drop * fontSize
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                // Reset drop to the top randomly after it crosses the screen
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+
+                // Increment Y coordinate
+                drops[i]++;
+            }
+        }
+
+        // Run the animation loop at ~30 FPS
+        setInterval(drawMatrix, 45);
+
+    </script>
+</body>
+</html>
