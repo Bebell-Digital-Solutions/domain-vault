@@ -439,6 +439,15 @@
             </div>
         </div>
     </header>
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     <section class="py-12 border-b border-brand-border bg-brand-bgDarker overflow-hidden flex flex-col items-center">
         <p class="text-brand-muted text-sm uppercase tracking-widest font-tech mb-8">Track domains from any registrar</p>
@@ -481,6 +490,17 @@
           </div>  
         </div>
     </section>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     <section class="py-24 border-b border-brand-border px-6" id="integration">
         <div class="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-16">
@@ -496,22 +516,27 @@
                     <span class="text-brand-primary drop-shadow-[0_0_15px_rgba(255,80,17,0.3)]">Just your data.</span>
                 </h2>
                 <p class="text-brand-muted leading-relaxed mb-8 text-lg">
-                    Domain Vault doesn't ask for registrar credentials or scrape your accounts. Add a domain, hit the WHOIS button to auto-fill the dates, and you're done. Your vault lives in a Supabase Postgres database protected by Row-Level Security — only you can read your rows.
-                </p>
+Domain Vault never asks for registrar credentials and never scrapes your accounts. Add a domain, hit the WHOIS button to pull the creation and expiry dates, set your costs, and it's tracked. Your vault lives in a Supabase Postgres database with Row-Level Security, designed so only you can read your rows.                </p>
                 
                 <ul class="space-y-4 mb-8">
+
+      
                     <li class="flex items-start gap-3 text-sm text-brand-muted">
                         <i data-lucide="check" class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5"></i>
-                        <span><strong class="text-brand-textMain">Provider credential vault:</strong> store usernames, passwords, and account IDs for every registrar.</span>
+                        <span><strong class="text-brand-textMain">Provider credential vault:</strong> Store usernames, passwords, and account IDs for every registrar.</span>
                     </li>
+
+
+        <li class="flex items-start gap-3 text-sm text-brand-muted">
+          <i data-lucide="check" class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5"></i>
+          <span><strong class="text-brand-textMain">Manual prices, your control:</strong> You decide what counts as purchase and renewal cost.</span>
+        </li>
+ 
                     <li class="flex items-start gap-3 text-sm text-brand-muted">
                         <i data-lucide="check" class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5"></i>
                         <span><strong class="text-brand-textMain">Full CSV export:</strong> take your portfolio anywhere, any time.</span>
                     </li>
-                    <li class="flex items-start gap-3 text-sm text-brand-muted">
-                        <i data-lucide="check" class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5"></i>
-                        <span><strong class="text-brand-textMain">Bilingual UI:</strong> English and Español, one click away.</span>
-                    </li>
+                
                 </ul>
                 
                 <button class="bg-brand-card border border-brand-border text-brand-textMain hover:border-brand-muted rounded-md px-5 py-2.5 font-medium transition-colors">
@@ -530,7 +555,7 @@
                     <div class="space-y-3">
                         <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-lg p-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded bg-white p-0 flex items-center justify-center">
+                                <div class="w-10 h-10 rounded bg-black p-0 flex items-center justify-center">
                                     <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/cloudflare-button.webp" alt="CF" class="w-full" onerror="this.style.display='none'">
                                 </div>
                                 <div>
@@ -543,7 +568,7 @@
 
                         <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-lg p-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded bg-white p-0 flex items-center justify-center">
+                                <div class="w-10 h-10 rounded bg-black p-0 flex items-center justify-center">
                                     <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/namecheap-button.webp" alt="NC" class="w-full" onerror="this.style.display='none'">
                                 </div>
                                 <div>
@@ -556,7 +581,7 @@
                         
                         <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-lg p-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded bg-white p-0 flex items-center justify-center">
+                                <div class="w-10 h-10 rounded bg-black p-0 flex items-center justify-center">
                                     <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/hostinger.webp" alt="Hostinger" class="w-full" onerror="this.style.display='none'">
                                 </div>
                                 <div>
@@ -569,7 +594,7 @@
   
                         <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-lg p-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded bg-white p-0 flex items-center justify-center">
+                                <div class="w-10 h-10 rounded bg-black p-0 flex items-center justify-center">
                                     <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/ionos.webp" alt="Ionos" class="w-full" onerror="this.style.display='none'">
                                 </div>
                                 <div>
@@ -580,7 +605,7 @@
                             <span class="inline-flex items-center gap-1.5 text-xs text-brand-success"><span class="w-1.5 h-1.5 rounded-full bg-brand-success"></span> Connected</span>
                         </div>  
 
-                        <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-lg p-4 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
+                        <div class="flex items-center justify-between bg-brand-bgDark border border-brand-border rounded-xl p-4 opacity-60 hover:opacity-100 transition-opacity cursor-pointer">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded bg-brand-hover border border-brand-border flex items-center justify-center">
                                     <i data-lucide="plus" class="w-5 h-5 text-brand-muted"></i>
@@ -593,6 +618,13 @@
             </div>
         </div>
     </section>
+
+
+
+
+
+
+    
 
     <section class="py-24 border-b border-brand-border px-6" id="features">
         <div class="max-w-6xl mx-auto">
