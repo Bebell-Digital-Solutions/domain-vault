@@ -133,19 +133,42 @@
         /* Custom scrollbar for webkit to match the dark aesthetic */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #000000; }
-        ::-webkit-scrollbar-thumb { background: #262626; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #ff5011; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #404040; }
 
         body { background-color: #000000; color: #A3A3A3; }
+        
+        
+        
+        .header-icon {
+        size: 10px;
+        position: relative; 
+        cursor: pointer; 
+        color: var(--text-muted); 
+        transition: color 0.2s; 
+        display: flex; 
+        align-items: center; 
+        }
+        
+        
+        .header-icon:hover { 
+        color: #ff5011; 
+        }
+        
+
         
         .logo-swap {
             background-image: url('https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png');
             transition: background-image 0.3s ease, transform 0.3s ease;
         }
+        
+        
         .logo-swap:hover {
-            background-image: url('YOUR_HOVER_IMAGE_URL_HERE');
+            background-image: url('https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612');
             transform: scale(1.1);
-        }        
+        }    
+        
+        
         
         /* Smooth height transition for FAQ Accordion */
         .faq-answer {
@@ -204,8 +227,8 @@
     <nav class="sticky top-0 z-50 w-full backdrop-blur-md bg-brand-bgDark/80 border-b border-brand-border transition-all duration-300">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <!-- Left: Brand -->
-            <div class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight group">
-                <div class="relative w-9 h-9">
+            <div class="flex items-center gap-3 text-brand-textMain font-semibold  group uppercase tracking-wider font-tech">
+                <div class="relative w-8 h-8">
                     <!-- Default logo -->
                     <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" 
                          alt="Domain Vault Logo" 
@@ -221,15 +244,43 @@
 
             <!-- Center: Muted Links (Hidden on mobile) -->
             <div class="hidden md:flex items-center gap-8 text-sm font-medium text-brand-muted">
-                <a href="#features" class="hover:text-brand-textMain transition-colors duration-300">Features</a>
+                
+                
+                
                 <a href="#workflow" class="hover:text-brand-textMain transition-colors duration-300">How It Works</a>
+                
+                
+                
+                <a href="#features" class="hover:text-brand-textMain transition-colors duration-300">Features</a>
+                
+                
+                
+                <a href="#download" class="hover:text-brand-textMain transition-colors duration-300">Download</a>                
+                
                 <a href="#pricing" class="hover:text-brand-textMain transition-colors duration-300">Pricing</a>
-                <a href="#download" class="hover:text-brand-textMain transition-colors duration-300">Download</a>
+                
+                
+                
+<a href="#reviews" class="hover:text-brand-textMain transition-colors duration-300">Reviews</a>                
+                
+             
                 <a href="#faq" class="hover:text-brand-textMain transition-colors duration-300">FAQ</a>
+                
+                
+                
             </div>
 
             <!-- Right: Primary CTA -->
             <div class="flex items-center gap-4">
+            
+            
+  <div class="header-icon" id="translateBtn" title="Translate to Spanish/English">
+  <i data-lucide="languages"></i>
+  </div>           
+            
+            
+            
+            
                 <a href="#" class="hidden sm:block text-sm font-medium text-brand-muted hover:text-brand-textMain transition-colors duration-300">Log in</a>
                 <a href="#pricing" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow">
                     Get Started
@@ -237,6 +288,18 @@
             </div>
         </div>
     </nav>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     <header class="relative pt-24 pb-16 md:pt-32 md:pb-24 flex flex-col items-center text-center border-b border-brand-border px-6 overflow-hidden">
 
@@ -509,7 +572,7 @@
     
     
 
-    <section class="py-24 border-b border-brand-border px-6" id="integration">
+    <section class="py-24 border-b border-brand-border px-6" id="workflow">
         <div class="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-16">
             <!-- Left Text -->
             <div class="flex-1 lg:pr-12">
@@ -822,7 +885,7 @@
                 <div class="bg-brand-card border border-brand-border rounded-xl p-6 hover:border-brand-secondary transition-colors group relative overflow-hidden">
                     <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
                     <div class="flex items-center gap-3 mb-6">
-                        <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/windows.webp" 
+                        <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/linux.webp?updatedAt=1789700953530" 
                              alt="Linux" 
                              class="w-8 h-8 object-contain icon-tilt" />
                         <div class="text-lg font-semibold text-brand-textMain">Linux</div>
@@ -887,7 +950,7 @@
                             <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Track up to <strong>5 Domains</strong>
                         </li>
                         <li class="flex items-center gap-3 text-sm text-brand-muted">
-                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> 2 Connected Providers
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Unlimited Providers
                         </li>
                         <li class="flex items-center gap-3 text-sm text-brand-muted">
                             <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Basic Calendar Sync
@@ -915,7 +978,7 @@
                             <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Track up to <strong>20 Domains</strong>
                         </li>
                         <li class="flex items-center gap-3 text-sm text-brand-muted">
-                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> 5 Connected Providers
+                            <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Unlimited Providers
                         </li>
                         <li class="flex items-center gap-3 text-sm text-brand-muted">
                             <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> DNS Inspector Tools
@@ -953,9 +1016,12 @@
                             <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Webhook Integrations
                         </li>
                     </ul>
+                    
+                    
                     <button class="w-full bg-brand-bgDark border border-brand-border hover:border-brand-muted text-brand-textMain rounded-md py-2.5 font-medium transition-colors">
                         Get Business
                     </button>
+                    
                 </div>
             </div>
 
@@ -976,32 +1042,38 @@
                     </p>
                 </div>
 
-                <div class="relative z-10 flex flex-row items-center gap-6 w-full lg:w-auto mt-2 lg:mt-0">
-                    <div class="flex items-baseline gap-1">
-                        <span class="text-4xl font-bold text-brand-textMain">$98</span>
-                        <span class="text-brand-muted text-sm">/year</span>
-                    </div>
-                    <button class="w-full sm:w-auto bg-brand-textMain text-black hover:bg-white rounded-md px-8 py-3 font-medium transition-colors flex items-center justify-center gap-2">
-                        Get Agency <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                    </button>
-                </div>
+                <div class="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 w-full lg:w-auto mt-4 lg:mt-0">
+
+    <!-- Price -->
+    <div class="flex items-baseline gap-1 justify-start sm:justify-start">
+        <span class="text-4xl font-bold text-brand-textMain">$98</span>
+        <span class="text-brand-muted text-sm">/year</span>
+    </div>
+
+    <!-- Button -->
+    <button class="w-full sm:w-auto bg-brand-textMain text-black hover:bg-white rounded-md px-8 py-3 font-medium transition-colors flex items-center justify-center gap-2">
+        Get Agency <i data-lucide="arrow-right" class="w-4 h-4"></i>
+    </button>
+
+</div>
             </div>
 
         </div>
     </section>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-
-
-
-
-
-
-
-
-
-  
-
-    <section class="w-full max-w-[1600px] mx-auto border-y border-zinc-800 bg-zinc-950/50 py-24 overflow-hidden">
+    <section class="w-full max-w-[1600px] mx-auto border-y border-zinc-800 bg-zinc-950/50 py-24 overflow-hidden" id="reviews">
         <!-- Header -->
         <div class="mb-16 md:w-2/3 mx-auto text-center">
             <div class="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-bgDark/50 px-3 py-1 mb-6 ">
@@ -1305,17 +1377,19 @@
 
             </div>
         </div>
-    </section>   
-
-
-
-
-
-
-
-
-
-  
+    </section> 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     <section class="py-24 border-b border-brand-border px-6" id="faq">
         <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-12">
@@ -1333,7 +1407,15 @@
                         Answers to the most common questions about security, integration, and pricing.
                     </p>
                 </div>
+                
+        
             </div>
+            
+            
+            
+            
+            
+            
 
             <!-- Right Accordion Column (70%) -->
             <div class="w-full md:w-2/3 flex flex-col">
@@ -1419,11 +1501,13 @@
             </div>
         </div>
     </section>
-
-
-
-
-  
+    
+    
+    
+    
+    
+    
+    
 
     <footer class="py-12 px-6 mt-auto bg-brand-bgDarker">
         <!-- Main Footer Content Wrapper -->
@@ -1431,7 +1515,7 @@
             
             <!-- Left Info (Brand & Copyright) - Takes up 3 cols on desktop -->
             <div class="flex flex-col gap-2 md:col-span-3">
-                <div class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight text-sm">
+                <div class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight text-sm font-semibold  group uppercase tracking-wider font-tech">
                     <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault Logo" class="w-8 h-8 object-contain">
                     Domain Vault
                 </div>
@@ -1442,30 +1526,33 @@
 
             <!-- Center Links - Takes up 5 cols on desktop -->
             <div class="flex flex-wrap gap-12 text-sm md:col-span-5 md:justify-center">
-              
                 <div class="flex flex-col gap-3">
                     <div class="text-brand-textMain font-medium mb-1">Product</div>
-                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Download</a>
-                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Pricing</a>
+                    <a href="#features" class="text-brand-muted hover:text-brand-primary transition-colors">Features</a>
+                    
+                    <a href="#download" class="text-brand-muted hover:text-brand-primary transition-colors">Download</a>
+                    
+                    
+                    <a href="#pricing" class="text-brand-muted hover:text-brand-primary transition-colors">Pricing</a>
+                    
+                    
                     <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Changelog</a>
-                </div>
 
-              
-                <div class="flex flex-col gap-3">
+</div>
+
+
+
+<div class="flex flex-col gap-3">
                     <div class="text-brand-textMain font-medium mb-1">Resources</div>
                     <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Documentation</a>
                     <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">API Reference</a>
                     <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Status</a>
                 </div>
-
-
-              
                 <div class="flex flex-col gap-3">
                     <div class="text-brand-textMain font-medium mb-1">Legal</div>
                     <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Privacy</a>
                     <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Terms</a>
                 </div>
-              
             </div>
 
             <!-- Right Column (Support Card) - Takes up 4 cols on desktop -->
@@ -1490,7 +1577,7 @@
                     <img 
                         src="https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/assets/support-agent.webp" 
                         alt="Soporte 24/7" 
-                        class="absolute bottom-0 right-0 w-32 sm:w-36 md:w-24 lg:w-40 object-contain z-0 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" 
+                        class="absolute bottom-0 right-0 w-32 sm:w-36 md:w-36 lg:w-40 object-contain z-0 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" 
                     />
                 </div>
             </div>
@@ -1502,7 +1589,11 @@
 
 
 
-  
+
+
+
+
+
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
@@ -1602,9 +1693,6 @@
         setInterval(drawMatrix, 45);
 
     </script>
-
-
-  
        <script>
         // The animation is handled entirely by CSS keyframes defined in the Tailwind config.
         // We added a 'group' class to the container and 'group:hover' rules in CSS 
@@ -1615,9 +1703,5 @@
             console.log('Animated review section loaded successfully.');
         });
     </script> 
-
-
-
-  
 </body>
 </html>
