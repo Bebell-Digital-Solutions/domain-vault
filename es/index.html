@@ -274,11 +274,15 @@
             <div class="flex items-center gap-4">
             
             
-  <div href="/" class="header-icon" id="translateBtn" title="Traducir a Español/Inglés">
+  <div class="header-icon" id="translateBtn" title="Traducir a Español/Inglés">
   <i data-lucide="languages"></i>
   </div>            
             
-            
+   <script>
+document.getElementById('translateBtn').addEventListener('click', function() {
+    window.location.href = '/';
+});
+</script>         
             
             
                 <a href="#" class="hidden sm:block text-sm font-medium text-brand-muted hover:text-brand-textMain transition-colors duration-300">Iniciar sesión</a>
