@@ -85,7 +85,7 @@ No API keys. No OAuth. Just your data, securely in one place.
 </details>
 </div>
 
-
+---
 <div align="left">
   <i>Developed with 🧡 by Bebell Digital Solutions. All rights reserved.</i>
 </div>
