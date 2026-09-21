@@ -1,0 +1,92 @@
+{
+  "name": "domain-vault-desktop",
+  "productName": "Domain Vault",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Domain Vault desktop client",
+  "author": "Bebell Digital Solutions <hello@bebelldigitalsolutions.com>",
+  "homepage": "https://domain-vault.elnegocio.digital",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "DOMAIN_VAULT_URL=http://127.0.0.1:5500 electron .",
+    "test": "node --test test/*.test.mjs",
+    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build": "electron-builder",
+    "verify": "./verify-build.sh"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "playwright-core": "^1.63.0"
+  },
+  "build": {
+    "appId": "digital.elnegocio.domainvault",
+    "productName": "Domain Vault",
+    "copyright": "Copyright \u00a9 Bebell Digital Solutions",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib.js",
+      "build/icon.png",
+      "build/tray.png"
+    ],
+    "publish": null,
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.business",
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "artifactName": "DomainVault-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "DomainVault-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Domain Vault"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility",
+      "maintainer": "Bebell Digital Solutions <hello@bebelldigitalsolutions.com>",
+      "synopsis": "Track domain renewals, registrars and costs",
+      "artifactName": "DomainVault-${version}-${arch}.${ext}"
+    }
+  }
+}

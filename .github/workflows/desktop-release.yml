@@ -1,0 +1,125 @@
+# ============================================================================
+# Builds the Domain Vault desktop client for macOS, Windows and Linux and
+# attaches the installers to a GitHub Release.
+#
+# macOS and Windows builds MUST run on their own runners: a .dmg cannot be
+# produced on Linux, and the Windows installer needs Windows tooling.
+#
+# Trigger:
+#   git tag desktop-v1.0.0 && git push origin desktop-v1.0.0
+# or run it by hand from the Actions tab (produces artifacts, no release).
+#
+# ---------------------------------------------------------------------------
+# Code signing (optional, but unsigned apps show scary warnings)
+#
+#   macOS  — add repository secrets:
+#     APPLE_CERT_P12 (base64 of a Developer ID Application .p12)
+#     APPLE_CERT_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+#   Windows — add:
+#     WINDOWS_CERT_PFX (base64 of the .pfx), WINDOWS_CERT_PASSWORD
+#
+# Without them the build still succeeds; it just ships unsigned.
+# ============================================================================
+name: Desktop release
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    # Job-level so the "is a certificate configured?" step condition can see it.
+    env:
+      APPLE_CERT_P12: ${{ secrets.APPLE_CERT_P12 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS (.dmg, Intel + Apple Silicon)
+            command: npm run build:mac
+          - os: windows-latest
+            name: Windows (.exe installer)
+            command: npm run build:win
+          - os: ubuntu-latest
+            name: Linux (.AppImage + .deb)
+            command: npm run build:linux
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Unit tests
+        working-directory: desktop
+        run: npm test
+
+      - name: Import macOS signing certificate
+        if: matrix.os == 'macos-latest' && env.APPLE_CERT_P12 != ''
+        env:
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+        run: |
+          echo "$APPLE_CERT_P12" | base64 --decode > certificate.p12
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
+          rm certificate.p12
+
+      - name: Build
+        working-directory: desktop
+        env:
+          # electron-builder signs and notarises only when these are present.
+          # CSC_* is not platform-specific, so the Windows certificate must
+          # never leak into the macOS job (it would break macOS signing).
+          CSC_LINK: ${{ matrix.os == 'windows-latest' && secrets.WINDOWS_CERT_PFX || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.os == 'windows-latest' && secrets.WINDOWS_CERT_PASSWORD || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ${{ matrix.command }}
+
+      - name: Collect installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: domain-vault-${{ runner.os }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.exe
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            desktop/dist/*.dmg
+            desktop/dist/*.exe
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+          body: |
+            Domain Vault desktop client ${{ github.ref_name }}.
+
+            After publishing this release, point the download buttons at it by
+            setting `downloads` in `config.js` to these asset URLs, then merge
+            to `main`.
