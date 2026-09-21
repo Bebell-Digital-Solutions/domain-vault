@@ -24,6 +24,7 @@
 
 ---
   <div align="left">
+    
 ## ⚡ Why DOMAIN VAULT?
 
 Replace messy spreadsheets with a high-performance system designed for domain investors, developers, and agencies.[cite: 6] **DOMAIN VAULT** never asks for registrar credentials and never scrapes your accounts.[cite: 12] Add a domain, hit the WHOIS button to pull the creation and expiry dates, set your costs, and it's tracked.[cite: 12] 
