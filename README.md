@@ -17,13 +17,13 @@
   [![Backend](https://img.shields.io/badge/backend-Google_Apps_Script-F4B400?style=for-the-badge&logo=google)](#)
   [![License](https://img.shields.io/badge/license-Project_Freedom-8A2BE2?style=for-the-badge)](#)
 
-  <p align="left">
+  <p align="center">
     The ultimate command center for all your domains, DNS records, and renewal calendars in one dark, unified vault.[cite: 6] Never lose a domain to expiration again.[cite: 6]
   </p>
 </div>
 
 ---
-
+  <div align="left">
 ## ⚡ Why DOMAIN VAULT?
 
 Replace messy spreadsheets with a high-performance system designed for domain investors, developers, and agencies.[cite: 6] **DOMAIN VAULT** never asks for registrar credentials and never scrapes your accounts.[cite: 12] Add a domain, hit the WHOIS button to pull the creation and expiry dates, set your costs, and it's tracked.[cite: 12] 
@@ -75,7 +75,7 @@ No API keys. No OAuth. Just your data, securely in one place.[cite: 12]
   <br>
   Yes, all our annual plans come with a 14-day money-back guarantee.[cite: 12] If you realize Domain Vault isn't the right fit for your workflow within your first two weeks, just reach out to support and we'll issue a full refund, no questions asked.[cite: 12]
 </details>
-
+</div>
 ---
 
 <div align="center">
