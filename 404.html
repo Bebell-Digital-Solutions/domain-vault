@@ -107,16 +107,22 @@
         }
 
         /* ===== MATRIX CANVAS ===== */
-        #matrix-canvas {
+        #canvas {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+		height: 100vh;
             z-index: 0;
             display: block;
             pointer-events: none;
         }
+
+
+
+
+
+        
 
         /* ===== CENTERED CARD ===== */
         .card {
@@ -230,7 +236,7 @@
 </head>
 <body>
 
-    <canvas id="matrix-canvas"></canvas>
+    <canvas id="canvas"></canvas>
 
 
 
@@ -252,82 +258,39 @@
     
     
 
-    <script>
-        (function() {
-            const canvas = document.getElementById('matrix-canvas');
-            const ctx = canvas.getContext('2d');
 
-            const ORANGE = '#ff5011';
-            let width, height;
-            let columns = [];
-            let fontSize = 20;
 
-            function resize() {
-                width = window.innerWidth;
-                height = window.innerHeight;
-                canvas.width = width;
-                canvas.height = height;
 
-                fontSize = Math.max(14, Math.min(20, width / 45));
-                const colCount = Math.floor(width / fontSize);
-                columns = [];
-                for (let i = 0; i < colCount; i++) {
-                    columns.push({
-                        x: i * fontSize + (fontSize / 2),
-                        y: Math.random() * height * -1,
-                        speed: 1.5 + Math.random() * 4,
-                    });
-                }
-            }
+<script>
+	const canvas = document.getElementById("canvas");
+	const ctx = canvas.getContext("2d");
 
-            function getDigit() {
-                const r = Math.random();
-                if (r < 0.15) return '4';
-                if (r < 0.30) return '0';
-                if (r < 0.45) return '4';
-                return Math.floor(Math.random() * 10).toString();
-            }
+	const fontSize = 2;
+	const columns = canvas.width / fontSize;
+	const drops = new Array(columns).fill(1);
+	function draw() {
+		ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.fillStyle = "#ff5011";
+		ctx.font = fontSize + "px arial";
 
-            function draw() {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-                ctx.fillRect(0, 0, width, height);
+		for (let i = 0; i < drops.length; i++) {
+			const text = String.fromCharCode(Math.floor(Math.random() * 94 + 33));
+			ctx.fillText(text, i * fontSize, drops[i] * fontSize);
 
-                ctx.font = fontSize + 'px "Courier New", monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
+			if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+				drops[i] = 0;
+			}
 
-                for (let col of columns) {
-                    col.y += col.speed;
+			drops[i]++;
+		}
+	}
 
-                    if (col.y > height) {
-                        col.y = -fontSize * 3;
-                        col.speed = 1.5 + Math.random() * 4;
-                        col.x = Math.floor(Math.random() * (width / fontSize)) * fontSize + (fontSize / 2);
-                    }
+	setInterval(draw, 33);
+</script>
 
-                    const numChars = 5 + Math.floor(Math.random() * 10);
-                    for (let i = 0; i < numChars; i++) {
-                        const yPos = col.y - i * fontSize;
-                        if (yPos < -fontSize || yPos > height + fontSize) continue;
 
-                        const fadeFactor = 1 - (i / numChars) * 0.9;
-                        const finalOpacity = 0.5 * fadeFactor * (0.6 + 0.4 * Math.random());
-                        ctx.globalAlpha = Math.min(finalOpacity, 0.9);
-                        ctx.fillStyle = ORANGE;
 
-                        const char = getDigit();
-                        ctx.fillText(char, col.x, yPos);
-                    }
-                }
-
-                ctx.globalAlpha = 1;
-                requestAnimationFrame(draw);
-            }
-
-            window.addEventListener('resize', resize);
-            resize();
-            draw();
-        })();
-    </script>
+    
 </body>
 </html>
