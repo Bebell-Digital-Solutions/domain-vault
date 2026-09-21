@@ -86,7 +86,13 @@
         .sidebar-brand h1 { font-family: var(--font-tech); font-weight: 400; font-size: 1.2rem; color: var(--text-main); letter-spacing: 0.025em; margin-bottom: 5px; white-space: nowrap; }
         .sidebar-brand p { font-size: 0.875rem; color: var(--text-muted); line-height: 1.4; }
         .sidebar-menu { padding: 10px 0; flex-grow: 1; }
-        .menu-item { padding: 12px 20px; display: flex; align-items: center; gap: 12px; transition: var(--transition); cursor: pointer; border-left: 4px solid transparent; position: relative; color: var(--text-muted); }
+        /* The Admin and Downloads entries are links, and Admin stays hidden until the
+   server says the user is an admin. Without these, .menu-item's display:flex
+   overrides the hidden attribute. */
+.menu-item[hidden] { display: none; }
+a.menu-item { text-decoration: none; }
+
+.menu-item { padding: 12px 20px; display: flex; align-items: center; gap: 12px; transition: var(--transition); cursor: pointer; border-left: 4px solid transparent; position: relative; color: var(--text-muted); }
         .menu-item:hover, .menu-item.active { background: var(--bg-hover); border-left: 4px solid var(--primary); color: var(--text-main); }
         .menu-item i { width: 20px; height: 20px; stroke-width: 2; color: var(--primary); }
         
