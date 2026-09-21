@@ -84,7 +84,7 @@ No API keys. No OAuth. Just your data, securely in one place.
   Yes, all our annual plans come with a 14-day money-back guarantee. If you realize Domain Vault isn't the right fit for your workflow within your first two weeks, just reach out to support and we'll issue a full refund, no questions asked.
 </details>
 </div>
----
+
 
 <div align="left">
   <i>Developed with 🧡 by Bebell Digital Solutions. All rights reserved.</i>
