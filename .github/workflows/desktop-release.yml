@@ -43,13 +43,10 @@ jobs:
         include:
           - os: macos-latest
             name: macOS (.dmg, Intel + Apple Silicon)
-            command: npm run build:mac
           - os: windows-latest
             name: Windows (.exe installer)
-            command: npm run build:win
           - os: ubuntu-latest
             name: Linux (.AppImage + .deb)
-            command: npm run build:linux
 
     steps:
       - uses: actions/checkout@v4
@@ -81,19 +78,33 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
           rm certificate.p12
 
-      - name: Build
+      # electron-builder reads CSC_LINK as a certificate path. An empty but
+      # DEFINED value is not "no certificate" — it resolves to the working
+      # directory and the build dies with "<dir> not a file". So the signing
+      # variables are only ever set on the job that has a certificate.
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
         working-directory: desktop
         env:
-          # electron-builder signs and notarises only when these are present.
-          # CSC_* is not platform-specific, so the Windows certificate must
-          # never leak into the macOS job (it would break macOS signing).
-          CSC_LINK: ${{ matrix.os == 'windows-latest' && secrets.WINDOWS_CERT_PFX || '' }}
-          CSC_KEY_PASSWORD: ${{ matrix.os == 'windows-latest' && secrets.WINDOWS_CERT_PASSWORD || '' }}
+          CSC_LINK: ${{ secrets.WINDOWS_CERT_PFX }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: npm run build:win
+
+      - name: Build (macOS)
+        if: matrix.os == 'macos-latest'
+        working-directory: desktop
+        env:
+          # Only attempt signing/notarisation when a certificate was imported.
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.APPLE_CERT_P12 != '' }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ${{ matrix.command }}
+        run: npm run build:mac
+
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: desktop
+        run: npm run build:linux
 
       - name: Collect installers
         uses: actions/upload-artifact@v4
