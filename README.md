@@ -17,7 +17,7 @@
   [![Backend](https://img.shields.io/badge/backend-Google_Apps_Script-F4B400?style=for-the-badge&logo=google)](#)
   [![License](https://img.shields.io/badge/license-Project_Freedom-8A2BE2?style=for-the-badge)](#)
 
-  <p align="center">
+  <p align="left">
     The ultimate command center for all your domains, DNS records, and renewal calendars in one dark, unified vault.[cite: 6] Never lose a domain to expiration again.[cite: 6]
   </p>
 </div>
