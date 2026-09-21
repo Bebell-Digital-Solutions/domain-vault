@@ -5,7 +5,7 @@
   # DOMAIN VAULT
 
   <div align="center">
-  <img src="[https://bucket.mlcdn.com/a/3336/3336910/images/9b43ae4dc8c7ae0011742b02e7ff93036ff525a1.png](https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/mediamodifier_image.png)" alt="DOMAIN VAULT Logo" width="100%" />
+  <img src="[https://bucket.mlcdn.com/a/3336/3336910/images/9b43ae4dc8c7ae0011742b02e7ff93036ff525a1.png](https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/mediamodifier_image.png)" alt="DOMAIN VAULT Logo" width="1000" />
   
   **Secure Domain Portfolio Manager**[cite: 13, 15]
 
