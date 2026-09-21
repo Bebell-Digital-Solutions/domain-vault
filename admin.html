@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Domain Vault · Admin</title>
+    <link rel="icon" href="https://bucket.mlcdn.com/a/3336/3336910/images/115f0fdbe1cc012228f0c234e8b4f909d2e7ab69.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700&family=Fira+Code&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #ff5011;
+            --primary-soft: rgba(255, 80, 17, 0.12);
+            --bg: #0d0d12;
+            --bg-card: #16161d;
+            --bg-hover: #1f1f28;
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #ececf1;
+            --muted: #9a9aa8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --radius: 10px;
+            --font: 'Inter', system-ui, sans-serif;
+            --font-tech: 'Orbitron', var(--font);
+            --font-code: 'Fira Code', ui-monospace, monospace;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); }
+        button, input, select { font: inherit; }
+        a { color: var(--primary); }
+        [hidden] { display: none !important; }
+
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--border); background: #111118; position: sticky; top: 0; z-index: 10; }
+        .brand { font-family: var(--font-tech); letter-spacing: .08em; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+        .brand .tag { font-family: var(--font); font-size: 11px; letter-spacing: .1em; color: var(--primary); background: var(--primary-soft); padding: 2px 8px; border-radius: 99px; }
+        .who { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 13px; flex-wrap: wrap; justify-content: flex-end; }
+
+        main { max-width: 1280px; margin: 0 auto; padding: 24px; }
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; overflow-x: auto; }
+        .tab { background: none; border: 0; color: var(--muted); padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+        .tab.active { color: var(--text); border-bottom-color: var(--primary); }
+        .tab .count { background: var(--danger); color: #fff; border-radius: 99px; font-size: 11px; padding: 0 7px; }
+
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+        .card h2 { margin: 0 0 4px; font-size: 16px; }
+        .card .sub { color: var(--muted); margin: 0 0 16px; font-size: 13px; }
+
+        .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+        .tile .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+        .tile .value { font-size: 26px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+        .tile.alert .value { color: var(--danger); }
+
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 14px; }
+        .field { display: flex; flex-direction: column; gap: 4px; }
+        .field label { font-size: 12px; color: var(--muted); }
+        input, select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+        input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+
+        .btn { background: var(--bg-hover); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { border-color: var(--muted); }
+        .btn:disabled { opacity: .45; cursor: not-allowed; }
+        .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .btn.good { color: var(--success); }
+        .btn.bad { color: var(--danger); }
+        .btn.sm { padding: 4px 9px; font-size: 12px; }
+        .btn svg { width: 15px; height: 15px; }
+
+        .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+        th { color: var(--muted); font-weight: 500; font-size: 12px; background: #121219; position: sticky; top: 0; }
+        tr:last-child td { border-bottom: 0; }
+        tbody tr:hover { background: var(--bg-hover); }
+        td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        td.wrap { white-space: normal; min-width: 220px; color: var(--muted); }
+        .mono { font-family: var(--font-code); font-size: 12px; }
+        .empty { padding: 30px; text-align: center; color: var(--muted); }
+        .actions { display: flex; gap: 6px; }
+
+        .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+        .b-active, .b-completed { background: rgba(34,197,94,.14); color: var(--success); }
+        .b-pending { background: rgba(245,158,11,.14); color: var(--warning); }
+        .b-suspended, .b-rejected, .b-reversed, .b-failed { background: rgba(239,68,68,.14); color: var(--danger); }
+        .b-refunded, .b-unmatched { background: rgba(59,130,246,.14); color: var(--info); }
+        .b-admin { background: var(--primary-soft); color: var(--primary); }
+
+        .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: var(--muted); }
+        .totals { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+        .totals .tile { min-width: 200px; }
+        .price-row { display: grid; grid-template-columns: 140px 1fr 110px auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .price-row:last-child { border-bottom: 0; }
+        .note { background: var(--primary-soft); border: 1px solid rgba(255,80,17,.3); color: var(--text); padding: 12px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+
+        .login { max-width: 380px; margin: 10vh auto; }
+        .login .field { margin-bottom: 12px; }
+        .login input { width: 100%; }
+        .msg { margin-top: 10px; font-size: 13px; min-height: 1.2em; }
+        .msg.err { color: var(--danger); }
+
+        .toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg-hover); border-left: 4px solid var(--success); padding: 12px 18px; border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.5); opacity: 0; transform: translateY(12px); transition: .2s; pointer-events: none; max-width: 420px; z-index: 50; }
+        .toast.show { opacity: 1; transform: none; }
+        .toast.err { border-left-color: var(--danger); }
+
+        @media (max-width: 640px) {
+            main { padding: 16px; }
+            .topbar { padding: 12px 16px; }
+            .price-row { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand"><i data-lucide="shield"></i> DOMAIN VAULT <span class="tag">ADMIN</span></div>
+        <div class="who">
+            <span id="whoEmail"></span>
+            <a href="./">Back to app</a>
+            <button class="btn sm" id="signOutBtn" hidden><i data-lucide="log-out"></i> Sign out</button>
+        </div>
+    </header>
+
+    <!-- Sign in -->
+    <section class="card login" id="loginView" hidden>
+        <h2>Admin sign in</h2>
+        <p class="sub">Use your Domain Vault account. It must have admin rights.</p>
+        <form id="loginForm">
+            <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+            <div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+            <button class="btn primary" type="submit" style="width:100%;justify-content:center">Sign in</button>
+            <div class="msg" id="loginMsg"></div>
+        </form>
+    </section>
+
+    <main id="appView" hidden>
+        <nav class="tabs" role="tablist">
+            <button class="tab active" data-tab="overview"><i data-lucide="layout-dashboard"></i> Overview</button>
+            <button class="tab" data-tab="users"><i data-lucide="users"></i> Users <span class="count" id="pendingCount" hidden></span></button>
+            <button class="tab" data-tab="sales"><i data-lucide="receipt"></i> Sales <span class="count" id="attentionCount" hidden></span></button>
+            <button class="tab" data-tab="prices"><i data-lucide="tag"></i> Prices</button>
+            <button class="tab" data-tab="audit"><i data-lucide="history"></i> Audit log</button>
+        </nav>
+
+        <!-- Overview -->
+        <section data-panel="overview">
+            <div class="tiles" id="overviewTiles"></div>
+            <div class="card">
+                <h2>Waiting for activation</h2>
+                <p class="sub">New sign-ups start pending. Activating one emails them that their account is live.</p>
+                <div class="table-wrap"><table>
+                    <thead><tr><th>Email</th><th>Phone</th><th>Location</th><th>Signed up</th><th></th></tr></thead>
+                    <tbody id="pendingRows"></tbody>
+                </table></div>
+            </div>
+        </section>
+
+        <!-- Users -->
+        <section data-panel="users" hidden>
+            <div class="toolbar">
+                <div class="field"><label for="userStatus">Status</label>
+                    <select id="userStatus">
+                        <option value="">All</option><option value="pending">Pending</option>
+                        <option value="active">Active</option><option value="suspended">Suspended</option>
+                    </select>
+                </div>
+                <div class="field" style="flex:1;min-width:200px"><label for="userSearch">Search email</label><input id="userSearch" type="search" placeholder="name@example.com"></div>
+                <button class="btn" id="userRefresh"><i data-lucide="refresh-cw"></i> Refresh</button>
+            </div>
+            <div class="table-wrap"><table>
+                <thead><tr>
+                    <th>Email</th><th>Status</th><th>Plan</th><th title="Admin override. Empty = use what they bought.">Override</th>
+                    <th class="num">Domains</th><th>Phone</th><th>Location</th><th>Joined</th><th>Admin</th><th>Actions</th>
+                </tr></thead>
+                <tbody id="userRows"></tbody>
+            </table></div>
+            <div class="pager">
+                <span id="userPageInfo"></span>
+                <span><button class="btn sm" id="userPrev">Previous</button> <button class="btn sm" id="userNext">Next</button></span>
+            </div>
+        </section>
+
+        <!-- Sales -->
+        <section data-panel="sales" hidden>
+            <div class="toolbar">
+                <div class="field"><label for="salesFrom">From</label><input id="salesFrom" type="date"></div>
+                <div class="field"><label for="salesTo">To</label><input id="salesTo" type="date"></div>
+                <div class="field"><label for="salesStatus">Status</label>
+                    <select id="salesStatus">
+                        <option value="">All</option><option value="completed">Completed</option><option value="pending">Pending</option>
+                        <option value="refunded">Refunded</option><option value="reversed">Chargeback</option>
+                        <option value="rejected">Rejected</option><option value="unmatched">Unmatched</option><option value="failed">Failed</option>
+                    </select>
+                </div>
+                <button class="btn" id="salesRefresh"><i data-lucide="refresh-cw"></i> Apply</button>
+                <button class="btn" id="salesCsv"><i data-lucide="download"></i> Export CSV</button>
+            </div>
+            <div class="note" id="salesAttention" hidden></div>
+            <div class="totals" id="salesTotals"></div>
+            <div class="table-wrap"><table>
+                <thead><tr>
+                    <th>Date</th><th>Status</th><th>Pack</th><th class="num">Amount</th><th>Account</th><th>Payer (PayPal)</th><th>Transaction</th><th>Details</th>
+                </tr></thead>
+                <tbody id="salesRows"></tbody>
+            </table></div>
+        </section>
+
+        <!-- Prices -->
+        <section data-panel="prices" hidden>
+            <div class="card">
+                <h2>Pack prices</h2>
+                <p class="sub">One-time purchase. A payment is only accepted if it matches the price and currency here exactly.</p>
+                <div class="note">
+                    Each price must be <b>identical</b> to the price on the matching PayPal button. If they differ, customers
+                    are charged but the pack is <b>not</b> granted; the payment shows up under Sales as "rejected".
+                    Clear a price to take that pack off sale.
+                </div>
+                <div id="priceRows"></div>
+            </div>
+        </section>
+
+        <!-- Audit -->
+        <section data-panel="audit" hidden>
+            <div class="table-wrap"><table>
+                <thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Change</th></tr></thead>
+                <tbody id="auditRows"></tbody>
+            </table></div>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

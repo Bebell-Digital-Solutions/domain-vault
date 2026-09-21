@@ -12,9 +12,10 @@
      * The session survives a page reload, which the old build did not.
      * Expired access tokens are refreshed transparently, once, on 401.
 
-   Load this BEFORE script.js:
-       <script src="/backend/web/api.js"></script>
-       <script src="/script.js"></script>
+   Load order (see index.html / admin.html):
+       <script src="config.js"></script>
+       <script src="api.js"></script>
+       <script src="script.js"></script>
    ========================================================================== */
 
 (function (global) {
@@ -111,8 +112,11 @@
       return Promise.reject(new Error("DOMAIN_VAULT_CONFIG.functionsUrl is not set"));
     }
 
-    // Public actions need no token.
-    if (action === "registerUser") return post(action, payload).then(unwrap);
+    // Public actions need no token. Keep in sync with PUBLIC_ACTIONS in the
+    // api function.
+    if (action === "registerUser" || action === "getPrices") {
+      return post(action, payload).then(unwrap);
+    }
 
     if (action === "loginUser") {
       return post(action, payload).then(function (res) {
@@ -174,11 +178,19 @@
     saveSession(null);
   }
 
+  /** Merge fresh account fields (plan, isAdmin) into the stored session user. */
+  function updateUser(patch) {
+    if (!session || !session.user || !patch) return;
+    session.user = Object.assign({}, session.user, patch);
+    saveSession(session);
+  }
+
   global.DomainVaultAPI = {
     call: call,
     revealPassword: revealPassword,
     restore: restore,
     signOut: signOut,
+    updateUser: updateUser,
     get session() { return session; }
   };
 })(window);
