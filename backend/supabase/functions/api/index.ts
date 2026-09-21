@@ -20,6 +20,7 @@ import {
   clientIp,
   HttpError,
   rateLimit,
+  requireAdmin,
   requireUser,
   serviceClient,
   userClient,
@@ -27,6 +28,15 @@ import {
 import { decryptSecret, encryptSecret, KEY_VERSION } from "../_shared/crypto.ts";
 import { BadRequest, boundedArray, isUuid, isValidEmail, str } from "../_shared/validate.ts";
 import { sendEmail, sendWhatsApp } from "../_shared/notify.ts";
+import {
+  adminAudit,
+  adminGetPrices,
+  adminListUsers,
+  adminOverview,
+  adminSales,
+  adminSetPrice,
+  adminUpdateUser,
+} from "./admin.ts";
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
 const ADMIN_PHONE = Deno.env.get("ADMIN_PHONE") ?? null;
@@ -157,7 +167,7 @@ async function loginUser(req: Request, p: any) {
 
   const { data: profile } = await serviceClient()
     .from("profiles")
-    .select("id, email, phone, plan, status")
+    .select("id, email, phone, plan, status, is_admin")
     .eq("id", data.user.id)
     .maybeSingle();
 
@@ -176,6 +186,7 @@ async function loginUser(req: Request, p: any) {
       email: profile.email,
       phone: profile.phone ?? "",
       plan: profile.plan,
+      isAdmin: profile.is_admin === true,
     },
     session: {
       access_token: data.session.access_token,
@@ -186,12 +197,15 @@ async function loginUser(req: Request, p: any) {
 }
 
 async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
-  const [domains, providers, settings, secrets] = await Promise.all([
+  const [domains, providers, settings, secrets, purchases] = await Promise.all([
     db.from("domains").select("*").order("renewal_date", { nullsFirst: false }),
     db.from("providers").select("*").order("name"),
     db.from("settings").select("*").maybeSingle(),
     // Which providers have a stored password — ids only, never the ciphertext.
     serviceClient().from("provider_secrets").select("provider_id").eq("user_id", caller.id),
+    db.from("purchases")
+      .select("txn_id, plan, amount, currency, status, created_at")
+      .order("created_at", { ascending: false }),
   ]);
 
   if (domains.error) throw new HttpError(500, domains.error.message);
@@ -210,7 +224,11 @@ async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
         profilePicture: settings.data.profile_pic_url ?? "",
       }
       : null,
+    // Always the server's current value: the plan changes after a purchase
+    // or refund, and the session copy saved at login does not.
     plan: caller.plan,
+    isAdmin: caller.is_admin === true,
+    purchases: purchases.data ?? [],
   };
 }
 
@@ -385,11 +403,23 @@ function escapeHtml(value: string): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
+/** Public: pack prices for the upgrade modal. Unpriced packs are listed as null. */
+async function getPrices() {
+  const { data, error } = await serviceClient()
+    .from("plan_prices").select("plan, amount, currency");
+  if (error) throw new HttpError(500, error.message);
+  return { success: true, prices: data ?? [] };
+}
+
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
-const PUBLIC_ACTIONS = new Set(["registerUser", "loginUser"]);
+const PUBLIC_ACTIONS = new Set(["registerUser", "loginUser", "getPrices"]);
+const ADMIN_ACTIONS = new Set([
+  "adminOverview", "adminListUsers", "adminUpdateUser",
+  "adminSales", "adminGetPrices", "adminSetPrice", "adminAudit",
+]);
 
 Deno.serve(async (req: Request) => {
   const pre = preflight(req);
@@ -404,10 +434,31 @@ Deno.serve(async (req: Request) => {
     const action = typeof body?.action === "string" ? body.action : "";
 
     if (PUBLIC_ACTIONS.has(action)) {
-      const result = action === "registerUser"
-        ? await registerUser(req, body)
-        : await loginUser(req, body);
-      return json(req, result);
+      if (action === "registerUser") return json(req, await registerUser(req, body));
+      if (action === "loginUser") return json(req, await loginUser(req, body));
+      await rateLimit(`prices:${clientIp(req)}`, 60, 60);
+      return json(req, await getPrices());
+    }
+
+    if (ADMIN_ACTIONS.has(action)) {
+      const { caller } = await requireAdmin(req);
+      await rateLimit(`admin:${caller.id}`, 120, 60);
+      switch (action) {
+        case "adminOverview":
+          return json(req, await adminOverview());
+        case "adminListUsers":
+          return json(req, await adminListUsers(body));
+        case "adminUpdateUser":
+          return json(req, await adminUpdateUser(caller, body));
+        case "adminSales":
+          return json(req, await adminSales(body));
+        case "adminGetPrices":
+          return json(req, await adminGetPrices());
+        case "adminSetPrice":
+          return json(req, await adminSetPrice(caller, body));
+        case "adminAudit":
+          return json(req, await adminAudit(body));
+      }
     }
 
     const { caller, db } = await requireUser(req);

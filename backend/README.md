@@ -1,221 +1,273 @@
 # Domain Vault — Backend
 
-Postgres backend replacing the Google Apps Script + Google Sheets setup.
+Supabase backend for Domain Vault (Postgres, Auth, Storage, Edge Functions).
+It replaces the old Google Apps Script + Google Sheets setup.
 
-Built on Supabase (Postgres, Auth, Storage, Edge Functions). Because the
-database is plain Postgres, moving to Neon or any other host later is a
-`pg_dump` plus a replacement for the Auth layer — the schema, the policies and
-the business logic in this directory all carry across unchanged.
+The database is plain Postgres. Moving to Neon or another host later means a
+`pg_dump` plus a replacement for Supabase Auth; the schema, policies and
+business logic here carry across unchanged.
+
+**Going live?** Follow [LAUNCH.md](LAUNCH.md). It lists what the business owner
+has to provide and the deployment steps in order.
 
 ---
 
-## Why this exists
+## What it does
 
-The previous backend had three problems that could not be patched in place:
+| Area | How |
+|---|---|
+| Accounts | Supabase Auth (bcrypt). New sign-ups start `pending` until an admin activates them, or until they pay. |
+| Data isolation | Row Level Security on every table. A user's token can only ever reach that user's rows. |
+| Registrar passwords | Optional. AES-256-GCM encrypted with a key that lives only in the function environment. Reveal is rate limited and audited. |
+| Plans | One-time PayPal purchase of a domain pack (no subscription). The plan is **derived from a purchase ledger**, so refunds and chargebacks take back exactly what they granted. |
+| Payments | PayPal IPN, verified with PayPal, checked against our receiver account and **against the price list** (amount and currency), deduplicated, and recorded, including the ones refused. |
+| Admin | `admin.html`: activate and suspend users, override plans, set prices, sales report with CSV export, audit log. |
+| Reminders | Daily pg_cron job emails (and optionally WhatsApp-messages) customers 30, 7 and 1 day before renewal. Idempotent. |
+| Lookups | WHOIS / DNS proxied, validated, cached and rate limited. |
 
-1. **No authorization.** The Apps Script endpoint is public in the page source
-   and accepted the caller's own email as identity. Anyone could read or
-   overwrite any account's data by passing a different address.
-2. **Plaintext passwords.** Both account passwords and customers' *registrar*
-   credentials sat in spreadsheet cells in clear text.
-3. **Destructive writes.** Every save deleted all of a user's rows and
-   re-appended them. An Apps Script timeout mid-write lost the lot.
-
-Each is addressed structurally here rather than by adding checks: identity
-comes from a signed JWT, Row Level Security makes cross-account reads
-impossible at the database level, passwords are delegated to Supabase Auth,
-registrar secrets are encrypted with a key the database never sees, and writes
-are atomic.
+The problems in the old backend, and how each one is handled, are covered in
+[SECURITY.md](SECURITY.md).
 
 ---
 
 ## Layout
 
 ```
-backend/
-├── supabase/
-│   ├── migrations/
-│   │   ├── 20260912000100_init.sql      schema
-│   │   ├── 20260912000200_rls.sql       row level security + grants
-│   │   ├── 20260912000300_logic.sql     triggers, entitlements, sync RPCs
-│   │   ├── 20260912000400_cron.sql      scheduled jobs
-│   │   └── 20260912000500_storage.sql   avatars bucket
-│   └── functions/
-│       ├── _shared/                     cors, crypto, validation, db, notify
-│       ├── api/                         main router (replaces doPost)
-│       ├── lookup/                      WHOIS + DNS proxy with caching
-│       ├── billing-webhook/             verified PayPal IPN
-│       └── reminders/                   daily renewal sweep
-├── scripts/import-from-sheets.mjs       one-time data migration
-└── web/api.js                           frontend client
+domain-vault/                    (repo root = the website, served by GitHub Pages)
+├── index.html  script.js        the app
+├── admin.html  admin.js         the admin panel
+├── config.js                    public config: backend URL, anon key, PayPal button ids
+├── api.js                       browser client for the api function
+└── backend/
+    ├── LAUNCH.md                go-live checklist
+    ├── SECURITY.md              threat model, known gaps, key management
+    ├── supabase/
+    │   ├── config.toml          local stack + per-function JWT settings
+    │   ├── migrations/
+    │   │   ├── …000100_init.sql           schema
+    │   │   ├── …000200_rls.sql            row level security + grants
+    │   │   ├── …000300_logic.sql          triggers, plan limits, sync RPCs, rate limiter
+    │   │   ├── …000400_cron.sql           first schedule (superseded by cron_vault)
+    │   │   ├── …000500_storage.sql        avatars bucket
+    │   │   ├── …0917000100_billing_admin.sql  prices, purchase ledger, admin role, audit
+    │   │   └── …0917000200_cron_vault.sql     reminder schedule via Vault
+    │   ├── functions/
+    │   │   ├── _shared/         cors, crypto, validation, db/auth, email + WhatsApp
+    │   │   ├── api/             user + admin actions (index.ts, admin.ts)
+    │   │   ├── lookup/          WHOIS + DNS proxy
+    │   │   ├── billing-webhook/ PayPal IPN
+    │   │   └── reminders/       daily renewal sweep
+    │   └── tests/               SQL security tests + test function environment
+    └── scripts/
+        ├── import-from-sheets.mjs   one-time migration from the old sheet
+        ├── smoke-test.mjs           client + admin API journeys
+        ├── webhook-test.mjs         payment scenarios
+        ├── ui-test.mjs              real-browser tests (headless Chrome)
+        └── e2e.sh                   runs all three against the local stack
 ```
 
 ---
 
 ## Running it locally
 
-Everything runs on your machine — no Supabase account needed. Requires Docker.
+Requires Docker and the [Supabase CLI](https://supabase.com/docs/guides/cli).
 
 ```bash
-# 1. Install the CLI (skip if `supabase --version` already works)
-npm install -g supabase        # or: brew install supabase/tap/supabase
+cd backend
+npm install
 
-# 2. Configure
 cp .env.example .env
-openssl rand -base64 32        # paste into CREDENTIAL_ENCRYPTION_KEY
+openssl rand -base64 32     # -> CREDENTIAL_ENCRYPTION_KEY
+openssl rand -hex 32        # -> CRON_SECRET
+# set PAYPAL_ENV=sandbox for local work
 
-# 3. Start Postgres, Auth, Storage and the API gateway.
-#    First run downloads several GB of images and takes a few minutes.
-supabase start
-```
-
-`supabase start` prints a local `API URL`, `anon key` and `service_role key`.
-Copy those three into `.env` — the placeholders from `.env.example` are not
-real keys:
-
-```bash
-SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_ANON_KEY=<anon key from the output>
-SUPABASE_SERVICE_ROLE_KEY=<service_role key from the output>
-```
-
-Then apply the schema and serve the functions:
-
-```bash
-supabase db reset                        # runs every migration from scratch
+supabase start              # first run downloads several GB of images
+supabase db reset           # applies every migration from scratch
 supabase functions serve --env-file .env
 ```
 
-Useful local endpoints:
+In a second terminal, serve the site from the repo root:
 
-| What | URL |
+```bash
+python3 -m http.server 5500 --bind 127.0.0.1
+```
+
+Open http://127.0.0.1:5500. Use `127.0.0.1` or `localhost`, not `file://`:
+`config.js` picks the local backend based on the hostname.
+
+| Local service | URL |
 |---|---|
-| Studio (browse tables, run SQL) | http://127.0.0.1:54323 |
-| API | http://127.0.0.1:54321 |
-| Inbucket (catches every outbound email) | http://127.0.0.1:54324 |
+| App | http://127.0.0.1:5500 |
+| Admin panel | http://127.0.0.1:5500/admin.html |
+| Supabase Studio (tables, SQL) | http://127.0.0.1:54323 |
+| Mail catcher (every outbound email) | http://127.0.0.1:54324 |
 
-### Smoke test
+### Do not put `SUPABASE_*` values in `.env`
 
-With `functions serve` running, in a second terminal:
+The function runtime injects `SUPABASE_URL`, `SUPABASE_ANON_KEY` and
+`SUPABASE_SERVICE_ROLE_KEY` itself. Locally, `SUPABASE_URL` is
+`http://kong:8000` on the Docker network. Overriding it with
+`http://127.0.0.1:54321` makes every call fail with `name resolution failed`,
+because inside the container `127.0.0.1` is the container. Hosted projects
+reject `SUPABASE_*` secret names outright.
 
-```bash
-API=http://127.0.0.1:54321/functions/v1/api
+### Your first admin
 
-# 1. Register. Accounts start pending, by design.
-curl -s -X POST $API -H 'Content-Type: application/json' \
-  -d '{"action":"registerUser","email":"you@example.com","password":"correct-horse-battery"}'
-# -> {"success":true,"message":"Account created! Pending admin activation."}
-
-# 2. Logging in now is refused, and says why.
-curl -s -X POST $API -H 'Content-Type: application/json' \
-  -d '{"action":"loginUser","email":"you@example.com","password":"correct-horse-battery"}'
-# -> {"success":false,"message":"Account pending activation by Admin."}
-
-# 3. Activate (normally an admin action; there is no admin panel yet).
-docker exec supabase_db_backend psql -U postgres \
-  -c "update public.profiles set status='active' where email='you@example.com';"
-
-# 4. Log in and keep the token.
-TOKEN=$(curl -s -X POST $API -H 'Content-Type: application/json' \
-  -d '{"action":"loginUser","email":"you@example.com","password":"correct-horse-battery"}' \
-  | python3 -c 'import sys,json;print(json.load(sys.stdin)["session"]["access_token"])')
-
-# 5. Use it.
-curl -s -X POST $API -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $TOKEN" -d '{"action":"getUserData"}'
-```
-
-Worth confirming the properties yourself:
+The first admin has to be created directly in the database, once. After that,
+admins manage each other from the Users tab.
 
 ```bash
-# No token: refused.
-curl -s -X POST $API -H 'Content-Type: application/json' -d '{"action":"getUserData"}'
-# -> {"success":false,"message":"Not signed in."}
-
-# Plan limits are enforced by the database, not the browser.
-curl -s -X POST $API -H 'Content-Type: application/json' -H "Authorization: Bearer $TOKEN" \
-  -d '{"action":"saveDomains","domains":[{"name":"d1.com"},{"name":"d2.com"},{"name":"d3.com"},
-       {"name":"d4.com"},{"name":"d5.com"},{"name":"d6.com"}]}'
-# -> "You have reached the domain limit for the Personal plan."
-
-# Stored registrar passwords are ciphertext at rest.
-docker exec supabase_db_backend psql -U postgres -c "select * from public.provider_secrets;"
+# register normally through the app, then:
+docker exec supabase_db_backend psql -U postgres -c \
+  "update profiles set status='active', is_admin=true where email='you@example.com';"
 ```
 
-Register a second user and call `getUserData` with the first user's token: you
-get your own rows, never theirs. That is Row Level Security doing it, not
-application code — which is exactly what the old backend could not do.
+On the hosted project, run the same `update` in the SQL editor.
 
-### Stopping
+### If `functions serve` gets stuck
+
+A `functions serve` whose runtime container has died keeps running and prints
+`No such container: supabase_edge_runtime_backend` in a loop. It also blocks a
+new one from starting.
 
 ```bash
-supabase stop             # keeps data
-supabase stop --no-backup # wipes the local database
+pkill -x supabase; pkill -f "node .*supabase functions"
+docker rm -f supabase_edge_runtime_backend
+supabase functions serve --env-file .env
 ```
+
+Always stop `serve` with Ctrl+C before starting another.
 
 ---
 
-## Deploying to a hosted project
+## Testing
 
 ```bash
-supabase login
-supabase link --project-ref YOUR-PROJECT-REF
+npm test            # SQL: 7 migrations on a clean Postgres 16 + security assertions
+npm run test:e2e    # starts a PayPal stub + test functions, then runs:
+                    #   smoke-test   customer and admin journeys through api.js
+                    #   webhook-test 17 payment scenarios
+                    #   ui-test      index.html + admin.html in headless Chrome
+```
 
-supabase db push                          # apply migrations
-supabase secrets set --env-file .env      # push secrets to the function runtime
+`test:e2e` needs `supabase start` first. It serves the functions with
+`supabase/tests/functions.env`, a throwaway environment in which PayPal
+verification goes to a local stub container. It stops everything it started
+when it finishes. Restart your own `functions serve` afterwards.
+
+What the suites prove, among other things:
+
+- one user's token never reaches another user's rows, and a suspended account
+  is locked out at the database level;
+- users cannot grant themselves a plan, an override, admin rights or a
+  purchase;
+- plan limits hold even when the browser's limit is bypassed;
+- an Agency payment of 0.01, a payment in the wrong currency, a payment to
+  another receiver, and an unverified notification all grant nothing;
+- a Pending payment that later clears is applied exactly once, and replays
+  change nothing;
+- a full refund or chargeback withdraws the pack, a partial refund does not,
+  and a cancelled chargeback restores it;
+- registrar passwords are stored encrypted and never returned except through
+  the reveal action;
+- the admin panel's actions work end to end, are all audited, and render
+  database content as text (no XSS);
+- the mobile menu works.
+
+---
+
+## Payments
+
+PayPal only, one-time purchase per pack:
+
+| Pack | Domains | Button `item_number` |
+|---|---|---|
+| Personal | 5 | free, no button |
+| Start-up | 20 | `startup` |
+| Business | 50 | `business` |
+| Agency | unlimited | `agency` |
+
+1. The admin sets each pack's price in **Admin → Prices**. A pack with no price
+   cannot be bought.
+2. Each pack has a PayPal "Buy Now" button charging **exactly** that price. Its
+   id goes into `config.js`.
+3. The site sends the customer to PayPal with their account email in `custom`.
+4. PayPal notifies `billing-webhook`. The webhook verifies the notification,
+   checks the receiver, pack, amount and currency, records it in `purchases`,
+   and recomputes the customer's plan.
+5. PayPal returns the customer to `/?payment=success`. The app polls until the
+   new plan shows up.
+
+The effective plan is the admin override if one is set, otherwise the
+highest-ranked pack with a completed purchase, otherwise Personal. The first
+completed purchase also activates a pending account. A downgrade never deletes
+domains; the customer just can't add more until they're under the limit again.
+
+Payments the webhook refuses still appear in **Admin → Sales**:
+
+- `rejected`: wrong amount, currency or pack.
+- `unmatched`: no account with that email.
+
+The customer was charged in both cases, so refund them in PayPal, or grant
+the pack with a plan override.
+
+---
+
+## Scheduled reminders
+
+`…0917000200_cron_vault.sql` schedules the sweep for 08:00 UTC. It reads two
+values from Supabase Vault. Create them once per project, in the SQL editor
+(locally: Studio, or `docker exec … psql`):
+
+```sql
+select vault.create_secret('https://<project-ref>.supabase.co/functions/v1', 'dv_functions_base_url');
+select vault.create_secret('<the CRON_SECRET value>', 'dv_cron_secret');
+```
+
+Locally, the base URL is `http://kong:8000/functions/v1`.
+
+Until both entries exist, the job runs and does nothing. To trigger a sweep by
+hand:
+
+```bash
+curl -X POST https://<project-ref>.supabase.co/functions/v1/reminders \
+  -H "x-cron-secret: $CRON_SECRET"
+```
+
+The sweep is idempotent. Each reminder is claimed in `notifications` before it
+is sent, so overlapping runs cannot double-send.
+
+---
+
+## Deploying
+
+The full sequence, including what to verify afterwards, is in
+[LAUNCH.md](LAUNCH.md). The commands:
+
+```bash
+supabase link --project-ref <project-ref>
+supabase db push
+supabase secrets set --env-file .env.production
 supabase functions deploy api lookup billing-webhook reminders
 ```
 
-`api` and `billing-webhook` must run with gateway JWT verification **off**.
-`supabase/config.toml` already declares this, so the deploy command above
-picks it up. If your CLI version ignores that, deploy those two explicitly:
+`supabase/config.toml` turns gateway JWT verification off for `api`,
+`billing-webhook` and `reminders`. Each authenticates callers itself:
 
-```bash
-supabase functions deploy api --no-verify-jwt
-supabase functions deploy billing-webhook --no-verify-jwt
-```
+- `api` authenticates per action; register, login and prices are public
+  because the caller has no token yet.
+- `billing-webhook` verifies with PayPal.
+- `reminders` checks the cron secret.
 
-This is not a hole. `api` authenticates every action itself — only
-`registerUser` and `loginUser` are public, and they have to be, because the
-caller has no token yet. `billing-webhook` authenticates by posting the
-message back to PayPal for confirmation. Gateway verification would simply
-reject both before our code could run.
-
-Never put `SUPABASE_SERVICE_ROLE_KEY` in the frontend. The anon key is public
-by design; the service role key bypasses every policy in the database.
+With gateway verification on, all three are rejected before our code runs. If
+your CLI version ignores `config.toml`, add `--no-verify-jwt` when deploying
+those three.
 
 ---
 
-## Scheduled jobs
+## Migrating the old Google Sheet
 
-`20260912000400_cron.sql` registers two pg_cron jobs: the daily reminder sweep
-at 08:00 UTC and a nightly cache purge. pg_cron needs two settings to know
-where to call:
-
-```sql
-alter database postgres set app.functions_base_url =
-  'https://YOUR-PROJECT-REF.supabase.co/functions/v1';
-alter database postgres set app.service_role_key = 'your-service-role-key';
-```
-
-If pg_cron is unavailable the migration logs a notice and does nothing. In that
-case call the endpoint from any external scheduler:
-
-```bash
-curl -X POST https://YOUR-PROJECT-REF.supabase.co/functions/v1/reminders \
-  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
-```
-
-The sweep is idempotent — a duplicate run cannot send a duplicate reminder —
-so overlapping schedules are harmless.
-
----
-
-## Migrating the existing data
-
-### Exporting the old sheet
-
-Run this once in the existing Apps Script project and copy the output into
+Run this once in the old Apps Script project and save the output as
 `export.json`:
 
 ```javascript
@@ -237,63 +289,43 @@ function exportAll() {
 }
 ```
 
-### Importing
-
 ```bash
-npm install
-export SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=...
-
-node scripts/import-from-sheets.mjs export.json            # dry run first
+export SUPABASE_URL=https://<project-ref>.supabase.co
+export SUPABASE_SERVICE_ROLE_KEY=...        # shell only, never a file in the repo
+node scripts/import-from-sheets.mjs export.json            # dry run
 node scripts/import-from-sheets.mjs export.json --commit
 ```
 
-**No passwords are imported, by design.** Account passwords and registrar
-credentials were both exposed by the old backend, so every one of them must be
-treated as compromised. Accounts are created with a random password and a
-recovery link; registrar passwords are left out entirely and users re-enter the
-ones they still want stored, *after rotating them at the registrar*. See
-[SECURITY.md](SECURITY.md).
+**No passwords are imported, by design.** The old backend exposed both
+account and registrar passwords, so all of them must be treated as
+compromised. See [SECURITY.md](SECURITY.md).
 
 ---
 
-## Wiring up the frontend
+## API reference
 
-See [INTEGRATION.md](INTEGRATION.md). The short version: the action names and
-response shapes are unchanged, so the change to `script.js` is a config block,
-a three-line replacement of `apiCall`, and two small edits for the credential
-handling.
+Every action is a `POST /functions/v1/api` with body `{ "action": "...", ... }`.
+Except the public ones, each needs `Authorization: Bearer <access_token>`.
 
----
+| Action | Who | Payload | Notes |
+|---|---|---|---|
+| `registerUser` | public | `email`, `password`, `phone`, `location` | Password ≥ 10 chars. 5/hour per IP. |
+| `loginUser` | public | `email`, `password` | Returns `user` (incl. `plan`, `isAdmin`) and `session`. |
+| `getPrices` | public | — | Pack prices; `amount: null` = not for sale. |
+| `getUserData` | user | — | Domains, providers, settings, current `plan`, `isAdmin`, own `purchases`. |
+| `saveDomains` | user | `domains[]` | Atomic sync. Plan limit enforced. |
+| `saveProviders` | user | `providers[]` | Empty `pass` keeps the stored password; `removePassword: true` deletes it. |
+| `saveSettings` | user | `settings{}` | Base64 avatars are moved to Storage. |
+| `revealCredential` | user | `providerId` | 10/hour, audited. |
+| `adminOverview` | admin | — | Counts by status and plan, domains, sales, payments needing review. |
+| `adminListUsers` | admin | `status?`, `search?`, `limit?`, `offset?` | With domain counts. |
+| `adminUpdateUser` | admin | `userId`, `status?`, `planOverride?`, `isAdmin?` | Audited. Emails the user on activation. Can't demote or suspend yourself. |
+| `adminSales` | admin | `from?`, `to?`, `status?` | Ledger plus totals per currency. |
+| `adminGetPrices` / `adminSetPrice` | admin | `plan`, `amount`, `currency` | `amount: null` takes a pack off sale. Audited. |
+| `adminAudit` | admin | `limit?` | Recent admin changes, before and after. |
 
-## API
+Other endpoints:
 
-All actions POST to `/functions/v1/api` as `{ "action": "...", ... }`.
-Everything except `registerUser` and `loginUser` requires
-`Authorization: Bearer <access_token>`.
-
-| Action | Payload | Notes |
-|---|---|---|
-| `registerUser` | `email`, `password`, `phone`, `location` | Password min 10 chars. 5/hour per IP. |
-| `loginUser` | `email`, `password` | Returns the user and a session. |
-| `getUserData` | — | Domains, providers, settings. Never returns stored passwords. |
-| `saveDomains` | `domains[]` | Atomic sync. Enforces the plan limit. |
-| `saveProviders` | `providers[]` | Empty `pass` leaves a stored password untouched. |
-| `saveSettings` | `settings{}` | Base64 avatars are moved to Storage. |
-| `revealCredential` | `providerId` | One registrar password. 10/hour, audited. |
-
-Separate endpoints: `POST /functions/v1/lookup` (`domain`, `kind`,
-`types[]`) and `POST /functions/v1/billing-webhook` (PayPal IPN).
-
----
-
-## Still to do
-
-Not built here, and worth scoping before the next phase:
-
-- **Admin panel.** Activating a user is currently a SQL update.
-- **Stripe.** Needed for Japan; PayPal alone is a poor fit there
-  (Konbini, JCB, and JPY pricing).
-- **Automated tests.** The SQL has been validated against Postgres 16, but
-  there is no test suite for the Edge Functions yet.
-- **Rotating the exposed Apps Script deployment**, which keeps serving until
-  it is explicitly retired.
+- `POST /functions/v1/lookup` with `domain`, `kind`, `types[]` (signed-in users)
+- `POST /functions/v1/billing-webhook` (PayPal IPN)
+- `POST /functions/v1/reminders` (`x-cron-secret`)

@@ -29,11 +29,34 @@ function escapeHtml(value: string): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
+/** Constant-time string comparison, so the secret cannot be guessed by timing. */
+function safeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const x = enc.encode(a);
+  const y = enc.encode(b);
+  if (x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+/**
+ * Only the scheduler may run this: pg_cron presents x-cron-secret, and an
+ * operator running it by hand may present the service role key instead.
+ */
+function authorized(req: Request): boolean {
+  const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+  const presented = req.headers.get("x-cron-secret") ?? "";
+  if (cronSecret.length >= 32 && safeEqual(presented, cronSecret)) return true;
+
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const bearer = req.headers.get("Authorization") ?? "";
+  return serviceKey.length > 0 && safeEqual(bearer, `Bearer ${serviceKey}`);
+}
+
 Deno.serve(async (req: Request) => {
-  // Only the scheduler may run this.
-  const auth = req.headers.get("Authorization") ?? "";
-  const expected = `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`;
-  if (auth !== expected) return new Response("forbidden", { status: 403 });
+  if (req.method !== "POST") return new Response("POST only", { status: 405 });
+  if (!authorized(req)) return new Response("forbidden", { status: 403 });
 
   const admin = serviceClient();
   const targets = new Map(LEAD_DAYS.map((d) => [isoDateInDays(d), d]));

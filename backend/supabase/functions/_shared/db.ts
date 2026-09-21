@@ -36,6 +36,7 @@ export interface Caller {
   plan: string;
   status: string;
   phone: string | null;
+  is_admin: boolean;
 }
 
 export class HttpError extends Error {
@@ -58,7 +59,7 @@ export async function requireUser(req: Request): Promise<{ caller: Caller; db: S
 
   const { data: profile } = await serviceClient()
     .from("profiles")
-    .select("id, email, plan, status, phone")
+    .select("id, email, plan, status, phone, is_admin")
     .eq("id", auth.user.id)
     .maybeSingle();
 
@@ -69,6 +70,13 @@ export async function requireUser(req: Request): Promise<{ caller: Caller; db: S
   }
 
   return { caller: profile as Caller, db };
+}
+
+/** requireUser, plus the caller must hold the admin flag. */
+export async function requireAdmin(req: Request): Promise<{ caller: Caller; db: SupabaseClient }> {
+  const result = await requireUser(req);
+  if (!result.caller.is_admin) throw new HttpError(403, "Administrators only.");
+  return result;
 }
 
 /**

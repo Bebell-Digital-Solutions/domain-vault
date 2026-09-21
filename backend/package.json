@@ -11,12 +11,16 @@
     "serve": "supabase functions serve --env-file .env",
     "deploy": "supabase functions deploy api lookup billing-webhook reminders",
     "smoke": "node scripts/smoke-test.mjs",
-    "test": "./supabase/tests/run-tests.sh"
+    "test": "./supabase/tests/run-tests.sh",
+    "test:webhook": "node scripts/webhook-test.mjs",
+    "test:e2e": "./scripts/e2e.sh",
+    "test:ui": "node scripts/ui-test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4"
   },
   "devDependencies": {
+    "playwright-core": "^1.63.0",
     "supabase": "^2.117.0"
   }
 }

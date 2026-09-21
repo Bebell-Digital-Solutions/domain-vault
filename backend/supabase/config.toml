@@ -426,11 +426,17 @@ enabled = true
 # "billing-webhook" must not be verified either: PayPal cannot present a JWT.
 # It authenticates by posting the message back to PayPal for confirmation.
 #
-# "lookup" and "reminders" keep the default (verify_jwt = true) as an extra
-# gate; both also check the caller themselves.
+# "reminders" is called by pg_cron with an x-cron-secret header rather than a
+# JWT, so gateway verification is off and the function checks the secret.
+#
+# "lookup" keeps the default (verify_jwt = true) as an extra gate; it also
+# checks the caller itself.
 # ---------------------------------------------------------------------------
 [functions.api]
 verify_jwt = false
 
 [functions.billing-webhook]
+verify_jwt = false
+
+[functions.reminders]
 verify_jwt = false
