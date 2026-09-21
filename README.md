@@ -1,13 +1,13 @@
 
 <div align="center">
-  <img src="https://bucket.mlcdn.com/a/3336/3336910/images/115f0fdbe1cc012228f0c234e8b4f909d2e7ab69.png" alt="DOMAIN VAULT Logo" width="50" />
+  <img src="https://bucket.mlcdn.com/a/3336/3336910/images/115f0fdbe1cc012228f0c234e8b4f909d2e7ab69.png" alt="DOMAIN VAULT Logo" width="50" />  # DOMAIN VAULT
 
-  # DOMAIN VAULT
+   ## **Secure Domain Portfolio Manager**
 
   <div align="center">
   <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/mediamodifier_image.png" alt="DOMAIN VAULT Banner" width="100%" />
   
-  ## **Secure Domain Portfolio Manager**
+
 
   [![Version](https://img.shields.io/badge/version-v2.0.26--BETA-blue?style=for-the-badge)](#)
   [![Security](https://img.shields.io/badge/security-AES--256-success?style=for-the-badge)](#)
