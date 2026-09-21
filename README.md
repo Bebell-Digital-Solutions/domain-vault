@@ -7,7 +7,7 @@
   <div align="center">
   <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/mediamodifier_image.png" alt="DOMAIN VAULT Banner" width="100%" />
   
-  **Secure Domain Portfolio Manager**
+  ## **Secure Domain Portfolio Manager**
 
   [![Version](https://img.shields.io/badge/version-v2.0.26--BETA-blue?style=for-the-badge)](#)
   [![Security](https://img.shields.io/badge/security-AES--256-success?style=for-the-badge)](#)
