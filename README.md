@@ -35,17 +35,17 @@ No API keys. No OAuth. Just your data, securely in one place.
 ## 🚀 Key Features
 
 * **📊 All-in-One Dashboard:** View your entire domain portfolio at a glance, including total domains, annual costs, upcoming renewals, and provider distribution.
-* 
+
 * **📅 Automated Renewals Calendar:** Sync expiration dates directly to Google Calendar or download `.ics` files. Get WhatsApp reminders before you lose valuable digital real estate.
-* 
+
 * **🏢 Multi-Provider Vault:** Store secure credentials for GoDaddy, Namecheap, Cloudflare, IONOS, and custom registrars in one encrypted vault.
-* 
+
 * **🔐 Zero-Knowledge Security:** Your vault lives in a Supabase Postgres database protected by Row-Level Security (RLS) hosted on AWS, meaning only you can read your rows. Credential storage uses zero-knowledge AES-256 client-side encryption.
-* 
+
 * **🌐 Live DNS Inspector:** Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.
-* 
+
 * **📈 Financial Reporting:** Track renewal costs by month, visualize your true domain investment, and export comprehensive CSV reports to hand off to your accounting team.
-* 
+
 * **🌍 Bilingual UI:** Seamlessly switch between English and Español with one click.
 
 ---
