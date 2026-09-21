@@ -184,6 +184,19 @@
             box-shadow: none;
         }
 
+        .alt-download {
+            display: block;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+        .alt-download:hover { color: var(--primary); text-decoration: underline; }
+        /* Reserves the same height in cards with no second build, so every
+           primary button stays on one line across the three cards. */
+        .alt-download.placeholder { visibility: hidden; }
+
         .web-app {
             margin-top: 56px;
             font-size: 1rem;
@@ -257,11 +270,29 @@
             var live = 0;
 
             document.querySelectorAll('.btn-download').forEach(function (btn) {
-                var url = builds[btn.dataset.platform];
+                // Accept either a plain URL string or { url, alt: { label, url } }.
+                var build = builds[btn.dataset.platform] || {};
+                if (typeof build === 'string') build = { url: build };
+                var url = build.url;
+
                 if (url) {
                     btn.href = url;
                     btn.setAttribute('download', '');
                     live++;
+                    var alt;
+                    if (build.alt && build.alt.url) {
+                        alt = document.createElement('a');
+                        alt.className = 'alt-download';
+                        alt.href = build.alt.url;
+                        alt.textContent = 'or download for ' + build.alt.label;
+                        alt.setAttribute('download', '');
+                    } else {
+                        alt = document.createElement('span');
+                        alt.className = 'alt-download placeholder';
+                        alt.setAttribute('aria-hidden', 'true');
+                        alt.textContent = '\u00a0';
+                    }
+                    btn.insertAdjacentElement('afterend', alt);
                 } else {
                     btn.classList.add('unavailable');
                     btn.textContent = 'Coming soon';

@@ -40,14 +40,20 @@ window.DOMAIN_VAULT_CONFIG = (function () {
     }
   };
 
-  /* Desktop build URLs. A platform with no URL shows "Coming soon" on
-     downloads.html instead of a dead button. Point these at the release
-     assets once builds exist, e.g.
-       macos: 'https://github.com/<org>/<repo>/releases/latest/download/DomainVault.dmg' */
+  /* Desktop builds, from the GitHub release. `alt` adds a small secondary
+     link under the main button — one button cannot serve two architectures.
+     A platform with no `url` shows "Coming soon" instead of a dead button.
+     Update these when cutting a new desktop-v* release. */
   backend.downloads = {
-    macos:   '',
-    windows: '',
-    linux:   ''
+    macos: {
+      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-1.0.0-arm64.dmg',
+      alt: { label: 'Intel Mac (x64)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-1.0.0-x64.dmg' }
+    },
+    windows: { url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-Setup-1.0.0.exe' },
+    linux: {
+      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-1.0.0-x86_64.AppImage',
+      alt: { label: 'Debian / Ubuntu (.deb)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-1.0.0-amd64.deb' }
+    }
   };
 
   return backend;

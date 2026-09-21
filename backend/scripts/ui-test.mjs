@@ -204,11 +204,14 @@ async function login(page, email) {
     els => els.map(e => Math.round(e.getBoundingClientRect().width)));
   ok('downloads: brand glyphs actually render', glyphs.every(w => w >= 10), glyphs.join('/'));
 
-  ok('downloads: unconfigured builds show "Coming soon", not dead links',
-    await page.locator('.btn-download.unavailable').count() === 3 &&
-    await page.locator('.btn-download[href]').count() === 0);
-  ok('downloads: copy stays honest while no build exists',
-    /on the way/.test(await page.locator('#lede').textContent()));
+  // config.js now points at a published release, so the buttons are live.
+  // (Both states matter: the block below re-tests the unconfigured one.)
+  ok('downloads: every button is a real release download',
+    await page.locator('.btn-download[href*="releases/download"]').count() === 3);
+  ok('downloads: designed copy is shown',
+    /available for all major platforms/.test(await page.locator('#lede').textContent()));
+  ok('downloads: second architecture offered for macOS and Linux',
+    await page.locator('.alt-download[href]').count() === 2);
 
   const widths = await page.locator('.platform').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().width)));
   const buttonTops = await page.locator('.btn-download').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
@@ -217,6 +220,23 @@ async function login(page, email) {
   ok('downloads: no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
   ok('downloads: no JavaScript errors', errors.length === 0, errors.join(' | '));
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/downloads.png` });
+  await ctx.close();
+}
+
+// The same page with NO builds configured must never show dead buttons.
+{
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } });
+  const page = await ctx.newPage();
+  await page.route('**/config.js', route => route.fulfill({
+    contentType: 'application/javascript', body: 'window.DOMAIN_VAULT_CONFIG = { downloads: {} };',
+  }));
+  await page.goto(SITE + '/downloads.html');
+  await page.waitForSelector('.btn-download');
+  ok('downloads: unconfigured builds show "Coming soon", not dead links',
+    await page.locator('.btn-download.unavailable').count() === 3 &&
+    await page.locator('.btn-download[href]').count() === 0);
+  ok('downloads: copy stays honest while no build exists',
+    /on the way/.test(await page.locator('#lede').textContent()));
   await ctx.close();
 }
 
