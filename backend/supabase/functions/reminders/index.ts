@@ -1,35 +1,36 @@
 // ============================================================================
 // Daily renewal reminder sweep
 //
-// Replaces checkRenewalsAndNotify. Differences that matter:
-//   * Idempotent. Each (domain, days-out, channel) reminder is recorded, and
-//     the unique index means a re-run — or an overlapping run — cannot send a
-//     duplicate. The old version re-sent everything if the trigger fired twice.
-//   * Queries only the three dates it cares about instead of scanning every
-//     row and computing dates in a loop.
-//   * A single user's bad phone number or bounced address no longer aborts
-//     the rest of the sweep.
+// All the "who should hear about what" logic lives in the due_reminders SQL
+// function, where it is covered by the test suite. This function's job is to
+// claim, send, and record — and to leave the claim off if the send failed, so
+// tomorrow tries again.
+//
+// One digest per user per channel: ten domains renewing the same week is one
+// email, not ten.
 // ============================================================================
 
 import { serviceClient } from "../_shared/db.ts";
 import { sendEmail, sendWhatsApp } from "../_shared/notify.ts";
 
-const LEAD_DAYS = [30, 7, 1];
 const SITE_URL = Deno.env.get("SITE_URL") ?? "";
+const CHANNELS = ["email", "whatsapp"] as const;
 
-function isoDateInDays(days: number): string {
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+interface Due {
+  user_id: string;
+  email: string;
+  phone: string | null;
+  domain_id: string;
+  domain_name: string;
+  renewal_date: string;
+  renewal_price: number | null;
+  auto_renew: boolean;
+  provider_name: string | null;
+  days_left: number;
+  milestone: number;
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-}
-
-/** Constant-time string comparison, so the secret cannot be guessed by timing. */
+/** Constant-time comparison, so the secret cannot be guessed by timing. */
 function safeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
   const x = enc.encode(a);
@@ -40,18 +41,84 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/**
- * Only the scheduler may run this: pg_cron presents x-cron-secret, and an
- * operator running it by hand may present the service role key instead.
- */
+/** pg_cron presents x-cron-secret; an operator may present the service key. */
 function authorized(req: Request): boolean {
   const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
-  const presented = req.headers.get("x-cron-secret") ?? "";
-  if (cronSecret.length >= 32 && safeEqual(presented, cronSecret)) return true;
-
+  if (cronSecret.length >= 32 && safeEqual(req.headers.get("x-cron-secret") ?? "", cronSecret)) {
+    return true;
+  }
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const bearer = req.headers.get("Authorization") ?? "";
-  return serviceKey.length > 0 && safeEqual(bearer, `Bearer ${serviceKey}`);
+  return serviceKey.length > 0 &&
+    safeEqual(req.headers.get("Authorization") ?? "", `Bearer ${serviceKey}`);
+}
+
+function escapeHtml(value: string): string {
+  return String(value).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+function money(amount: number | null): string {
+  return amount === null || Number(amount) === 0 ? "" : ` · ${Number(amount).toFixed(2)}`;
+}
+
+function whenText(days: number): string {
+  if (days <= 0) return "today";
+  if (days === 1) return "tomorrow";
+  return `in ${days} days`;
+}
+
+function subjectFor(rows: Due[]): string {
+  const soonest = rows[0];
+  if (rows.length === 1) {
+    return `${soonest.domain_name} renews ${whenText(soonest.days_left)}`;
+  }
+  return `${rows.length} domains renewing soon — first ${whenText(soonest.days_left)}`;
+}
+
+function emailBody(rows: Due[]): string {
+  const items = rows.map((r) => `
+    <tr>
+      <td style="padding:10px 14px;border-bottom:1px solid #eee">
+        <b>${escapeHtml(r.domain_name)}</b>${
+    r.provider_name ? ` <span style="color:#777">· ${escapeHtml(r.provider_name)}</span>` : ""
+  }
+      </td>
+      <td style="padding:10px 14px;border-bottom:1px solid #eee;white-space:nowrap">
+        ${escapeHtml(r.renewal_date)} (${escapeHtml(whenText(r.days_left))})${escapeHtml(money(r.renewal_price))}
+      </td>
+      <td style="padding:10px 14px;border-bottom:1px solid #eee;color:#777;white-space:nowrap">
+        ${r.auto_renew ? "auto-renew on" : "manual"}
+      </td>
+    </tr>`).join("");
+
+  const anyManual = rows.some((r) => !r.auto_renew);
+
+  return `
+    <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#111">
+      <h2 style="margin:0 0 6px">Renewal reminder</h2>
+      <p style="margin:0 0 18px;color:#555">
+        ${rows.length === 1 ? "One domain is" : `${rows.length} domains are`} coming up for renewal.
+      </p>
+      <table style="border-collapse:collapse;width:100%;max-width:600px">${items}</table>
+      ${
+    anyManual
+      ? `<p style="margin:18px 0 0;color:#555">Domains marked <b>manual</b> will not renew by
+           themselves — renew them with your registrar before the date above.</p>`
+      : ""
+  }
+      ${SITE_URL ? `<p style="margin:18px 0 0"><a href="${SITE_URL}">Open Domain Vault</a></p>` : ""}
+      <p style="margin:22px 0 0;font-size:12px;color:#999">
+        You can change or switch off these reminders in Domain Vault under Settings.
+      </p>
+    </div>`;
+}
+
+function whatsappBody(rows: Due[]): string {
+  const lines = rows.slice(0, 10).map((r) =>
+    `• ${r.domain_name} — ${whenText(r.days_left)} (${r.renewal_date})${r.auto_renew ? " [auto]" : ""}`
+  );
+  if (rows.length > 10) lines.push(`…and ${rows.length - 10} more`);
+  return `Domain Vault renewal reminder:\n${lines.join("\n")}`;
 }
 
 Deno.serve(async (req: Request) => {
@@ -59,95 +126,71 @@ Deno.serve(async (req: Request) => {
   if (!authorized(req)) return new Response("forbidden", { status: 403 });
 
   const admin = serviceClient();
-  const targets = new Map(LEAD_DAYS.map((d) => [isoDateInDays(d), d]));
+  const summary = { due: 0, sent: 0, recipients: 0, failed: 0 };
 
-  const { data: domains, error } = await admin
-    .from("domains")
-    .select("id, user_id, name, renewal_date, renewal_price, auto_renew")
-    .in("renewal_date", [...targets.keys()]);
-
-  if (error) {
-    console.error("reminder query failed", error.message);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
-  }
-
-  if (!domains?.length) {
-    return new Response(JSON.stringify({ checked: 0, sent: 0 }), {
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  // One profile lookup for the whole sweep rather than one per domain.
-  const userIds = [...new Set(domains.map((d) => d.user_id))];
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, email, phone, status")
-    .in("id", userIds);
-
-  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
-
-  let sent = 0;
-  let skipped = 0;
-
-  for (const domain of domains) {
-    const profile = profileById.get(domain.user_id);
-    if (!profile || profile.status !== "active") {
-      skipped++;
-      continue;
+  for (const channel of CHANNELS) {
+    const { data, error } = await admin.rpc("due_reminders", { p_channel: channel });
+    if (error) {
+      console.error(`due_reminders(${channel}) failed`, error.message);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    const diffDays = targets.get(domain.renewal_date as string)!;
+    const rows = (data ?? []) as Due[];
+    summary.due += rows.length;
 
-    for (const channel of ["email", "whatsapp"] as const) {
-      if (channel === "whatsapp" && !profile.phone) continue;
+    // One digest per user.
+    const byUser = new Map<string, Due[]>();
+    for (const row of rows) {
+      const list = byUser.get(row.user_id) ?? [];
+      list.push(row);
+      byUser.set(row.user_id, list);
+    }
 
-      // Claim the reminder first. If the insert conflicts, another run already
-      // sent this one, so we must not send again.
-      const { error: claimError } = await admin.from("notifications").insert({
-        user_id: profile.id,
-        domain_id: domain.id,
-        domain_name: domain.name,
-        diff_days: diffDays,
+    for (const [, userRows] of byUser) {
+      userRows.sort((a, b) => a.days_left - b.days_left);
+      const who = userRows[0];
+
+      // Claim first: if two sweeps overlap, only one inserts these rows and
+      // only one sends. A failed send releases the claim below.
+      const claims = userRows.map((r) => ({
+        user_id: r.user_id,
+        domain_id: r.domain_id,
+        domain_name: r.domain_name,
+        renewal_date: r.renewal_date,
+        diff_days: r.milestone,
         type: "renewal",
         channel,
-      });
+      }));
+
+      const { data: inserted, error: claimError } = await admin
+        .from("notifications").insert(claims).select("id, domain_id, diff_days");
 
       if (claimError) {
         if (claimError.code !== "23505") console.error("claim failed", claimError.message);
-        continue;
+        continue;   // another run already has these
       }
 
       const ok = channel === "email"
-        ? await sendEmail(
-          profile.email,
-          `Domain renewal reminder: ${domain.name}`,
-          `<h3>${escapeHtml(domain.name)} expires in ${diffDays} day${diffDays === 1 ? "" : "s"}</h3>
-           <p>Renewal date: <b>${domain.renewal_date}</b></p>
-           ${domain.auto_renew ? "<p>Auto-renew is on for this domain.</p>" : ""}
-           ${SITE_URL ? `<p><a href="${SITE_URL}">Open Domain Vault</a></p>` : ""}`,
-        )
-        : await sendWhatsApp(
-          profile.phone,
-          `Reminder: your domain ${domain.name} expires in ${diffDays} day${
-            diffDays === 1 ? "" : "s"
-          }.`,
-        );
+        ? await sendEmail(who.email, subjectFor(userRows), emailBody(userRows))
+        : await sendWhatsApp(who.phone, whatsappBody(userRows));
 
       if (ok) {
-        sent++;
+        summary.sent += userRows.length;
+        summary.recipients++;
       } else {
-        // Delivery failed, so release the claim and let tomorrow's run retry.
-        await admin.from("notifications")
-          .delete()
-          .eq("domain_id", domain.id)
-          .eq("diff_days", diffDays)
-          .eq("channel", channel)
-          .eq("type", "renewal");
+        summary.failed += userRows.length;
+        // Release the claim so the next sweep retries. Without this a failed
+        // send would be recorded as delivered and never tried again.
+        const ids = (inserted ?? []).map((r) => r.id);
+        if (ids.length) await admin.from("notifications").delete().in("id", ids);
       }
     }
   }
 
-  return new Response(JSON.stringify({ checked: domains.length, sent, skipped }), {
+  return new Response(JSON.stringify(summary), {
     headers: { "Content-Type": "application/json" },
   });
 });

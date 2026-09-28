@@ -139,7 +139,7 @@
         let domains = [];
         let providers = [];
         let notifications = [];
-        let settings = { username: 'User', language: 'en', theme: 'orange' };
+        let settings = { username: 'User', language: 'en', theme: 'orange', reminders: { enabled: true, channels: ['email'], leadDays: [30, 7, 1, 0] } };
         let expensesChart = null;
         let isLoginMode = true;
         let currentCalendarDate = new Date();
@@ -226,6 +226,12 @@
             document.getElementById('tab-register').addEventListener('click', () => switchAuthMode(false));
             document.getElementById('authSubmitBtn').addEventListener('click', handleAuthSubmit);
             document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('settingsRemindersForm').addEventListener('submit', saveReminderSettings);
+            document.getElementById('remindersEnabled').addEventListener('change', function () {
+                settings.reminders = settings.reminders || {};
+                settings.reminders.enabled = this.checked;
+                applyReminderSettings();
+            });
 
             // Setup Plan Badge Click Listener
             document.getElementById('upgradePlanBtn').addEventListener('click', () => {
@@ -594,6 +600,47 @@
             });
         }
 
+        // --- Renewal reminder preferences -------------------------------
+
+        function applyReminderSettings() {
+            var prefs = (settings && settings.reminders) || {};
+            var enabled = prefs.enabled !== false;
+            var channels = prefs.channels || ['email'];
+            var leadDays = (prefs.leadDays || [30, 7, 1, 0]).map(Number);
+
+            document.getElementById('remindersEnabled').checked = enabled;
+            document.querySelectorAll('.reminder-channel').forEach(function (cb) {
+                cb.checked = channels.indexOf(cb.value) !== -1;
+            });
+            document.querySelectorAll('.reminder-lead').forEach(function (cb) {
+                cb.checked = leadDays.indexOf(Number(cb.value)) !== -1;
+            });
+            document.getElementById('reminderOptions').style.opacity = enabled ? '1' : '0.45';
+            document.querySelectorAll('#reminderOptions input').forEach(function (cb) {
+                cb.disabled = !enabled;
+            });
+        }
+
+        async function saveReminderSettings(e) {
+            e.preventDefault();
+            var channels = Array.from(document.querySelectorAll('.reminder-channel:checked')).map(c => c.value);
+            var leadDays = Array.from(document.querySelectorAll('.reminder-lead:checked')).map(c => Number(c.value));
+            var enabled = document.getElementById('remindersEnabled').checked;
+
+            // The server rejects empty sets; say so before the round trip.
+            if (enabled && channels.length === 0) return showToast("Choose at least one way to be reminded.", "warning");
+            if (enabled && leadDays.length === 0) return showToast("Choose at least one reminder time.", "warning");
+
+            settings.reminders = { enabled: enabled, channels: channels, leadDays: leadDays };
+            try {
+                const res = await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+                if (res && res.success === false) return showToast(res.message || "Could not save reminders.", "danger");
+                showToast(enabled ? "Reminder settings saved." : "Renewal reminders switched off.");
+            } catch (err) {
+                showToast("Failed to save reminder settings.", "danger");
+            }
+        }
+
         /**
          * In the desktop client, hand the shell the renewal dates so it can
          * raise native reminders. No-op in a browser, and deliberately sends
@@ -746,6 +793,7 @@
         }
 
         function applySettings() {
+            applyReminderSettings();
             if (settings.theme === 'custom' && settings.customColor) {
                 document.documentElement.style.setProperty('--primary', settings.customColor);
             } else {

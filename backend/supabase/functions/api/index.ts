@@ -222,6 +222,11 @@ async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
         language: settings.data.language,
         username: settings.data.username,
         profilePicture: settings.data.profile_pic_url ?? "",
+        reminders: {
+          enabled: settings.data.reminders_enabled !== false,
+          channels: settings.data.reminder_channels ?? ["email"],
+          leadDays: settings.data.reminder_lead_days ?? [30, 7, 1, 0],
+        },
       }
       : null,
     // Always the server's current value: the plan changes after a purchase
@@ -359,13 +364,39 @@ async function saveSettings(caller: Caller, db: ReturnType<typeof userClient>, p
     pictureUrl = await uploadAvatar(caller.id, s.profilePicture);
   }
 
-  const row = {
+  const row: Record<string, unknown> = {
     user_id: caller.id,
     theme: str(s.theme, 32) ?? "dark",
     language: str(s.language, 8) ?? "en",
     username: str(s.username, 80),
     ...(pictureUrl ? { profile_pic_url: pictureUrl } : {}),
   };
+
+  // Reminder preferences are optional: a client that does not send them
+  // leaves the stored values alone.
+  const prefs = s.reminders;
+  if (prefs && typeof prefs === "object") {
+    if (prefs.enabled !== undefined) row.reminders_enabled = prefs.enabled !== false;
+
+    if (Array.isArray(prefs.channels)) {
+      const channels = [...new Set(prefs.channels)].filter((c) => c === "email" || c === "whatsapp");
+      if (channels.length === 0) {
+        throw new BadRequest("Choose at least one way to be reminded, or switch reminders off.");
+      }
+      row.reminder_channels = channels;
+    }
+
+    if (Array.isArray(prefs.leadDays)) {
+      // Must match settings_lead_days_valid in the database.
+      const allowed = [0, 1, 3, 7, 14, 30, 60, 90];
+      const days = [...new Set(prefs.leadDays.map(Number))]
+        .filter((d) => allowed.includes(d))
+        .sort((a, b) => b - a);
+      if (days.length === 0) throw new BadRequest("Choose at least one reminder time.");
+      if (days.length > 6) throw new BadRequest("Choose at most six reminder times.");
+      row.reminder_lead_days = days;
+    }
+  }
 
   const { error } = await db.from("settings").upsert(row, { onConflict: "user_id" });
   if (error) throw new HttpError(400, error.message);

@@ -22,7 +22,7 @@ has to provide and the deployment steps in order.
 | Plans | One-time PayPal purchase of a domain pack (no subscription). The plan is **derived from a purchase ledger**, so refunds and chargebacks take back exactly what they granted. |
 | Payments | PayPal IPN, verified with PayPal, checked against our receiver account and **against the price list** (amount and currency), deduplicated, and recorded, including the ones refused. |
 | Admin | `admin.html`: activate and suspend users, override plans, set prices, sales report with CSV export, audit log. |
-| Reminders | Daily pg_cron job emails (and optionally WhatsApp-messages) customers 30, 7 and 1 day before renewal. Idempotent. |
+| Reminders | Daily pg_cron job. Fires on the most urgent milestone a domain has *crossed* (default 30/7/1/0 days), so a domain added late or a missed run still produces exactly one reminder. One digest per user, not one email per domain. Per-user opt-out, channels and lead days. |
 | Lookups | WHOIS / DNS proxied, validated, cached and rate limited. |
 
 The problems in the old backend, and how each one is handled, are covered in
@@ -145,9 +145,10 @@ Always stop `serve` with Ctrl+C before starting another.
 ```bash
 npm test            # SQL: 7 migrations on a clean Postgres 16 + security assertions
 npm run test:e2e    # starts a PayPal stub + test functions, then runs:
-                    #   smoke-test   customer and admin journeys through api.js
-                    #   webhook-test 17 payment scenarios
-                    #   ui-test      index.html + admin.html in headless Chrome
+                    #   smoke-test     customer and admin journeys through api.js
+                    #   webhook-test   17 payment scenarios
+                    #   reminders-test the daily sweep, end to end (needs a mail key)
+                    #   ui-test        index.html + admin.html in headless Chrome
 ```
 
 `test:e2e` needs `supabase start` first. It serves the functions with
@@ -234,8 +235,33 @@ curl -X POST https://<project-ref>.supabase.co/functions/v1/reminders \
   -H "x-cron-secret: $CRON_SECRET"
 ```
 
-The sweep is idempotent. Each reminder is claimed in `notifications` before it
-is sent, so overlapping runs cannot double-send.
+### How it decides
+
+All of it lives in the `due_reminders` SQL function, covered by `npm test`.
+
+- A reminder fires for the **most urgent milestone a domain has crossed** and
+  not yet been told about — not for an exact date match. A domain added 20
+  days before renewal gets the 30-day reminder immediately; a sweep that never
+  ran (outage, paused project) does not lose the milestone.
+- Only one fires at a time. Passing several thresholds at once produces the
+  most urgent, never a backlog.
+- "Already reminded" is keyed on the **renewal date**, so renewing a domain
+  starts a fresh cycle. (Without this, reminders worked once per domain, ever.)
+- Expired domains are left alone.
+- Each user gets **one digest** per sweep listing every due domain, with
+  provider, price, and whether auto-renew is on.
+- Each reminder is claimed in `notifications` *before* sending; if the send
+  fails the claim is released, so the next sweep retries rather than recording
+  a delivery that never happened.
+- Users choose channels and lead days, or switch reminders off, under
+  Settings → Renewal Reminders. Suspended accounts are skipped.
+- Sent reminders are purged after 180 days by `purge_transient`.
+
+The sweep is safe to run repeatedly: overlapping runs cannot double-send.
+
+```bash
+npm run test:reminders   # needs the functions served with a mail key
+```
 
 ---
 

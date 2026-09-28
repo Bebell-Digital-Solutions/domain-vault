@@ -222,3 +222,120 @@ begin
   select count(*) into n from public.purchases;
   raise notice '%', case when n = 0 then 'PASS t15 (isolated)' else 'FAIL t15 saw '||n end;
 end $$;
+
+-- ===========================================================================
+-- Renewal reminders (20260928000100)
+-- ===========================================================================
+\set QUIET on
+insert into auth.users (id, email) values
+  ('eeeeeeee-0000-4000-8000-000000000005', 'rem@example.com');
+update public.profiles set status = 'active', phone = '+10000000001'
+ where email = 'rem@example.com';
+\set QUIET off
+
+\echo '--- T16: a domain added mid-cycle still gets one reminder'
+do $$
+declare u uuid := 'eeeeeeee-0000-4000-8000-000000000005'; got text;
+begin
+  -- 20 days out: the old exact-match sweep sent nothing until day 7.
+  insert into public.domains (user_id, name, renewal_date)
+  values (u, 'midcycle.com', current_date + 20);
+  select milestone || ' (' || days_left || 'd left)' into got
+    from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  raise notice '%', case when got = '30 (20d left)'
+    then 'PASS t16 milestone ' || got else 'FAIL t16 got ' || coalesce(got, 'nothing') end;
+end $$;
+
+\echo '--- T17: only the most urgent milestone fires, never a backlog'
+do $$
+declare n int; got int;
+begin
+  update public.domains set renewal_date = current_date + 3 where name = 'midcycle.com';
+  select count(*), min(milestone) into n, got
+    from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  raise notice '%', case when n = 1 and got = 7
+    then 'PASS t17 (one reminder, milestone 7)' else 'FAIL t17 count=' || n || ' milestone=' || got end;
+end $$;
+
+\echo '--- T18: once sent, the same milestone does not fire again'
+do $$
+declare n int;
+begin
+  insert into public.notifications (user_id, domain_id, domain_name, renewal_date, diff_days, type, channel)
+  select user_id, domain_id, domain_name, renewal_date, milestone, 'renewal', 'email'
+    from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  select count(*) into n from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  raise notice '%', case when n = 0 then 'PASS t18 (silent after sending)' else 'FAIL t18 got ' || n end;
+end $$;
+
+\echo '--- T19: as it gets closer, the next milestone fires'
+do $$
+declare got int;
+begin
+  update public.domains set renewal_date = current_date + 1 where name = 'midcycle.com';
+  select milestone into got from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  raise notice '%', case when got = 1 then 'PASS t19 (milestone 1)' else 'FAIL t19 got ' || coalesce(got::text,'nothing') end;
+end $$;
+
+\echo '--- T20: renewing a domain starts a fresh cycle of reminders'
+do $$
+declare got int;
+begin
+  -- Tell them about every milestone of the current cycle.
+  insert into public.notifications (user_id, domain_id, domain_name, renewal_date, diff_days, type, channel)
+  select user_id, domain_id, domain_name, renewal_date, milestone, 'renewal', 'email'
+    from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  -- Customer renews for another year. The old scheme stayed silent forever.
+  update public.domains set renewal_date = current_date + 30 where name = 'midcycle.com';
+  select milestone into got from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  raise notice '%', case when got = 30
+    then 'PASS t20 (new cycle reminds again)' else 'FAIL t20 got ' || coalesce(got::text, 'nothing') end;
+end $$;
+
+\echo '--- T21: expired domains are left alone'
+do $$
+declare n int;
+begin
+  update public.domains set renewal_date = current_date - 2 where name = 'midcycle.com';
+  select count(*) into n from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  raise notice '%', case when n = 0 then 'PASS t21 (no nagging after expiry)' else 'FAIL t21 got ' || n end;
+end $$;
+
+\echo '--- T22: the expiry day itself is covered'
+do $$
+declare got int;
+begin
+  update public.domains set renewal_date = current_date where name = 'midcycle.com';
+  select milestone into got from public.due_reminders(current_date) where domain_name = 'midcycle.com';
+  raise notice '%', case when got = 0 then 'PASS t22 (expires today)' else 'FAIL t22 got ' || coalesce(got::text,'nothing') end;
+end $$;
+
+\echo '--- T23: preferences are respected (off, channels, custom lead days)'
+do $$
+declare u uuid := 'eeeeeeee-0000-4000-8000-000000000005'; n_off int; n_wa int; n_lead int;
+begin
+  update public.domains set renewal_date = current_date + 14 where name = 'midcycle.com';
+
+  update public.settings set reminders_enabled = false where user_id = u;
+  select count(*) into n_off from public.due_reminders(current_date);
+
+  update public.settings set reminders_enabled = true, reminder_channels = array['whatsapp'] where user_id = u;
+  select count(*) into n_wa from public.due_reminders(current_date, 'email');
+
+  update public.settings set reminder_channels = array['email'], reminder_lead_days = array[1] where user_id = u;
+  select count(*) into n_lead from public.due_reminders(current_date);
+
+  raise notice '%', case when n_off = 0 and n_wa = 0 and n_lead = 0
+    then 'PASS t23 (opt-out, channel and lead-day choices all honoured)'
+    else 'FAIL t23 off=' || n_off || ' wrongChannel=' || n_wa || ' leadDays=' || n_lead end;
+end $$;
+
+\echo '--- T24: suspended accounts get no reminders'
+do $$
+declare n int;
+begin
+  update public.settings set reminder_lead_days = array[30,7,1,0] where user_id = 'eeeeeeee-0000-4000-8000-000000000005';
+  update public.profiles set status = 'suspended' where email = 'rem@example.com';
+  select count(*) into n from public.due_reminders(current_date);
+  raise notice '%', case when n = 0 then 'PASS t24 (suspended is silent)' else 'FAIL t24 got ' || n end;
+end $$;

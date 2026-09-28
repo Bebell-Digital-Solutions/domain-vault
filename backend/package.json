@@ -14,7 +14,8 @@
     "test": "./supabase/tests/run-tests.sh",
     "test:webhook": "node scripts/webhook-test.mjs",
     "test:e2e": "./scripts/e2e.sh",
-    "test:ui": "node scripts/ui-test.mjs"
+    "test:ui": "node scripts/ui-test.mjs",
+    "test:reminders": "node scripts/reminders-test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4"

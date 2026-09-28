@@ -15,7 +15,9 @@ the right order.
 | `config.js` production key | ✅ publishable key set |
 | Production backend verified end to end (20 checks, probe account deleted) | ✅ |
 | Placeholder `PAYPAL_RECEIVER_EMAIL` / `ADMIN_EMAIL` / `ADMIN_PHONE` removed from production | ✅ Until a real receiver is set, the webhook answers 500, so PayPal keeps retrying instead of the payment being discarded |
-| Owner items: prices, PayPal buttons, receiver email, admin email, Resend | ⏳ §1 |
+| Resend API key set on production; sending verified end to end | ✅ but see §1 item 5 — the sending domain is still unverified |
+| Renewal reminders: milestone logic, digests, per-user preferences | ✅ deployed and verified through the scheduler |
+| Owner items: prices, PayPal buttons, receiver email, admin email, Resend domain | ⏳ §1 |
 | Auth dashboard settings (Site URL, SMTP) | ⏳ §2d, needs the Resend key |
 | First admin, button ids in `config.js`, merge to `main`, live checks | ⏳ §2e, §4, §5 |
 | Desktop client (Electron) + release pipeline built; Linux build verified | ✅ tag `desktop-v*` to build all three, then §7 |
@@ -42,7 +44,7 @@ Steps are tagged by who does them:
 | 2 | **PayPal "Buy Now" buttons**, one per pack (see §3) | Checkout | The upgrade button says "not available yet" |
 | 3 | **PayPal account email** that receives the money | The webhook ignores payments to any other account | Every payment is ignored |
 | 4 | **Admin email** for alerts (refunds, chargebacks, rejected payments, new sign-ups) | Someone has to act on them | Alerts go nowhere |
-| 5 | **Resend account** + API key, and the sending domain verified in Resend | All email: welcome, activation, reminders, receipts | **No email is sent at all, including renewal reminders**, which are the core of the product |
+| 5 | **Verify `elnegocio.digital` in Resend** (the API key is already set) | All email: welcome, activation, reminders, receipts | Mail only reaches the Resend account owner's own address; **no customer receives anything** |
 | 6 | **Supabase plan decision** (Pro, about $25/month) and who owns the account | The free tier pauses projects after a week without activity | The live site goes down whenever it's quiet |
 | 7 | **Who is the first admin** (their email) | Activating users, prices, sales | Nobody can run the business |
 | 8 | Decision: **move `backend/` to a private repository?** | The repo is public, and GitHub Pages also serves `backend/` from the site | Schema, code and SECURITY.md are publicly readable |

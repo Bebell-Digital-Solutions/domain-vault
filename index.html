@@ -759,6 +759,47 @@
                         </form>
                     </div>
                     <div class="card">
+                        <h3 class="card-title" data-translate-key="reminderSettings" style="margin-bottom:6px;">Renewal Reminders</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 20px;" data-translate-key="reminderSettingsHelp">
+                            We remind you before a domain expires, so nothing lapses by accident.
+                        </p>
+                        <form id="settingsRemindersForm">
+                            <div class="form-group">
+                                <label class="switch-row" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                                    <input type="checkbox" id="remindersEnabled" checked>
+                                    <span data-translate-key="reminderEnabled">Send me renewal reminders</span>
+                                </label>
+                            </div>
+                            <div id="reminderOptions">
+                                <div class="form-group">
+                                    <label class="form-label" data-translate-key="reminderChannels">How</label>
+                                    <div style="display:flex; gap:18px; flex-wrap:wrap;">
+                                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                            <input type="checkbox" class="reminder-channel" value="email" checked> Email
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;" title="Requires a phone number on your account">
+                                            <input type="checkbox" class="reminder-channel" value="whatsapp"> WhatsApp
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" data-translate-key="reminderWhen">When</label>
+                                    <div id="reminderLeadDays" style="display:flex; gap:14px; flex-wrap:wrap;">
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" class="reminder-lead" value="90"> 90d</label>
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" class="reminder-lead" value="60"> 60d</label>
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" class="reminder-lead" value="30" checked> 30d</label>
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" class="reminder-lead" value="14"> 14d</label>
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" class="reminder-lead" value="7" checked> 7d</label>
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" class="reminder-lead" value="3"> 3d</label>
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" class="reminder-lead" value="1" checked> 1d</label>
+                                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" class="reminder-lead" value="0" checked> <span data-translate-key="reminderOnTheDay">on the day</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" data-translate-key="saveReminders">Save Reminders</button>
+                        </form>
+                    </div>
+                    <div class="card">
                          <h3 class="card-title" data-translate-key="appearance" style="margin-bottom:20px;">Appearance</h3>
                          <form id="settingsAppearanceForm">
                             <div class="form-group">
