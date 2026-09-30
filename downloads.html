@@ -498,8 +498,9 @@
                 }
             });
 
-            if (live === 0) {
-                document.getElementById('lede').textContent =
+            var lede = document.getElementById('lede');
+            if (live === 0 && lede) {
+                lede.textContent =
                     'Run Domain Vault in our secure cloud today. Desktop clients for macOS, ' +
                     'Windows and Linux are on the way.';
             }

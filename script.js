@@ -3,8 +3,6 @@
            JAVASCRIPT LOGIC
            ========================================================================== */
 
-        // REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL
-        const API_URL = "https://script.google.com/macros/s/AKfycbzNunJ_PonXh6Yeuj0AXRH4VobBZC2av97qzHeosg3DPbnDkysGXx4kUhghqo4VDSSb-w/exec";
 
         const PLAN_LIMITS = {
             'Personal': 5,
@@ -13,29 +11,51 @@
             'Agency': Infinity
         };
 
-        // --- DEFINITIVE PAYMENT CONFIGURATION ---
-        const PAYMENT_CONFIG = {
-            provider: 'paypal', // Options: 'paypal' or 'zylvie'
-            urls: {
-                paypal: {
-                    'Start-up': 'https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=YOUR_STARTUP_ID',
-                    'Business': 'https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=YOUR_BUSINESS_ID',
-                    'Agency': 'https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=YOUR_AGENCY_ID'
-                },
-                zylvie: {
-                    'Start-up': 'https://zylvie.com/your-store/p/domain-vault?variant=startup',
-                    'Business': 'https://zylvie.com/your-store/p/domain-vault?variant=business',
-                    'Agency': 'https://zylvie.com/your-store/p/domain-vault?variant=agency'
-                }
+        // --- PAYMENT CONFIGURATION ---
+        // PayPal only: one-time purchase of a domain pack, no subscription.
+        // Button ids live in config.js; prices live in the database and are
+        // edited from the admin panel.
+        const PAYPAL = (window.DOMAIN_VAULT_CONFIG && window.DOMAIN_VAULT_CONFIG.paypal) || { buttons: {} };
+        let packPrices = {};   // plan -> { amount, currency }, loaded from the API
+
+        function paypalCheckoutUrl(plan) {
+            const id = PAYPAL.buttons[plan];
+            const price = packPrices[plan];
+            if (!id || id.indexOf('REPLACE_') === 0 || !price || price.amount === null) return null;
+            // custom carries the account email: it is how the payment webhook
+            // knows which account to upgrade.
+            return `${PAYPAL.checkoutBase}?cmd=_s-xclick&hosted_button_id=${encodeURIComponent(id)}`
+                + `&custom=${encodeURIComponent(currentUser.email)}`;
+        }
+
+        async function loadPackPrices() {
+            try {
+                const res = await apiCall('getPrices', {});
+                packPrices = {};
+                (res.prices || []).forEach(p => { packPrices[p.plan] = p; });
+            } catch (e) { /* the modal falls back to "not available" */ }
+            const select = document.getElementById('upgradePlanSelect');
+            Array.from(select.options).forEach(opt => {
+                if (!opt.dataset.label) opt.dataset.label = opt.textContent;
+                const price = packPrices[opt.value];
+                const priced = price && price.amount !== null;
+                opt.textContent = priced
+                    ? `${opt.dataset.label} — ${Number(price.amount).toFixed(2)} ${price.currency}`
+                    : `${opt.dataset.label} — not available yet`;
+                opt.disabled = !priced;
+            });
+            const firstEnabled = Array.from(select.options).find(o => !o.disabled);
+            if (firstEnabled && select.selectedOptions[0] && select.selectedOptions[0].disabled) {
+                select.value = firstEnabled.value;
             }
-        };
+        }
 
         // --- TRANSLATION DATA ---
         const translations = {
             en: {
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Secure Domain Manager",
                 dashboard: "Dashboard", allDomains: "All Domains", domainProviders: "Domain Providers", toolsResources: "Tools & Resources",
-                calendar: "Calendar", notifications: "Notifications", settings: "Settings", searchPlaceholder: "Search domains...",
+                calendar: "Calendar", notifications: "Notifications", settings: "Settings", downloads: "Downloads", searchPlaceholder: "Search domains...",
                 dashboardOverview: "Dashboard Overview", addNewDomain: "Add New Domain", totalDomains: "Total Domains",
                 annualCost: "Annual Cost", expiringSoon: "Expiring Soon", renewalCostsByMonth: "Renewal Costs by Month",
                 providersDistribution: "Providers Distribution", domainName: "Domain Name", provider: "Provider",
@@ -64,7 +84,7 @@
             es: {
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Gestor Seguro de Dominios",
                 dashboard: "Tablero", allDomains: "Todos los Dominios", domainProviders: "Proveedores", toolsResources: "Herramientas",
-                calendar: "Calendario", notifications: "Notificaciones", settings: "Configuración", searchPlaceholder: "Buscar dominios...",
+                calendar: "Calendario", notifications: "Notificaciones", settings: "Configuración", downloads: "Descargas", searchPlaceholder: "Buscar dominios...",
                 dashboardOverview: "Resumen del Tablero", addNewDomain: "Añadir Dominio", totalDomains: "Dominios Totales",
                 annualCost: "Costo Anual", expiringSoon: "Próximos a Vencer", renewalCostsByMonth: "Costos de Renovación por Mes",
                 providersDistribution: "Distribución de Proveedores", domainName: "Nombre de Dominio", provider: "Proveedor",
@@ -119,7 +139,7 @@
         let domains = [];
         let providers = [];
         let notifications = [];
-        let settings = { username: 'User', language: 'en', theme: 'orange' };
+        let settings = { username: 'User', language: 'en', theme: 'orange', reminders: { enabled: true, channels: ['email'], leadDays: [30, 7, 1, 0] } };
         let expensesChart = null;
         let isLoginMode = true;
         let currentCalendarDate = new Date();
@@ -137,6 +157,8 @@
 
         function initMatrix() {
             const canvas = document.getElementById('matrixCanvas');
+            // The page may ship its own background effect instead.
+            if (!canvas) return;
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             let drops = [];
@@ -181,40 +203,50 @@
             Chart.defaults.color = 'hsl(242, 8%, 70%)';
             Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
 
+            // Mobile drawer: mirror the sidebar menu (the drawer had no links,
+            // so the app could not be navigated below 992px).
+            const mobileMenu = document.querySelector('.sidebar-menu').cloneNode(true);
+            mobileMenu.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+            document.getElementById('mobileNav').appendChild(mobileMenu);
+
             // Start Matrix Effect
             initMatrix();
+
+            // Restore a previous session, if there is one. The old build logged
+            // you out on every refresh.
+            window.DomainVaultAPI.restore().then(function (user) {
+                if (!user) return;
+                currentUser = user;
+                document.getElementById('auth-overlay').style.display = 'none';
+                if (matrixInterval) clearInterval(matrixInterval);
+                loadDashboardData();
+                handlePaymentReturn();
+            });
 
             // Setup Auth Overlay UI
             document.getElementById('tab-login').addEventListener('click', () => switchAuthMode(true));
             document.getElementById('tab-register').addEventListener('click', () => switchAuthMode(false));
             document.getElementById('authSubmitBtn').addEventListener('click', handleAuthSubmit);
             document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('settingsRemindersForm').addEventListener('submit', saveReminderSettings);
+            document.getElementById('remindersEnabled').addEventListener('change', function () {
+                settings.reminders = settings.reminders || {};
+                settings.reminders.enabled = this.checked;
+                applyReminderSettings();
+            });
 
             // Setup Plan Badge Click Listener
             document.getElementById('upgradePlanBtn').addEventListener('click', () => {
                 document.getElementById('upgradeCurrentPlan').textContent = currentUser?.plan || 'Personal';
                 document.getElementById('upgradeModal').style.display = 'flex';
+                loadPackPrices();
             });
 
             // Modular Checkout Button Logic
             document.getElementById('proceedToCheckoutBtn').addEventListener('click', () => {
                 const selectedPlan = document.getElementById('upgradePlanSelect').value;
-                const provider = PAYMENT_CONFIG.provider;
-                const baseUrl = PAYMENT_CONFIG.urls[provider][selectedPlan];
-                
-                if(!baseUrl || baseUrl.includes('YOUR_')) return showToast("Payment URL not fully configured.", "danger");
-
-                let checkoutUrl = baseUrl;
-                
-                // Dynamically append the user's email based on the provider's API standard
-                if (provider === 'paypal') {
-                    checkoutUrl += `&custom=${encodeURIComponent(currentUser.email)}`;
-                } else if (provider === 'zylvie') {
-                    const separator = baseUrl.includes('?') ? '&' : '?';
-                    checkoutUrl += `${separator}email=${encodeURIComponent(currentUser.email)}`;
-                }
-                
-                // Redirect user to the active payment gateway
+                const checkoutUrl = paypalCheckoutUrl(selectedPlan);
+                if (!checkoutUrl) return showToast("This pack is not available for purchase yet.", "danger");
                 window.location.href = checkoutUrl;
             });
 
@@ -224,6 +256,7 @@
                 if (domains.length >= limit) {
                     document.getElementById('upgradeCurrentPlan').textContent = currentUser?.plan || 'Personal';
                     document.getElementById('upgradeModal').style.display = 'flex';
+                    loadPackPrices();
                     return;
                 }
                 openModal('domainModal', 'addNewDomain', 'addDomain', {});
@@ -241,6 +274,7 @@
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', (e) => {
                     const page = e.currentTarget.dataset.page;
+                    if (!page) return;   // e.g. the Admin link navigates normally
                     setActivePage(page);
                 });
             });
@@ -463,23 +497,16 @@
             document.getElementById('authMessage').style.display = 'none';
         }
 
+        // Transport lives in backend/web/api.js. It attaches the signed JWT,
+        // refreshes it when it expires, and keeps the session across reloads.
+        // Identity is taken from that token server-side, so the email these
+        // call sites still pass is ignored.
         async function apiCall(action, payload = {}) {
-            if (API_URL === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL") {
-                showToast("Please configure the API_URL in the code first.", "danger");
-                throw new Error("API_URL not configured");
+            if (!window.DomainVaultAPI) {
+                showToast("backend/web/api.js did not load.", "danger");
+                throw new Error("DomainVaultAPI missing");
             }
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: action, ...payload })
-                });
-                return await response.json();
-            } catch (error) {
-                console.error("API Error:", error);
-                showToast("Network error. Check console.", "danger");
-                throw error;
-            }
+            return window.DomainVaultAPI.call(action, payload);
         }
 
         async function fetchLocation() {
@@ -514,6 +541,7 @@
                         document.getElementById('auth-overlay').style.display = 'none';
                         if(matrixInterval) clearInterval(matrixInterval); // Optimize performance
                         loadDashboardData();
+                        handlePaymentReturn();
                     } else {
                         msgEl.style.color = 'var(--danger)';
                         msgEl.textContent = res.message;
@@ -539,7 +567,9 @@
         }
 
         function handleLogout() {
+            window.DomainVaultAPI.signOut();
             currentUser = null;
+            document.querySelectorAll('.admin-link').forEach(a => { a.hidden = true; });
             document.getElementById('auth-overlay').style.display = 'flex';
             document.getElementById('authForm').reset();
             document.getElementById('authMessage').style.display = 'none';
@@ -559,15 +589,109 @@
                     providers = data.providers || [];
                     if(data.settings) settings = data.settings;
                     else settings.username = currentUser.email.split('@')[0];
+                    applyAccountState(data);
                 }
                 
                 applySettings();
                 setLanguage(settings.language);
                 setActivePage('dashboard');
                 renderAll();
+                reportRenewalsToDesktop();
             }).catch(err => {
                 showToast("Failed to load dashboard data.", "danger");
             });
+        }
+
+        // --- Renewal reminder preferences -------------------------------
+
+        function applyReminderSettings() {
+            var prefs = (settings && settings.reminders) || {};
+            var enabled = prefs.enabled !== false;
+            var channels = prefs.channels || ['email'];
+            var leadDays = (prefs.leadDays || [30, 7, 1, 0]).map(Number);
+
+            document.getElementById('remindersEnabled').checked = enabled;
+            document.querySelectorAll('.reminder-channel').forEach(function (cb) {
+                cb.checked = channels.indexOf(cb.value) !== -1;
+            });
+            document.querySelectorAll('.reminder-lead').forEach(function (cb) {
+                cb.checked = leadDays.indexOf(Number(cb.value)) !== -1;
+            });
+            document.getElementById('reminderOptions').style.opacity = enabled ? '1' : '0.45';
+            document.querySelectorAll('#reminderOptions input').forEach(function (cb) {
+                cb.disabled = !enabled;
+            });
+        }
+
+        async function saveReminderSettings(e) {
+            e.preventDefault();
+            var channels = Array.from(document.querySelectorAll('.reminder-channel:checked')).map(c => c.value);
+            var leadDays = Array.from(document.querySelectorAll('.reminder-lead:checked')).map(c => Number(c.value));
+            var enabled = document.getElementById('remindersEnabled').checked;
+
+            // The server rejects empty sets; say so before the round trip.
+            if (enabled && channels.length === 0) return showToast("Choose at least one way to be reminded.", "warning");
+            if (enabled && leadDays.length === 0) return showToast("Choose at least one reminder time.", "warning");
+
+            settings.reminders = { enabled: enabled, channels: channels, leadDays: leadDays };
+            try {
+                const res = await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+                if (res && res.success === false) return showToast(res.message || "Could not save reminders.", "danger");
+                showToast(enabled ? "Reminder settings saved." : "Renewal reminders switched off.");
+            } catch (err) {
+                showToast("Failed to save reminder settings.", "danger");
+            }
+        }
+
+        /**
+         * In the desktop client, hand the shell the renewal dates so it can
+         * raise native reminders. No-op in a browser, and deliberately sends
+         * nothing but names and dates — never providers or credentials.
+         */
+        function reportRenewalsToDesktop() {
+            if (!window.domainVaultDesktop) return;
+            try {
+                window.domainVaultDesktop.reportRenewals(
+                    domains.map(d => ({ name: d.name, renewalDate: d.renewalDate })));
+            } catch (e) { /* the app works with or without the shell */ }
+        }
+
+        /** Sync plan + admin flag from a getUserData response into the UI and the stored session. */
+        function applyAccountState(data) {
+            if (data.plan) currentUser.plan = data.plan;
+            currentUser.isAdmin = data.isAdmin === true;
+            window.DomainVaultAPI.updateUser({ plan: currentUser.plan, isAdmin: currentUser.isAdmin });
+
+            document.getElementById('userPlanBadgeText').textContent = currentUser.plan.toUpperCase();
+            const limit = PLAN_LIMITS[currentUser.plan] || 5;
+            const limitEl = document.getElementById('stat-domain-limit');
+            if (limitEl) limitEl.textContent = `/ ${limit === Infinity ? '∞' : limit}`;
+            document.querySelectorAll('.admin-link').forEach(a => { a.hidden = !currentUser.isAdmin; });
+        }
+
+        /**
+         * Back from PayPal (?payment=success). The webhook usually lands within
+         * seconds but can take longer, so poll a few times for the new plan.
+         */
+        async function handlePaymentReturn() {
+            const params = new URLSearchParams(location.search);
+            if (params.get('payment') !== 'success' || !currentUser) return;
+            history.replaceState(null, '', location.pathname);
+
+            const before = currentUser.plan;
+            showToast("Payment received. Activating your pack…", "warning");
+            for (let i = 0; i < 12; i++) {
+                await new Promise(r => setTimeout(r, 5000));
+                try {
+                    const data = await apiCall('getUserData', {});
+                    if (data && data.plan && data.plan !== before) {
+                        applyAccountState(data);
+                        renderAll();
+                        return showToast(`Your ${data.plan} pack is active!`, "success");
+                    }
+                } catch (e) { /* keep polling */ }
+            }
+            showToast("Your payment is still being processed. Your plan will update shortly; refresh in a few minutes.", "warning");
         }
 
         function showToast(message, type = 'success') {
@@ -671,6 +795,7 @@
         }
 
         function applySettings() {
+            applyReminderSettings();
             if (settings.theme === 'custom' && settings.customColor) {
                 document.documentElement.style.setProperty('--primary', settings.customColor);
             } else {
@@ -1151,12 +1276,16 @@
                 document.getElementById('providerName').value = data.name || '';
                 document.getElementById('providerUrl').value = data.url || '';
                 document.getElementById('providerUser').value = data.user || '';
-                document.getElementById('providerPass').value = data.pass || '';
+                // The stored password is never sent to the browser. Leaving this
+                // blank keeps whatever is stored; typing replaces it.
+                document.getElementById('providerPass').value = '';
+                document.getElementById('providerPass').placeholder =
+                    data.hasPassword ? '•••••••• (unchanged)' : 'No password stored';
                 document.getElementById('providerUid').value = data.uid || '';
             } else if(id === 'credentialsModal') {
                 m.querySelector('#credentialsModalTitle').textContent = `${data.name} ${translations[lang].providerCredentials}`;
                 document.getElementById('credUser').textContent = data.user || 'Not set';
-                document.getElementById('credPass').textContent = data.pass ? '••••••••' : 'Not set';
+                document.getElementById('credPass').textContent = data.hasPassword ? '••••••••' : 'Not set';
                 document.getElementById('credUid').textContent = data.uid || 'Not set';
             }
             m.style.display = 'flex';
