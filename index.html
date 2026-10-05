@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
+<script>
+  // Links meant for the app can land on the site root: PayPal's return URL,
+  // and password-reset links when Auth falls back to the Site URL. Forward
+  // them to /app/, which knows what to do with them.
+  (function () {
+    if (/[?&]payment=success(&|$)/.test(location.search) ||
+        /(^#|&)(type=recovery|error_code=)/.test(location.hash)) {
+      location.replace('/app/' + location.search + location.hash);
+    }
+  })();
+</script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Domain Vault | Secure Domain Portfolio Command Center</title>
@@ -283,7 +295,7 @@ document.getElementById('translateBtn').addEventListener('click', function() {
             
             
             
-                <a href="/app/" class="hidden sm:block text-sm font-medium text-brand-muted hover:text-brand-textMain transition-colors duration-300">Log in</a>
+                <a href="/app/" class="block text-sm font-medium text-brand-muted hover:text-brand-textMain transition-colors duration-300">Log in</a>
                 <a href="#pricing" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow">
                     Get Started
                 </a>
@@ -338,9 +350,9 @@ document.getElementById('translateBtn').addEventListener('click', function() {
 
             <!-- Inline CTA Flex Container -->
             <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                <button class="w-full sm:w-auto bg-brand-primary hover:bg-[#e6460f] text-white rounded-md px-6 py-3 font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-glow">
+                <a href="/app/" class="w-full sm:w-auto bg-brand-primary hover:bg-[#e6460f] text-white rounded-md px-6 py-3 font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-glow">
                     Open The Vault <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
+                </a>
                 <button class="w-full sm:w-auto bg-brand-bgDark/50 backdrop-blur-sm border border-brand-secondary hover:border-brand-muted text-brand-textMain rounded-md px-6 py-3 font-medium transition-colors duration-300 flex items-center justify-center gap-2">
                     View Documentation
                 </button>
@@ -870,9 +882,9 @@ document.getElementById('translateBtn').addEventListener('click', function() {
                         <div class="text-lg font-semibold text-brand-textMain">macOS</div>
                     </div>
                     <div class="text-sm text-brand-muted mb-6">Requires macOS 11.0 or later. Apple Silicon (M1/M2/M3) natively supported.</div>
-                    <button class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow">
+                    <a href="/downloads.html" class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow block text-center">
                         Download for Mac
-                    </button>
+                    </a>
                 </div>
 
                 <!-- Windows Card -->
@@ -885,9 +897,9 @@ document.getElementById('translateBtn').addEventListener('click', function() {
                         <div class="text-lg font-semibold text-brand-textMain">Windows</div>
                     </div>
                     <div class="text-sm text-brand-muted mb-6">Requires Windows 10 or 11. 64-bit architecture required.</div>
-                    <button class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow">
+                    <a href="/downloads.html" class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow block text-center">
                         Download for Windows
-                    </button>
+                    </a>
                 </div>
 
                 <!-- Linux Card -->
@@ -900,9 +912,9 @@ document.getElementById('translateBtn').addEventListener('click', function() {
                         <div class="text-lg font-semibold text-brand-textMain">Linux</div>
                     </div>
                     <div class="text-sm text-brand-muted mb-6">Available as AppImage, Snap, or Debian package (.deb) for Ubuntu/Debian.</div>
-                    <button class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow">
+                    <a href="/downloads.html" class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors text-sm shadow-glow block text-center">
                         Download for Linux
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
@@ -965,9 +977,9 @@ document.getElementById('translateBtn').addEventListener('click', function() {
                             <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Basic Calendar Sync
                         </li>
                     </ul>
-                    <button class="w-full bg-brand-bgDark border border-brand-border hover:border-brand-muted text-brand-textMain rounded-md py-2.5 font-medium transition-colors">
+                    <a href="/app/?register" class="w-full bg-brand-bgDark border border-brand-border hover:border-brand-muted text-brand-textMain rounded-md py-2.5 font-medium transition-colors block text-center">
                         Get Personal
-                    </button>
+                    </a>
                 </div>
 
                 <!-- Start-up Plan (Highlighted) -->
@@ -996,9 +1008,9 @@ document.getElementById('translateBtn').addEventListener('click', function() {
                             <i data-lucide="check" class="w-4 h-4 text-brand-primary"></i> Priority Email Support
                         </li>
                     </ul>
-                    <button class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors shadow-glow">
+                    <a href="/app/?register" class="w-full bg-brand-primary hover:bg-[#e6460f] text-white rounded-md py-2.5 font-medium transition-colors shadow-glow block text-center">
                         Get Start-up
-                    </button>
+                    </a>
                 </div>
 
                 <!-- Business Plan -->
@@ -1027,9 +1039,9 @@ document.getElementById('translateBtn').addEventListener('click', function() {
                     </ul>
                     
                     
-                    <button class="w-full bg-brand-bgDark border border-brand-border hover:border-brand-muted text-brand-textMain rounded-md py-2.5 font-medium transition-colors">
+                    <a href="/app/?register" class="w-full bg-brand-bgDark border border-brand-border hover:border-brand-muted text-brand-textMain rounded-md py-2.5 font-medium transition-colors block text-center">
                         Get Business
-                    </button>
+                    </a>
                     
                 </div>
             </div>
@@ -1060,9 +1072,9 @@ document.getElementById('translateBtn').addEventListener('click', function() {
     </div>
 
     <!-- Button -->
-    <button class="w-full sm:w-auto bg-brand-textMain text-black hover:bg-white rounded-md px-8 py-3 font-medium transition-colors flex items-center justify-center gap-2">
+    <a href="/app/?register" class="w-full sm:w-auto bg-brand-textMain text-black hover:bg-white rounded-md px-8 py-3 font-medium transition-colors flex items-center justify-center gap-2">
         Get Agency <i data-lucide="arrow-right" class="w-4 h-4"></i>
-    </button>
+    </a>
 
 </div>
             </div>
