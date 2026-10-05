@@ -3,8 +3,10 @@
 An Electron shell around the web app, plus the three things a browser tab
 can't do:
 
-- **Native renewal reminders** at 30, 7 and 1 day, even when the window is
-  closed.
+- **Native renewal reminders**, using the reminder settings from the web
+  app, even when the window is closed. The shell re-checks hourly and when
+  the computer wakes, so a milestone missed while it was off still arrives —
+  once, as the most urgent one, never as a backlog.
 - **Tray / menu-bar icon**, so the app keeps running in the background.
 - **Launch at login**, toggled from the tray menu.
 
@@ -19,7 +21,7 @@ internet, exactly like the website.
 desktop/
 ├── main.js        window, tray, notifications, navigation rules
 ├── preload.js     the only bridge to the page (2 methods)
-├── lib.js         pure logic — URL allow-list, renewal maths
+├── lib.js         pure logic — URL allow-list, reminder maths
 ├── build/         icons + macOS entitlements
 ├── test/
 │   ├── lib.test.mjs     unit tests, no display needed  (npm test)
@@ -31,16 +33,23 @@ The renderer is sandboxed, context-isolated and has no node access. The page
 reaches the shell through exactly two methods:
 
 ```js
-window.domainVaultDesktop.reportRenewals([{ name, renewalDate }]);  // for reminders
-await window.domainVaultDesktop.info();                             // { version, platform }
+window.domainVaultDesktop.reportRenewals(
+  [{ name, renewalDate }], { enabled, leadDays });   // for reminders
+await window.domainVaultDesktop.info();              // { version, platform }
 ```
 
 `script.js` calls `reportRenewals` after loading the dashboard and does
-nothing when the bridge is absent, so the same code runs in a browser.
+nothing when the bridge is absent, so the same code runs in a browser. The
+shell keeps the last list and settings in `renewals.json` in its user-data
+folder, so a launch at login can remind before the page has loaded.
+Reminders follow the same rules as the server's email sweep, and
+`notified.json` remembers what was shown for each renewal date, so renewing
+a domain starts a fresh cycle.
 
-Only domain names and renewal dates cross that bridge — never providers,
-credentials or tokens. Navigation is restricted to the app's own origin and
-PayPal; every other link opens in the user's real browser.
+Only domain names, renewal dates and the reminder settings (on/off and lead
+days) cross that bridge — never providers, credentials or tokens. Navigation
+is restricted to the app's own origin and PayPal; every other link opens in
+the user's real browser.
 
 ---
 
@@ -78,6 +87,30 @@ That produces a **draft** release with every installer attached. Publish it,
 then put the asset URLs into `downloads` in `config.js` so the download page
 stops saying "Coming soon".
 
+## Ubuntu 24.04+ and the sandbox
+
+Ubuntu 24.04 restricts unprivileged user namespaces through AppArmor, and
+Chromium's sandbox needs them. Without help the app aborts on launch with
+*"The SUID sandbox helper binary was found, but is not configured
+correctly"*. electron-builder's stock `.deb` script does not catch this: it
+tests namespaces as root, where they always work.
+
+The `.deb` therefore uses its own install scripts (`build/linux/`). They
+install `/etc/apparmor.d/domain-vault-desktop`, a profile that grants the app
+`userns` and nothing else (the approach Ubuntu takes for Chrome, VS Code and
+Slack), and remove it on uninstall. Where AppArmor cannot load it, they fall
+back to a setuid `chrome-sandbox`.
+
+To repair an already-installed 1.0.0 by hand:
+
+```bash
+sudo chmod 4755 "/opt/Domain Vault/chrome-sandbox"
+```
+
+The **AppImage** cannot install a profile, so on Ubuntu 24.04+ it still needs
+one by hand (same profile, with the AppImage's path) or `--no-sandbox`.
+Point Ubuntu users at the `.deb`.
+
 ## Verifying a Linux build
 
 ```bash
@@ -109,6 +142,8 @@ skips it when they don't.
 
 ## Known limits
 
+- **AppImage on Ubuntu 24.04+** needs a manual step; see "Ubuntu 24.04+ and
+  the sandbox" above.
 - **No auto-update.** Each new version is a fresh download. `electron-updater`
   plus a published release feed would fix it; not built yet.
 - **Tray icons are unreliable on some Linux desktops** (notably stock GNOME
@@ -116,5 +151,7 @@ skips it when they don't.
   quitting when the window closes.
 - **Notifications need a desktop notification service.** Present on normal
   desktops, absent in containers.
+- **Reminders use the last list the window loaded.** A domain added on
+  another device reaches the desktop the next time the dashboard loads here.
 - **~100 MB per install**, the price of bundling Chromium. Tauri would be
   ~10 MB but needs a per-platform Rust toolchain.

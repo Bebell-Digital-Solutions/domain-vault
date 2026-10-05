@@ -1,7 +1,7 @@
 {
   "name": "domain-vault-desktop",
   "productName": "Domain Vault",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Domain Vault desktop client",
   "author": "Bebell Digital Solutions <hello@bebelldigitalsolutions.com>",
@@ -87,6 +87,10 @@
       "maintainer": "Bebell Digital Solutions <hello@bebelldigitalsolutions.com>",
       "synopsis": "Track domain renewals, registrars and costs",
       "artifactName": "DomainVault-${version}-${arch}.${ext}"
+    },
+    "deb": {
+      "afterInstall": "build/linux/after-install.sh",
+      "afterRemove": "build/linux/after-remove.sh"
     }
   }
 }

@@ -10,34 +10,68 @@
    talks to the shell through a single narrow bridge (preload.js).
    ========================================================================== */
 
-const { app, BrowserWindow, Menu, Notification, Tray, dialog, ipcMain, shell } = require('electron');
+const {
+  app, BrowserWindow, Menu, Notification, Tray, dialog, ipcMain, powerMonitor, shell,
+} = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
-const { ALLOWED_ORIGINS, dueReminders, isAllowedUrl, pruneNotified } = require('./lib');
+const {
+  ALLOWED_ORIGINS, dueReminders, isAllowedUrl, normalizeDomains, normalizePrefs, pruneNotified,
+} = require('./lib');
 
 const APP_URL = process.env.DOMAIN_VAULT_URL || 'https://domain-vault.elnegocio.digital/app/';
 const NOTIFIED_FILE = () => path.join(app.getPath('userData'), 'notified.json');
+const RENEWALS_FILE = () => path.join(app.getPath('userData'), 'renewals.json');
+const CHECK_EVERY_MS = 60 * 60 * 1000;   // hourly; a day boundary is caught within the hour
 
 let mainWindow = null;
 let tray = null;
 let quitting = false;
+let renewals = null;   // { domains, prefs } last reported by the page; loaded lazily
+// Shown notifications, held until dismissed: one that is garbage collected
+// early loses its click handler on some platforms.
+const liveNotifications = new Set();
 
 /* ----------------------------------------------------------- persistence */
 
-function readNotified() {
+function readJson(file, fallback) {
   try {
-    return JSON.parse(fs.readFileSync(NOTIFIED_FILE(), 'utf8'));
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch {
-    return [];
+    return fallback;
   }
 }
 
-function writeNotified(keys) {
+function writeJson(file, value, what) {
   try {
-    fs.writeFileSync(NOTIFIED_FILE(), JSON.stringify(keys));
+    fs.writeFileSync(file, JSON.stringify(value));
   } catch (err) {
-    console.error('could not persist notification state', err);
+    console.error(`could not persist ${what}`, err);
   }
+}
+
+// A corrupt or hand-edited file must never break reminders: anything that is
+// not a list of strings is treated as empty. Keys from older versions simply
+// fail to match and are pruned.
+function readNotified() {
+  const keys = readJson(NOTIFIED_FILE(), []);
+  return Array.isArray(keys) ? keys.filter((k) => typeof k === 'string') : [];
+}
+
+function writeNotified(keys) {
+  writeJson(NOTIFIED_FILE(), keys, 'notification state');
+}
+
+// The last domain list and reminder settings, kept on disk so that a
+// launch-at-login start with the window hidden can remind before the page
+// has loaded.
+function readRenewals() {
+  const saved = readJson(RENEWALS_FILE(), null) || {};
+  return { domains: normalizeDomains(saved.domains), prefs: normalizePrefs(saved.prefs) };
+}
+
+function writeRenewals(value) {
+  writeJson(RENEWALS_FILE(), value, 'renewal list');
 }
 
 /* --------------------------------------------------------------- window */
@@ -151,27 +185,63 @@ function buildTray() {
 /* -------------------------------------------------- renewal notifications */
 
 /**
- * The renderer reports its domain list (it already has it). The shell decides
- * what deserves a notification, so no credentials or tokens ever reach the
- * main process.
+ * Raise whatever reminders are due for the last reported domain list. Runs at
+ * startup, hourly, after the system wakes and whenever the page reports, so
+ * it does not depend on the page being open or reloaded.
  */
-ipcMain.on('renewals:report', (_event, domains) => {
-  if (!Notification.isSupported()) return;
+function checkRenewals() {
+  try {
+    if (!renewals) renewals = readRenewals();
+    const { domains, prefs } = renewals;
+    const notified = readNotified();
 
-  const notified = readNotified();
-  const due = dueReminders(domains, { alreadyNotified: notified });
+    if (prefs.enabled && Notification.isSupported()) {
+      const due = dueReminders(domains, { leadDays: prefs.leadDays, alreadyNotified: notified });
 
-  for (const item of due.slice(0, 5)) {   // never spam on first launch
-    new Notification({
-      title: item.title,
-      body: item.body,
-      icon: path.join(__dirname, 'build', 'icon.png'),
-    }).on('click', showWindow).show();
-    notified.push(item.key);
+      for (const item of due.slice(0, 5)) {   // never spam; the rest follow on later checks
+        const notification = new Notification({
+          title: item.title,
+          body: item.body,
+          icon: path.join(__dirname, 'build', 'icon.png'),
+        });
+        const release = () => liveNotifications.delete(notification);
+        notification.on('click', () => { release(); showWindow(); });
+        notification.on('close', release);
+        liveNotifications.add(notification);
+        notification.show();
+        notified.push(item.key);
+      }
+    }
+
+    writeNotified(pruneNotified(notified, domains));
+  } catch (err) {
+    // Runs unattended on a timer: a failed check must never take the app down.
+    console.error('renewal check failed', err);
   }
+}
 
-  writeNotified(pruneNotified(notified, domains));
+/**
+ * The renderer reports its domain list (it already has it) and the user's
+ * reminder settings. The shell decides what deserves a notification, so no
+ * credentials or tokens ever reach the main process.
+ */
+ipcMain.on('renewals:report', (event, domains, prefs) => {
+  // The preload runs on every page the window shows, PayPal's included; only
+  // the app itself may report renewals.
+  if (!isAppFrame(event.senderFrame)) return;
+  renewals = { domains: normalizeDomains(domains), prefs: normalizePrefs(prefs) };
+  writeRenewals(renewals);
+  checkRenewals();
 });
+
+function isAppFrame(frame) {
+  try {
+    const origin = new URL(frame.url).origin;
+    return origin === new URL(APP_URL).origin;
+  } catch {
+    return false;
+  }
+}
 
 ipcMain.handle('app:info', () => ({ version: app.getVersion(), platform: process.platform }));
 
@@ -185,6 +255,13 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     createWindow();
     buildTray();
+
+    // Reminders must not wait for the page: check the saved list now, then
+    // keep checking while the app sits in the tray. A laptop that slept
+    // through a day boundary catches up as soon as it wakes.
+    checkRenewals();
+    setInterval(checkRenewals, CHECK_EVERY_MS);
+    powerMonitor.on('resume', checkRenewals);
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
