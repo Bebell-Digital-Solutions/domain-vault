@@ -86,6 +86,37 @@ No API keys. No OAuth. Just your data, securely in one place.
 </div>
 
 ---
+<table>
+<tr>
+<td valign="top" width="45%">
+
+<img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/domain-safe-banner.webp?updatedAt=1789777371782" alt="Domain Vault Safe" width="100%" />
+
+</td>
+<td valign="top" width="55%">
+
+## 📬 Contact Us
+
+**✉️ Email**
+[hello@edgechat.ai](mailto:hello@edgechat.ai)
+
+**📞 Phone**
+[+1 (555) 123-4567](tel:+15551234567)
+
+**💬 Support Channel**
+[Discord — EdgeChat Community](https://discord.gg/your-invite)
+
+**🐛 Bug Reports**
+[GitHub Issues](https://github.com/your-org/edgechat/issues)
+
+**🕐 Response Time**
+Within 24 hours, Mon–Fri
+
+</td>
+</tr>
+</table>
+
+---
 <div align="left">
   <i>Developed with 🧡 by Bebell Digital Solutions. All rights reserved.</i>
 </div>
