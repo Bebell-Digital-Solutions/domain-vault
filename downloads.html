@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Downloads · Domain Vault</title>
+    <meta name="description" content="Deploy Domain Vault locally or use the secure cloud. Desktop clients for macOS, Windows and Linux.">
+    <link rel="icon" href="https://bucket.mlcdn.com/a/3336/3336910/images/115f0fdbe1cc012228f0c234e8b4f909d2e7ab69.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        code: ['Fira Code', 'monospace'],
+                        tech: ['Orbitron', 'monospace'],
+                    },
+                    colors: {
+                        black: '#000000',
+                        brand: {
+                            primary: '#ff5011', 
+                            secondary: '#333333',
+                            bgDark: '#000000',
+                            bgDarker: '#050505',
+                            card: '#121212',
+                            hover: '#1a1a1a',
+                            textMain: '#f5f5f5',
+                            muted: '#a0a0a0',
+                            border: 'rgba(255, 255, 255, 0.1)',
+                            success: '#51cf66',
+                            warning: '#ffd43b',
+                            danger: '#ef4444',
+                        }
+                    },
+                    boxShadow: {
+                        'glow': '0 0 30px rgba(255, 80, 17, 0.15)',
+                    },
+                    letterSpacing: {
+                        tight: '-0.02em',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* --- Root Variables & Base --- */
+        :root {
+            --primary: #ff5011;
+            --bg-dark: #000000;
+            --bg-card: #121212;
+            --bg-hover: #1a1a1a;
+            --text-main: #f5f5f5;
+            --text-muted: #a0a0a0;
+            --border: rgba(255, 255, 255, 0.1);
+            --shadow-glow: 0 0 30px rgba(255, 80, 17, 0.15);
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-primary: 'Inter', sans-serif;
+            --font-tech: 'Orbitron', monospace;
+        }
+
+        * { box-sizing: border-box; }
+        
+        /* Custom scrollbar for webkit to match the dark aesthetic */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #ff5011; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #404040; }
+        
+        a { color: var(--primary); }
+
+        /* --- Navbar / Footer Specific Styles --- */
+        .header-icon {
+            size: 10px;
+            position: relative; 
+            cursor: pointer; 
+            color: var(--text-muted); 
+            transition: color 0.2s; 
+            display: flex; 
+            align-items: center; 
+        }
+        .header-icon:hover { 
+            color: #ff5011; 
+        }
+        
+        .logo-swap {
+            background-image: url('https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png');
+            transition: background-image 0.3s ease, transform 0.3s ease;
+        }
+        .logo-swap:hover {
+            background-image: url('https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612');
+            transform: scale(1.1);
+        }
+
+        /* --- Download Page Specific Styles --- */
+        .downloads {
+            padding: 120px 24px 130px;
+            max-width: 1360px;
+            margin: 0 auto;
+            text-align: center;
+            color: var(--text-main);
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 20px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: #000;
+            font-family: var(--font-tech);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.22em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            transition: transform var(--transition),
+            border-color var(--transition),
+            color var(--transition),
+            box-shadow var(--transition);
+        }
+        
+        
+        .eyebrow::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+        
+        .eyebrow:hover {
+    transform: scale(1.08);
+    border-color: var(--primary);
+    color: var(--text-main);
+    box-shadow: var(--shadow-glow);
+}
+
+        .downloads h1 {
+            margin: 34px 0 0;
+            font-size: clamp(2.1rem, 5.2vw, 3.6rem);
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            line-height: 1.1;
+        }
+
+        .lede {
+            margin: 22px auto 0;
+            max-width: 780px;
+            font-size: clamp(1rem, 1.5vw, 1.19rem);
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        .platforms {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 34px;
+            margin-top: 64px;
+            text-align: left;
+        }
+
+        .platform {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: var(--transition);
+        }
+        
+        .platform:hover,
+        .platform:focus-within {
+            background: var(--bg-hover);
+            border-color: rgba(255, 80, 17, 0.35);
+            box-shadow: var(--shadow-glow);
+            transform: translateY(-3px);
+        }
+        
+        /* --- Glow Line Effect --- */
+        .glow-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, transparent, var(--primary), transparent);
+            z-index: 30;
+        }
+
+        .platform-head {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .platform-icon {
+            flex: none;
+            width: 50px;
+            height: 50px;
+            display: grid;
+            place-items: center;
+            border-radius: 13px;
+            background: linear-gradient(145deg, #ff6a33, var(--primary));
+            color: #fff;
+            font-size: 24px;
+            box-shadow: 0 6px 18px rgba(255, 80, 17, 0.28);
+        }
+
+        .platform h2 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .platform p {
+            margin: 0 0 26px;
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.55;
+            flex-grow: 1;
+        }
+
+        .btn-download {
+            display: block;
+            width: 100%;
+            padding: 15px 18px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--primary);
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .btn-download:hover {
+            background: #ff6a33;
+            box-shadow: 0 8px 22px rgba(255, 80, 17, 0.32);
+            color: #fff;
+        }
+        .btn-download:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 3px;
+        }
+
+        .btn-download.unavailable {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .alt-download {
+            display: block;
+            margin-top: 12px;
+            text-align: center;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+        .alt-download:hover { color: var(--primary); text-decoration: underline; }
+        .alt-download.placeholder { visibility: hidden; }
+
+        .web-app {
+            margin-top: 56px;
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 980px) {
+            .platforms { grid-template-columns: 1fr; gap: 20px; max-width: 520px; margin-inline: auto; }
+            .downloads { padding: 76px 20px 84px; }
+            .platform p { margin-bottom: 22px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
+            .platform:hover { transform: none; }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased selection:bg-brand-primary selection:text-white flex flex-col min-h-screen bg-brand-bgDark text-brand-muted">
+
+    <!-- === TOP NAVBAR === -->
+    <nav class="sticky top-0 z-50 w-full backdrop-blur-md bg-brand-bgDark/80 border-b border-brand-border transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <!-- Left: Brand -->
+            <a href="/" class="flex items-center gap-3 text-brand-textMain font-semibold  group uppercase tracking-wider font-tech hover:opacity-80 transition-opacity">
+                <div class="relative w-8 h-8">
+                    <!-- Default logo -->
+                    <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" 
+                         alt="Domain Vault Logo" 
+                         class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 group-hover:opacity-0" />
+                         
+                    <!-- Hover logo -->
+                    <img src="https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612" 
+                         alt="Domain Vault Logo Hover" 
+                         class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100" />
+                </div>
+                Domain Vault
+            </a>
+
+            <!-- Center: Muted Links (Hidden on mobile) -->
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-brand-muted">
+                <a href="/#workflow" class="hover:text-brand-textMain transition-colors duration-300">How It Works</a>
+                <a href="/#features" class="hover:text-brand-textMain transition-colors duration-300">Features</a>
+                <a href="/#download" class="hover:text-brand-textMain transition-colors duration-300">Download</a>                
+                <a href="/#pricing" class="hover:text-brand-textMain transition-colors duration-300">Pricing</a>
+                <a href="/#reviews" class="hover:text-brand-textMain transition-colors duration-300">Reviews</a>                
+                <a href="/#faq" class="hover:text-brand-textMain transition-colors duration-300">FAQ</a>
+            </div>
+
+            <!-- Right: Primary CTA -->
+            <div class="flex items-center gap-4">
+                <div class="header-icon" id="translateBtn" title="Translate to Spanish/English">
+                    <i data-lucide="languages"></i>
+                </div>            
+                <script>
+                    document.getElementById('translateBtn').addEventListener('click', function() {
+                        window.location.href = '/es';
+                    });
+                </script>        
+                <a href="/app/" class="block text-sm font-medium text-brand-muted hover:text-brand-textMain transition-colors duration-300">Log in</a>
+                <a href="/#pricing" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- === MAIN DOWNLOADS SECTION === -->
+    <!-- Wrapped main container directly dictating full width and hiding overflow -->
+    <main class="relative flex-1 w-full overflow-hidden bg-brand-bgDarker">
+        
+        <!-- Animated Matrix Background Canvas -->
+        <canvas id="matrix-canvas" class="absolute inset-0 w-full h-full z-0 opacity-80 pointer-events-none"></canvas>
+        
+        <!-- Gradient overlay to smoothly blend the canvas with the footer -->
+        <div class="absolute inset-0 z-[1] bg-gradient-to-b from-black/10 via-black/50 to-black/90 pointer-events-none"></div>
+
+        <!-- The actual text and buttons wrapped in relative z-10 so they sit on top of the canvas -->
+        <div class="downloads relative z-10 w-full">
+            <span class="eyebrow">Downloads</span>
+            <h1>Up and running in a minute.</h1>
+            <p class="lede" id="lede">
+                Deploy the Vault locally or use our secure cloud. Desktop clients are
+                available for all major platforms.
+            </p>
+
+            <div class="platforms">
+                <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-apple" aria-hidden="true"></i></span>
+                    <h2>macOS</h2>
+                </div>
+                <p>Requires macOS 11.0 or later. Apple Silicon (M1/M2/M3) natively supported.</p>
+                <a class="btn-download" data-platform="macos" href="#">Download for Mac</a>
+            </section>
+            
+            <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-windows" aria-hidden="true"></i></span>
+                    <h2>Windows</h2>
+                </div>
+                <p>Requires Windows 10 or 11. 64-bit architecture required.</p>
+                <a class="btn-download" data-platform="windows" href="#">Download for Windows</a>
+            </section>
+
+            <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-linux" aria-hidden="true"></i></span>
+                    <h2>Linux</h2>
+                </div>
+                <p>Available as AppImage, Snap, or Debian package (.deb) for Ubuntu/Debian.</p>
+                <a class="btn-download" data-platform="linux" href="#">Download for Linux</a>
+            </section>
+                
+                
+            </div>
+
+            <p class="web-app">Prefer the browser? <a href="app.getdomainvault.com">Open Domain Vault in the cloud</a>.</p>
+        </div>
+    </main>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+    <!-- === FOOTER === -->
+    <footer class="border-t border-brand-border py-12 px-6 mt-auto bg-brand-bgDarker">
+        <!-- Main Footer Content Wrapper -->
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+            
+            <!-- Left Info (Brand & Copyright) - Takes up 3 cols on desktop -->
+            <div class="flex flex-col gap-2 md:col-span-3">
+                <a href="/" class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight text-sm group uppercase tracking-wider font-tech hover:opacity-80 transition-opacity">
+                    <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault Logo" class="w-8 h-8 object-contain">
+                    Domain Vault
+                </a>
+                <div class="text-xs text-brand-muted">
+                    &copy; 2026 Domain Vault. All rights reserved.
+                </div>
+            </div>
+
+            <!-- Center Links - Takes up 5 cols on desktop -->
+            <div class="flex flex-wrap gap-12 text-sm md:col-span-5 md:justify-center">
+                <div class="flex flex-col gap-3">
+                    <div class="text-brand-textMain font-medium mb-1">Product</div>
+                    <a href="/#features" class="text-brand-muted hover:text-brand-primary transition-colors">Features</a>
+                    <a href="/#download" class="text-brand-muted hover:text-brand-primary transition-colors">Download</a>
+                    <a href="/#pricing" class="text-brand-muted hover:text-brand-primary transition-colors">Pricing</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Changelog</a>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <div class="text-brand-textMain font-medium mb-1">Resources</div>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Documentation</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">API Reference</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Status</a>
+                </div>
+                
+                <div class="flex flex-col gap-3">
+                    <div class="text-brand-textMain font-medium mb-1">Legal</div>
+                    <a href="/p/privacy" class="text-brand-muted hover:text-brand-primary transition-colors">Privacy</a>
+                    <a href="/p/terms" class="text-brand-muted hover:text-brand-primary transition-colors">Terms</a>
+                </div>
+            </div>
+
+            <!-- Right Column (Support Card) - Takes up 4 cols on desktop -->
+            <div class="md:col-span-4 mt-6 md:mt-0 w-full flex justify-center md:justify-end">
+                <div class="w-full max-w-full sm:max-w-[360px] aspect-[3/2] bg-brand-card rounded-2xl p-5 sm:p-6 md:p-4 lg:p-6 relative overflow-hidden flex flex-col justify-center shadow-lg border border-brand-border hover:border-brand-primary/50 transition-colors group">
+                
+                <!-- Top glowing line -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-30"></div>              
+                                                                           
+                    <div class="relative z-10 w-[65%] sm:w-3/4 lg:w-2/3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h4 class="text-brand-textMain font-bold text-lg sm:text-xl md:text-base lg:text-xl">Online Support</h4>
+                            <span class="bg-brand-primary/20 text-brand-primary border border-brand-primary/30 text-[10px] md:text-[9px] lg:text-[10px] font-bold px-2 py-0.5 md:px-1.5 md:py-0 lg:px-2 lg:py-0.5 rounded-md uppercase tracking-wider">24/7</span>
+                        </div>
+                        <p class="text-brand-muted text-xs sm:text-sm md:text-[10px] lg:text-sm mb-4 md:mb-2 lg:mb-4 leading-snug">Contact us if you have any questions. Our team is here to help you.</p>
+                        <button onclick="window.open('https://wa.me/18296203970?text=Hello!%20%F0%9F%91%8B%20I%20have%20a%20question%20about%20Domain%20Vault.', '_blank')" class="bg-brand-bgDark hover:bg-brand-hover text-brand-textMain text-xs sm:text-sm md:text-[11px] lg:text-sm font-semibold py-2 px-3 md:py-1.5 md:px-2.5 lg:py-2 lg:px-3 rounded-lg flex items-center gap-2 transition-colors border border-brand-border shadow-sm w-fit">
+                            <i data-lucide="headset" class="w-4 h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 text-brand-primary"></i>
+                            Message Us
+                        </button>
+                    </div>
+                    <img 
+                        src="https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/assets/support-agent.webp" 
+                        alt="24/7 Support" 
+                        class="absolute bottom-0 right-0 w-32 sm:w-36 md:w-36 lg:w-40 object-contain z-0 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" 
+                    />
+                </div>
+            </div>
+
+         </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script>
+        /* Build URLs live in config.js (DOMAIN_VAULT_CONFIG.downloads). Until a platform has one, its button says "Coming soon" */
+        (function () {
+            var builds = (window.DOMAIN_VAULT_CONFIG && window.DOMAIN_VAULT_CONFIG.downloads) || {};
+            var live = 0;
+
+            document.querySelectorAll('.btn-download').forEach(function (btn) {
+                var build = builds[btn.dataset.platform] || {};
+                if (typeof build === 'string') build = { url: build };
+                var url = build.url;
+
+                if (url) {
+                    btn.href = url;
+                    btn.setAttribute('download', '');
+                    live++;
+                    var alt;
+                    if (build.alt && build.alt.url) {
+                        alt = document.createElement('a');
+                        alt.className = 'alt-download';
+                        alt.href = build.alt.url;
+                        alt.textContent = 'or download for ' + build.alt.label;
+                        alt.setAttribute('download', '');
+                    } else {
+                        alt = document.createElement('span');
+                        alt.className = 'alt-download placeholder';
+                        alt.setAttribute('aria-hidden', 'true');
+                        alt.textContent = '\u00a0';
+                    }
+                    btn.insertAdjacentElement('afterend', alt);
+                } else {
+                    btn.classList.add('unavailable');
+                    btn.textContent = 'Coming soon';
+                    btn.removeAttribute('href');
+                    btn.setAttribute('role', 'button');
+                    btn.setAttribute('aria-disabled', 'true');
+                }
+            });
+
+            var lede = document.getElementById('lede');
+            if (live === 0 && lede) {
+                lede.textContent =
+                    'Run Domain Vault in our secure cloud today. Desktop clients for macOS, ' +
+                    'Windows and Linux are on the way.';
+            }
+        })();
+    </script>
+    
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+
+<script>
+    // ==========================================
+    // Matrix Background Animation Logic
+    // ==========================================
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+    const container = canvas.parentElement; // Uses the <main> tag to size the canvas perfectly
+
+    // Resize Canvas to fit the container dynamically
+    function resizeCanvas() {
+        canvas.width = container.offsetWidth;
+        canvas.height = container.offsetHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // The Characters for Matrix Effect (Katakana + Latin + Digits)
+    const matrixChars = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレゲゼデベペオォコソトノホモヨョロゴゾドボポヴッン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const characters = matrixChars.split('');
+
+    const fontSize = 16;
+    let columns = canvas.width / fontSize;
+    let drops = [];
+
+    // Initialize drop positions for each column
+    for (let x = 0; x < columns; x++) {
+        drops[x] = Math.random() * canvas.height; // Randomize start heights
+    }
+
+    function drawMatrix() {
+        // Re-calculate columns if window resized
+        if (drops.length < canvas.width / fontSize) {
+            const oldLength = drops.length;
+            columns = canvas.width / fontSize;
+            for (let x = oldLength; x < columns; x++) {
+                drops[x] = Math.random() * canvas.height;
+            }
+        }
+
+        // Draw translucent black background over everything to create trail effect
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = fontSize + 'px "Fira Code", monospace';
+        ctx.textAlign = 'center';
+
+        // Loop over all drops
+        for (let i = 0; i < drops.length; i++) {
+            // Get a random character
+            const text = characters[Math.floor(Math.random() * characters.length)];
+
+            // Randomly highlight some letters to bright white/orange
+            if (Math.random() > 0.95) {
+                 ctx.fillStyle = '#ffffff'; // Occasional bright white character
+            } else if (Math.random() > 0.8) {
+                 ctx.fillStyle = '#ff7b47'; // Lighter orange for variation
+            } else {
+                 ctx.fillStyle = 'rgba(255, 80, 17, 0.95)'; // Base brand primary orange
+            }
+
+            // x = i * fontSize, y = value of drop * fontSize
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            // Reset drop to the top randomly after it crosses the screen
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+
+            // Increment Y coordinate
+            drops[i]++;
+        }
+    }
+
+    // Run the animation loop at ~30 FPS
+    setInterval(drawMatrix, 45);
+</script>
+</body>
+</html>
