@@ -112,6 +112,10 @@ No API keys. No OAuth. Just your data, securely in one place.
 **🕐 Response Time**
 Within 24 hours, Mon–Fri
 
+<br />
+
+<img src="assets/edgechat-banner.png" alt="EdgeChat banner" width="100%" />
+
 </td>
 </tr>
 </table>
