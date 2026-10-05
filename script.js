@@ -17,6 +17,7 @@
         // edited from the admin panel.
         const PAYPAL = (window.DOMAIN_VAULT_CONFIG && window.DOMAIN_VAULT_CONFIG.paypal) || { buttons: {} };
         let packPrices = {};   // plan -> { amount, currency }, loaded from the API
+        const PLAN_RANK = { 'Personal': 0, 'Start-up': 1, 'Business': 2, 'Agency': 3 };
 
         function paypalCheckoutUrl(plan) {
             const id = PAYPAL.buttons[plan];
@@ -39,10 +40,14 @@
                 if (!opt.dataset.label) opt.dataset.label = opt.textContent;
                 const price = packPrices[opt.value];
                 const priced = price && price.amount !== null;
-                opt.textContent = priced
-                    ? `${opt.dataset.label} — ${Number(price.amount).toFixed(2)} ${price.currency}`
-                    : `${opt.dataset.label} — not available yet`;
-                opt.disabled = !priced;
+                // Buying a pack the account already has (or exceeds) would charge for nothing.
+                const included = (PLAN_RANK[opt.value] || 0) <= (PLAN_RANK[currentUser && currentUser.plan] || 0);
+                opt.textContent = included
+                    ? `${opt.dataset.label} — included in your plan`
+                    : priced
+                        ? `${opt.dataset.label} — ${Number(price.amount).toFixed(2)} ${price.currency}`
+                        : `${opt.dataset.label} — not available yet`;
+                opt.disabled = included || !priced;
             });
             const firstEnabled = Array.from(select.options).find(o => !o.disabled);
             if (firstEnabled && select.selectedOptions[0] && select.selectedOptions[0].disabled) {
@@ -79,7 +84,20 @@
                 searchRecommendations: "Search hosting, email...", quickDnsCheck: "Quick DNS Check", enterDomainName: "Enter domain name...", checkDns: "Check DNS", others: "Others", other: "Other",
                 upgradeTitle: "Upgrade Required", upgradeDesc: "Upgrade your account to add more domains and unlock premium features.", contactAdmin: "Contact Admin to Upgrade", maybeLater: "Maybe Later",
                 reports: "Reports", applyFilter: "Apply Filter", emailReport: "Email Report", downloadCsv: "Download CSV", startDate: "Start Date", endDate: "End Date",
-                currentPlan: "Your Current Plan:", selectNewPlan: "Select New Plan"
+                currentPlan: "Your Current Plan:", selectNewPlan: "Select New Plan",
+                reminderSettings: "Renewal Reminders", reminderSettingsHelp: "We remind you before a domain expires, so nothing lapses by accident.",
+                reminderEnabled: "Send me renewal reminders", reminderChannels: "How", reminderWhen: "When", reminderOnTheDay: "on the day", saveReminders: "Save Reminders",
+                passwordOptionalHint: "Optional. Stored encrypted; only you can reveal it.", removeStoredPassword: "Delete the stored password",
+                revealNote: "Each reveal is logged, up to 10 per hour.",
+                calendarFeedTitle: "Subscribe to your renewals", calendarFeedLink: "Private calendar link",
+                calendarFeedIntro: "Add this private link to Google Calendar, Apple Calendar or Outlook. Every renewal date appears there and stays current as you add, edit or renew domains.",
+                calendarFeedPrivate: "Anyone with this link can see your domain names and renewal dates. Keep it private.",
+                addToGoogle: "Add to Google Calendar", openInCalendarApp: "Open in Apple Calendar / Outlook", resetFeedLink: "Reset link",
+                calendarFeedDelay: "Calendar apps refresh subscriptions on their own schedule (Google: every few hours), so a change can take a while to show up.",
+                security: "Security", currentPassword: "Current password", newPassword: "New password", passwordRule: "At least 10 characters.",
+                confirmPassword: "Confirm new password", changePassword: "Change Password",
+                yourData: "Your Data", yourDataHelp: "Download everything in your vault. Stored registrar passwords are never included.",
+                exportCsv: "Export CSV", exportJson: "Export JSON", purchases: "Purchases", noPurchases: "No purchases yet."
             },
             es: {
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Gestor Seguro de Dominios",
@@ -108,7 +126,20 @@
                 searchRecommendations: "Buscar hosting, correo...", quickDnsCheck: "Comprobación Rápida DNS", enterDomainName: "Ingrese nombre de dominio...", checkDns: "Comprobar DNS", others: "Otros", other: "Otro",
                 upgradeTitle: "Actualización Requerida", upgradeDesc: "Actualice su cuenta para agregar más dominios y desbloquear funciones premium.", contactAdmin: "Contactar Admin para Actualizar", maybeLater: "Quizás Más Tarde",
                 reports: "Reportes", applyFilter: "Aplicar Filtro", emailReport: "Enviar por Correo", downloadCsv: "Descargar CSV", startDate: "Fecha de Inicio", endDate: "Fecha de Fin",
-                currentPlan: "Tu Plan Actual:", selectNewPlan: "Seleccionar Nuevo Plan"
+                currentPlan: "Tu Plan Actual:", selectNewPlan: "Seleccionar Nuevo Plan",
+                reminderSettings: "Recordatorios de Renovación", reminderSettingsHelp: "Te avisamos antes de que venza un dominio, para que nada caduque por descuido.",
+                reminderEnabled: "Enviarme recordatorios de renovación", reminderChannels: "Cómo", reminderWhen: "Cuándo", reminderOnTheDay: "el mismo día", saveReminders: "Guardar Recordatorios",
+                passwordOptionalHint: "Opcional. Se guarda cifrada; solo tú puedes verla.", removeStoredPassword: "Eliminar la contraseña guardada",
+                revealNote: "Cada consulta queda registrada, hasta 10 por hora.",
+                calendarFeedTitle: "Suscríbete a tus renovaciones", calendarFeedLink: "Enlace privado del calendario",
+                calendarFeedIntro: "Agrega este enlace privado a Google Calendar, Apple Calendar u Outlook. Todas las fechas de renovación aparecen allí y se mantienen al día cuando agregas, editas o renuevas dominios.",
+                calendarFeedPrivate: "Cualquiera con este enlace puede ver tus dominios y sus fechas de renovación. Mantenlo en privado.",
+                addToGoogle: "Agregar a Google Calendar", openInCalendarApp: "Abrir en Apple Calendar / Outlook", resetFeedLink: "Restablecer enlace",
+                calendarFeedDelay: "Las aplicaciones de calendario actualizan las suscripciones a su propio ritmo (Google: cada pocas horas), así que un cambio puede tardar en aparecer.",
+                security: "Seguridad", currentPassword: "Contraseña actual", newPassword: "Nueva contraseña", passwordRule: "Al menos 10 caracteres.",
+                confirmPassword: "Confirmar nueva contraseña", changePassword: "Cambiar Contraseña",
+                yourData: "Tus Datos", yourDataHelp: "Descarga todo lo que hay en tu bóveda. Las contraseñas de registradores guardadas nunca se incluyen.",
+                exportCsv: "Exportar CSV", exportJson: "Exportar JSON", purchases: "Compras", noPurchases: "Aún no hay compras."
             }
         };
 
@@ -145,6 +176,15 @@
         let currentCalendarDate = new Date();
         let currentToolFilter = 'all';
         let currentReportData = [];
+        let purchases = [];
+        let authMode = 'login';          // login | register | forgot | recover
+        let recoveryToken = null;        // from a password-reset link; kept out of the URL
+        let revealedPassword = null;     // credentials modal only, forgotten when it closes
+        let credentialsProviderId = null;
+        // saveDomains/saveProviders replace the whole list on the server, so
+        // nothing may be saved until the real list has been loaded: saving
+        // from an empty screen after a failed load would delete everything.
+        let vaultLoaded = false;
 
         const colorThemes = {
             orange: { primary: '#ff5011' }, cyan: { primary: '#17A2B8' }, green: { primary: '#51cf66' },
@@ -158,7 +198,6 @@
         function initMatrix() {
             const canvas = document.getElementById('matrixCanvas');
             // The page may ship its own background effect instead.
-            if (!canvas) return;
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             let drops = [];
@@ -212,22 +251,44 @@
             // Start Matrix Effect
             initMatrix();
 
-            // Restore a previous session, if there is one. The old build logged
-            // you out on every refresh.
-            window.DomainVaultAPI.restore().then(function (user) {
-                if (!user) return;
-                currentUser = user;
-                document.getElementById('auth-overlay').style.display = 'none';
-                if (matrixInterval) clearInterval(matrixInterval);
-                loadDashboardData();
-                handlePaymentReturn();
-            });
+            // A password-reset link lands here with its token in the URL
+            // fragment. Take it out of the address bar at once so it is not
+            // left in history or passed on with a copied URL.
+            const recovery = window.DomainVaultAPI.recoveryFromUrl();
+            if (recovery) {
+                history.replaceState(null, '', location.pathname + location.search);
+                if (recovery.accessToken) {
+                    recoveryToken = recovery.accessToken;
+                    setAuthMode('recover');
+                } else {
+                    setAuthMode('login');
+                    showAuthMessage(`${recovery.error} Use "Forgot your password?" to get a new link.`, 'danger');
+                }
+            } else {
+                // The landing page's sign-up buttons link to /app/?register.
+                if (new URLSearchParams(location.search).has('register')) setAuthMode('register');
+                // Restore a previous session, if there is one. The old build
+                // logged you out on every refresh.
+                window.DomainVaultAPI.restore().then(function (user) {
+                    if (!user) return;
+                    currentUser = user;
+                    enterApp();
+                });
+            }
 
             // Setup Auth Overlay UI
-            document.getElementById('tab-login').addEventListener('click', () => switchAuthMode(true));
-            document.getElementById('tab-register').addEventListener('click', () => switchAuthMode(false));
-            document.getElementById('authSubmitBtn').addEventListener('click', handleAuthSubmit);
-            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+            document.getElementById('tab-login').addEventListener('click', () => setAuthMode('login'));
+            document.getElementById('tab-register').addEventListener('click', () => setAuthMode('register'));
+            document.getElementById('authForm').addEventListener('submit', (e) => { e.preventDefault(); handleAuthSubmit(); });
+            document.getElementById('forgotPasswordLink').addEventListener('click', () => setAuthMode('forgot'));
+            document.getElementById('backToLoginLink').addEventListener('click', () => { recoveryToken = null; setAuthMode('login'); });
+            document.getElementById('logoutBtn').addEventListener('click', () => handleLogout());
+            document.getElementById('settingsPasswordForm').addEventListener('submit', submitPasswordChange);
+            document.getElementById('exportCsvBtn').addEventListener('click', () => {
+                if (domains.length === 0) return showToast("No domains to export yet.", "warning");
+                downloadFile(`domain_vault_${todayStamp()}.csv`, 'text/csv', domainsCsv(domains));
+            });
+            document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
             document.getElementById('settingsRemindersForm').addEventListener('submit', saveReminderSettings);
             document.getElementById('remindersEnabled').addEventListener('change', function () {
                 settings.reminders = settings.reminders || {};
@@ -244,7 +305,9 @@
 
             // Modular Checkout Button Logic
             document.getElementById('proceedToCheckoutBtn').addEventListener('click', () => {
-                const selectedPlan = document.getElementById('upgradePlanSelect').value;
+                const option = document.getElementById('upgradePlanSelect').selectedOptions[0];
+                if (!option || option.disabled) return showToast("There is no larger pack available for this account right now.", "warning");
+                const selectedPlan = option.value;
                 const checkoutUrl = paypalCheckoutUrl(selectedPlan);
                 if (!checkoutUrl) return showToast("This pack is not available for purchase yet.", "danger");
                 window.location.href = checkoutUrl;
@@ -303,7 +366,7 @@
             document.getElementById('translateBtn').addEventListener('click', async () => {
                 settings.language = settings.language === 'en' ? 'es' : 'en';
                 setLanguage(settings.language);
-                if (currentUser) await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+                if (currentUser) await persist('saveSettings', { settings }, null, false);
             });
 
             document.getElementById('headerNotificationIcon').addEventListener('click', () => setActivePage('notifications'));
@@ -350,20 +413,7 @@
 
             document.getElementById('pageDownloadReportBtn').addEventListener('click', () => {
                 if(currentReportData.length === 0) return showToast("No data to download.", "warning");
-                let csv = "Domain Name,Provider,Purchase Date,Renewal Date,Purchase Price,Renewal Price,Auto Renew\n";
-                currentReportData.forEach(d => {
-                    const pd = d.purchaseDate ? d.purchaseDate.split('T')[0] : '';
-                    const rd = d.renewalDate ? d.renewalDate.split('T')[0] : '';
-                    csv += `"${d.name}","${d.provider}",${pd},${rd},${d.purchasePrice},${d.renewalPrice},${d.autoRenew}\n`;
-                });
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `domain_report_${new Date().toISOString().split('T')[0]}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                downloadFile(`domain_report_${todayStamp()}.csv`, 'text/csv', domainsCsv(currentReportData));
                 showToast("Report downloaded successfully!", "success");
             });
 
@@ -419,6 +469,8 @@
                     generateICal([domain]);
                 } 
                 else if (actionBtn.title === 'Delete Notification') {
+                    const dismissed = notifications.find(n => String(n.id) === String(domainId));
+                    if (dismissed) rememberDismissed(dismissed.key);
                     notifications = notifications.filter(n => String(n.id) !== String(domainId));
                     renderNotificationsPage(); 
                     updateNotificationBadge();
@@ -454,7 +506,39 @@
                 if (renewals.length > 0) generateICal(renewals, true);
                 else showToast('No renewals this month to export.', 'danger');
             });
-            document.getElementById('syncGCalBtn').addEventListener('click', () => showToast('Google Calendar bulk sync coming soon.', 'warning'));
+            document.getElementById('syncGCalBtn').addEventListener('click', openCalendarFeed);
+            document.getElementById('copyFeedBtn').addEventListener('click', () => {
+                const url = document.getElementById('calendarFeedUrl').value;
+                if (/^https?:/.test(url)) copyToClipboard(url, 'Calendar link copied.');
+            });
+            document.getElementById('resetFeedBtn').addEventListener('click', async () => {
+                if (!confirm("Create a new link? Calendars subscribed with the current link will stop updating.")) return;
+                const res = await persist('resetCalendarFeed', {}, "New link created. Subscribe with it again in your calendar app.", false);
+                if (res && res.token) setFeedUrl(res.token);
+            });
+
+            document.getElementById('credRevealBtn').addEventListener('click', async () => {
+                const el = document.getElementById('credPass');
+                if (el.dataset.shown === '1') { el.textContent = '••••••••'; el.dataset.shown = ''; return; }
+                const password = await fetchStoredPassword();
+                if (password === null) return;
+                el.textContent = password;
+                el.dataset.shown = '1';
+            });
+            document.getElementById('credCopyBtn').addEventListener('click', async () => {
+                const password = await fetchStoredPassword();
+                if (password !== null) copyToClipboard(password, 'Password copied.');
+            });
+
+            // Custom accent colour: preview while picking, save once chosen.
+            const colorPicker = document.getElementById('customColorPicker');
+            colorPicker.addEventListener('input', () => document.documentElement.style.setProperty('--primary', colorPicker.value));
+            colorPicker.addEventListener('change', async () => {
+                settings.theme = colorPicker.value;   // a hex value is stored as the theme itself
+                applySettings();
+                updateStats();
+                if (currentUser) await persist('saveSettings', { settings }, "Accent color saved.", false);
+            });
 
             // Mobile Nav
             document.querySelector('.menu-toggle').addEventListener('click', () => { document.getElementById('mobileNav').classList.add('open'); document.getElementById('navOverlay').classList.add('open'); lucide.createIcons(); });
@@ -488,22 +572,59 @@
 
         // --- API & AUTH LOGIC ---
         
-        function switchAuthMode(login) {
-            isLoginMode = login;
-            document.getElementById('tab-login').classList.toggle('active', login);
-            document.getElementById('tab-register').classList.toggle('active', !login);
-            document.getElementById('registerFields').style.display = login ? 'none' : 'block';
-            document.getElementById('authSubmitBtn').textContent = login ? 'Log In' : 'Register Account';
+        const AUTH_MODES = {
+            login:    { button: 'Log In' },
+            register: { button: 'Register Account' },
+            forgot:   { button: 'Send Reset Link', intro: "Enter your account email and we'll send you a link to choose a new password." },
+            recover:  { button: 'Set New Password', intro: 'Choose a new password for your account.' }
+        };
+
+        /** One auth card, four jobs: log in, register, ask for a reset link, set a new password. */
+        function setAuthMode(mode) {
+            authMode = mode;
+            isLoginMode = mode === 'login';
+            const show = (id, on) => { document.getElementById(id).style.display = on ? '' : 'none'; };
+            const intro = AUTH_MODES[mode].intro || '';
+
+            document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+            document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+            document.querySelector('.auth-tabs').style.display = (mode === 'login' || mode === 'register') ? '' : 'none';
+            document.getElementById('authIntro').textContent = intro;
+            show('authIntro', !!intro);
+            show('authEmailGroup', mode !== 'recover');
+            show('authPasswordGroup', mode !== 'forgot');
+            show('authPasswordHint', mode === 'register' || mode === 'recover');
+            show('authConfirmGroup', mode === 'recover');
+            show('registerFields', mode === 'register');
+            show('forgotPasswordLink', mode === 'login');
+            show('backToLoginLink', mode === 'forgot' || mode === 'recover');
+            document.getElementById('authPasswordLabel').textContent = mode === 'recover' ? 'New password' : 'Password';
+            document.getElementById('authPassword').setAttribute('autocomplete', mode === 'login' ? 'current-password' : 'new-password');
+            document.getElementById('authSubmitBtn').textContent = AUTH_MODES[mode].button;
             document.getElementById('authMessage').style.display = 'none';
         }
 
-        // Transport lives in backend/web/api.js. It attaches the signed JWT,
+        function showAuthMessage(text, type) {
+            const el = document.getElementById('authMessage');
+            el.style.display = 'block';
+            el.style.color = type ? `var(--${type})` : 'var(--text-muted)';
+            el.textContent = text;
+        }
+
+        function enterApp() {
+            document.getElementById('auth-overlay').style.display = 'none';
+            if (matrixInterval) clearInterval(matrixInterval); // Optimize performance
+            loadDashboardData();
+            handlePaymentReturn();
+        }
+
+        // Transport lives in api.js. It attaches the signed JWT,
         // refreshes it when it expires, and keeps the session across reloads.
         // Identity is taken from that token server-side, so the email these
         // call sites still pass is ignored.
         async function apiCall(action, payload = {}) {
             if (!window.DomainVaultAPI) {
-                showToast("backend/web/api.js did not load.", "danger");
+                showToast("api.js did not load.", "danger");
                 throw new Error("DomainVaultAPI missing");
             }
             return window.DomainVaultAPI.call(action, payload);
@@ -520,60 +641,77 @@
         }
 
         async function handleAuthSubmit() {
-            const email = document.getElementById('authEmail').value;
+            const email = document.getElementById('authEmail').value.trim();
             const pass = document.getElementById('authPassword').value;
-            const phone = document.getElementById('authPhone').value;
-            const msgEl = document.getElementById('authMessage');
+            const btn = document.getElementById('authSubmitBtn');
 
-            if(!email || !pass) return showToast("Email and password required.", "warning");
+            if (authMode === 'forgot') {
+                if (!email) return showAuthMessage("Enter your account email.", 'warning');
+            } else if (authMode === 'recover') {
+                if (pass.length < 10) return showAuthMessage("Your new password must be at least 10 characters.", 'danger');
+                if (pass !== document.getElementById('authPasswordConfirm').value) return showAuthMessage("The two passwords do not match.", 'danger');
+            } else {
+                if (!email || !pass) return showToast("Email and password required.", "warning");
+                if (authMode === 'register' && pass.length < 10) return showAuthMessage("Password must be at least 10 characters.", 'danger');
+            }
 
-            msgEl.style.display = 'block';
-            msgEl.style.color = 'var(--text-muted)';
-            msgEl.textContent = 'Processing...';
-            document.getElementById('authSubmitBtn').disabled = true;
+            showAuthMessage('Processing...');
+            btn.disabled = true;
 
             try {
-                if (isLoginMode) {
-                    const res = await apiCall('loginUser', { email: email, password: pass }); // Updated to loginUser
-                    document.getElementById('authSubmitBtn').disabled = false;
-                    if(res.success) {
+                if (authMode === 'login') {
+                    const res = await apiCall('loginUser', { email: email, password: pass });
+                    if (res.success) {
                         currentUser = res.user;
-                        document.getElementById('auth-overlay').style.display = 'none';
-                        if(matrixInterval) clearInterval(matrixInterval); // Optimize performance
-                        loadDashboardData();
-                        handlePaymentReturn();
+                        enterApp();
                     } else {
-                        msgEl.style.color = 'var(--danger)';
-                        msgEl.textContent = res.message;
+                        showAuthMessage(res.message, 'danger');
                     }
+                } else if (authMode === 'register') {
+                    const place = await fetchLocation();
+                    const phone = document.getElementById('authPhone').value;
+                    const res = await apiCall('registerUser', { email: email, password: pass, phone: phone, location: place });
+                    showAuthMessage(res.message, res.success ? 'success' : 'danger');
+                    if (res.success) setTimeout(() => { if (authMode === 'register') setAuthMode('login'); }, 3000);
+                } else if (authMode === 'forgot') {
+                    // The link comes back to this page, wherever it is served from.
+                    const res = await apiCall('requestPasswordReset', { email: email, redirectTo: location.origin + location.pathname });
+                    showAuthMessage(res.message, res.success ? 'success' : 'danger');
                 } else {
-                    const location = await fetchLocation();
-                    const res = await apiCall('registerUser', { email: email, password: pass, phone: phone, location: location }); // Updated to registerUser
-                    document.getElementById('authSubmitBtn').disabled = false;
-                    if(res.success) {
-                        msgEl.style.color = 'var(--success)';
-                        msgEl.textContent = res.message;
-                        setTimeout(() => switchAuthMode(true), 3000);
+                    const res = await window.DomainVaultAPI.setPasswordWithRecovery(recoveryToken, pass);
+                    if (res.success) {
+                        recoveryToken = null;
+                        document.getElementById('authForm').reset();
+                        setAuthMode('login');
+                        showAuthMessage("Password updated. Log in with your new password.", 'success');
                     } else {
-                        msgEl.style.color = 'var(--danger)';
-                        msgEl.textContent = res.message;
+                        showAuthMessage(res.message, 'danger');
                     }
                 }
             } catch (err) {
-                document.getElementById('authSubmitBtn').disabled = false;
-                msgEl.style.color = 'var(--danger)';
-                msgEl.textContent = "Connection error.";
+                showAuthMessage("Connection error.", 'danger');
+            } finally {
+                btn.disabled = false;
             }
         }
 
-        function handleLogout() {
+        /** Sign out. `message`, if given, explains why (expired session, suspended account). */
+        function handleLogout(message) {
             window.DomainVaultAPI.signOut();
             currentUser = null;
             document.querySelectorAll('.admin-link').forEach(a => { a.hidden = true; });
+            document.querySelectorAll('.modal').forEach(m => { m.style.display = 'none'; });
             document.getElementById('auth-overlay').style.display = 'flex';
             document.getElementById('authForm').reset();
-            document.getElementById('authMessage').style.display = 'none';
-            domains = []; providers = []; notifications = [];
+            setAuthMode('login');
+            if (message) showAuthMessage(message, 'danger');
+            domains = []; providers = []; notifications = []; purchases = [];
+            vaultLoaded = false;
+            // The desktop shell keeps reminding about the last list it was
+            // given; a signed-out vault has none to show.
+            if (window.domainVaultDesktop) {
+                try { window.domainVaultDesktop.reportRenewals([], null); } catch (e) { /* no shell */ }
+            }
             initMatrix(); // Restart Matrix rain
         }
 
@@ -582,24 +720,80 @@
             const limit = PLAN_LIMITS[currentUser.plan] || 5;
             document.getElementById('stat-domain-limit').textContent = `/ ${limit === Infinity ? '∞' : limit}`;
 
-            apiCall('getUserData', { email: currentUser.email }).then(data => {
-                // Check if data exists directly, as the backend returns the raw arrays without a "success" flag
-                if(data && !data.error) {
-                    domains = data.domains || [];
-                    providers = data.providers || [];
-                    if(data.settings) settings = data.settings;
-                    else settings.username = currentUser.email.split('@')[0];
-                    applyAccountState(data);
+            document.getElementById('settingsAccountEmail').value = currentUser.email;
+
+            apiCall('getUserData', {}).then(data => {
+                // An expired session, or an account suspended since it last
+                // signed in: showing an empty vault would invite the user to
+                // start re-entering data that cannot be saved.
+                if (!data || data.success === false) {
+                    const message = (data && data.message) || "Please log in again.";
+                    if ((data && data.expired) || /suspended|pending activation|not signed in/i.test(message)) {
+                        return handleLogout(message);
+                    }
+                    return showToast(`Could not load your vault: ${message} Reload the page to try again.`, "danger");
                 }
-                
+                domains = data.domains || [];
+                providers = data.providers || [];
+                purchases = data.purchases || [];
+                vaultLoaded = true;
+                if (data.settings) settings = Object.assign({}, settings, data.settings);
+                else settings.username = currentUser.email.split('@')[0];
+                applyAccountState(data);
+
                 applySettings();
                 setLanguage(settings.language);
                 setActivePage('dashboard');
                 renderAll();
                 reportRenewalsToDesktop();
             }).catch(err => {
-                showToast("Failed to load dashboard data.", "danger");
+                showToast("Could not reach the server to load your vault. Reload the page to try again.", "danger");
             });
+        }
+
+        /** Re-read domains, providers and plan, so the screen shows what the server holds. */
+        async function reloadUserData() {
+            const data = await apiCall('getUserData', {});
+            if (!data || data.success === false) return;
+            domains = data.domains || [];
+            providers = data.providers || [];
+            purchases = data.purchases || [];
+            vaultLoaded = true;
+            applyAccountState(data);
+            renderAll();
+        }
+
+        /**
+         * Send a change to the server. If it is refused (plan limit, duplicate
+         * name, invalid value…) say why and, unless told otherwise, reload what
+         * the server actually holds: the screen must never show a change that
+         * was not saved. Resolves with the response, or null on failure.
+         */
+        async function persist(action, payload, successMessage, reloadOnFailure = true) {
+            if (!vaultLoaded && (action === 'saveDomains' || action === 'saveProviders')) {
+                showToast("Your vault has not loaded, so nothing was saved. Reload the page and try again.", "danger");
+                return null;
+            }
+            let res;
+            try {
+                res = await apiCall(action, payload);
+            } catch (err) {
+                showToast("Could not reach the server. The change was not saved.", "danger");
+                if (reloadOnFailure) reloadUserData().catch(() => {});
+                return null;
+            }
+            if (!res || res.success === false) {
+                const message = (res && res.message) || "The change was not saved.";
+                if ((res && res.expired) || /suspended|pending activation|not signed in/i.test(message)) {
+                    handleLogout(message);
+                    return null;
+                }
+                showToast(message, "danger");
+                if (reloadOnFailure) reloadUserData().catch(() => {});
+                return null;
+            }
+            if (successMessage) showToast(successMessage, "success");
+            return res;
         }
 
         // --- Renewal reminder preferences -------------------------------
@@ -634,13 +828,9 @@
             if (enabled && leadDays.length === 0) return showToast("Choose at least one reminder time.", "warning");
 
             settings.reminders = { enabled: enabled, channels: channels, leadDays: leadDays };
-            try {
-                const res = await apiCall('saveSettings', { settings: settings, email: currentUser.email });
-                if (res && res.success === false) return showToast(res.message || "Could not save reminders.", "danger");
-                showToast(enabled ? "Reminder settings saved." : "Renewal reminders switched off.");
-            } catch (err) {
-                showToast("Failed to save reminder settings.", "danger");
-            }
+            const res = await persist('saveSettings', { settings },
+                enabled ? "Reminder settings saved." : "Renewal reminders switched off.", false);
+            if (res) reportRenewalsToDesktop();
         }
 
         /**
@@ -652,7 +842,8 @@
             if (!window.domainVaultDesktop) return;
             try {
                 window.domainVaultDesktop.reportRenewals(
-                    domains.map(d => ({ name: d.name, renewalDate: d.renewalDate })));
+                    domains.map(d => ({ name: d.name, renewalDate: (d.renewalDate || '').split('T')[0] })),
+                    settings.reminders || null);
             } catch (e) { /* the app works with or without the shell */ }
         }
 
@@ -694,12 +885,15 @@
             showToast("Your payment is still being processed. Your plan will update shortly; refresh in a few minutes.", "warning");
         }
 
+        let toastTimer = null;
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.style.borderLeftColor = `var(--${type})`;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            // A newer toast gets its full time on screen.
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), type === 'danger' ? 5000 : 3000);
         }
 
         // --- RENDERING & UI ---
@@ -773,6 +967,7 @@
             renderGallery('modalProviderRecsGrid', recommendedProvidersData, 'getDeal');
             renderCalendar();
             updateNotifications();
+            renderPurchases();
             lucide.createIcons();
         }
 
@@ -796,8 +991,10 @@
 
         function applySettings() {
             applyReminderSettings();
-            if (settings.theme === 'custom' && settings.customColor) {
-                document.documentElement.style.setProperty('--primary', settings.customColor);
+            // A custom accent is saved as the theme itself ("#12abef").
+            const customColor = /^#[0-9a-f]{6}$/i.test(settings.theme || '') ? settings.theme : null;
+            if (customColor) {
+                document.documentElement.style.setProperty('--primary', customColor);
             } else {
                 const theme = colorThemes[settings.theme] || colorThemes.orange;
                 document.documentElement.style.setProperty('--primary', theme.primary);
@@ -811,7 +1008,7 @@
             
             [document.getElementById('userAvatar'), document.getElementById('settingsAvatarPreview')].forEach(avatar => {
                 if (settings.profilePicture) {
-                    avatar.style.backgroundImage = `url(${settings.profilePicture})`;
+                    avatar.style.backgroundImage = `url(${JSON.stringify(settings.profilePicture)})`;
                     avatar.textContent = '';
                 } else {
                     avatar.style.backgroundImage = '';
@@ -831,14 +1028,14 @@
                 if (key === settings.theme && settings.theme !== 'custom') swatch.classList.add('active');
                 
                 swatch.addEventListener('click', async () => {
-                    settings.theme = key; settings.customColor = null;
+                    settings.theme = key;
                     applySettings();
                     if(expensesChart) updateStats();
-                    if(currentUser) await apiCall('saveSettings', { settings: settings, email: currentUser.email });
+                    if(currentUser) await persist('saveSettings', { settings }, null, false);
                 });
                 colorPalette.appendChild(swatch);
             });
-            if (settings.customColor) document.getElementById('customColorPicker').value = settings.customColor;
+            document.getElementById('customColorPicker').value = customColor || (colorThemes[settings.theme] || colorThemes.orange).primary;
         }
 
         function renderDomains(filteredDomains = domains) {
@@ -1126,12 +1323,16 @@
             const notifIds = notifications.map(n => String(n.domainId));
             const newNotifs = [];
 
+            const dismissed = loadDismissed();
             expiringDomains.forEach(d => {
-                if (!notifIds.includes(String(d.id))) {
-                    const rdStr = d.renewalDate.split('T')[0];
+                const rdStr = d.renewalDate.split('T')[0];
+                const key = `${d.id}|${rdStr}`;
+                if (!notifIds.includes(String(d.id)) && !dismissed.includes(key)) {
                     const diff = Math.ceil((new Date(rdStr+'T00:00:00') - now) / 86400000);
-                    let msg = diff <= 0 ? `<strong>${d.name}</strong> ${translations[lang].statusExpired}!` : `<strong>${d.name}</strong> ${translations[lang].statusExpiringIn.replace('{days}', diff)}`;
-                    const n = { id: Date.now()+d.id, domainId: String(d.id), message: msg, type: diff <= 0 ? 'expired' : 'expiring' };
+                    // Domain names are user input: escape before they reach innerHTML.
+                    const name = escapeHTML(d.name);
+                    let msg = diff <= 0 ? `<strong>${name}</strong> ${translations[lang].statusExpired}!` : `<strong>${name}</strong> ${translations[lang].statusExpiringIn.replace('{days}', diff)}`;
+                    const n = { id: Date.now()+d.id, domainId: String(d.id), key: key, message: msg, type: diff <= 0 ? 'expired' : 'expiring' };
                     notifications.push(n);
                     newNotifs.push(n);
                 }
@@ -1158,16 +1359,30 @@
             lucide.createIcons();
         };
 
+        // Pop-ups sit over the page's action buttons, so they leave on their
+        // own; the Notifications page and the badge keep the full list.
+        const POPUP_LIMIT = 3, POPUP_SECONDS = 10;
         const renderPopUpNotifications = (arr) => {
             const c = document.getElementById('persistent-notifications-container');
-            c.innerHTML = ''; 
-            arr.forEach(n => {
+            c.innerHTML = '';
+            const dismiss = (el) => { el.classList.add('fading'); setTimeout(() => el.remove(), 400); };
+            arr.slice(0, POPUP_LIMIT).forEach(n => {
                 const el = document.createElement('div');
                 el.className = `persistent-notification ${n.type}`;
-                el.innerHTML = `<p>${n.message}</p><button class="notification-dismiss-btn">&times;</button>`;
-                el.querySelector('button').addEventListener('click', () => el.remove());
+                el.innerHTML = `<p>${n.message}</p><button class="notification-dismiss-btn" aria-label="Dismiss">&times;</button>`;
+                el.querySelector('button').addEventListener('click', () => dismiss(el));
                 c.appendChild(el);
+                setTimeout(() => dismiss(el), POPUP_SECONDS * 1000);
             });
+            if (arr.length > POPUP_LIMIT) {
+                const more = document.createElement('div');
+                more.className = 'persistent-notification';
+                more.innerHTML = `<p>+${arr.length - POPUP_LIMIT} more in Notifications</p>`;
+                more.style.cursor = 'pointer';
+                more.addEventListener('click', () => { setActivePage('notifications'); dismiss(more); });
+                c.appendChild(more);
+                setTimeout(() => dismiss(more), POPUP_SECONDS * 1000);
+            }
         };
 
         const updateNotificationBadge = () => {
@@ -1176,25 +1391,43 @@
 
         // --- EXTERNAL APIs ---
         
+        /** "https://www.Example.com/path" → "www.example.com". */
+        function normalizeDomain(input) {
+            return String(input || '').trim().toLowerCase()
+                .replace(/^[a-z][a-z0-9+.-]*:\/\//, '').replace(/[\/?#:].*$/, '').replace(/\.$/, '');
+        }
+
+        /** yyyy-mm-dd from whatever date format WHOIS returned, or '' if it cannot be read. */
+        function isoDay(value) {
+            const d = new Date(value);
+            return isNaN(d) ? '' : d.toISOString().substring(0, 10);
+        }
+
+        // WHOIS and DNS go through our lookup function, which validates the
+        // name, caches answers and rate limits per user, instead of every
+        // browser calling the upstream services directly.
         async function fetchWhoisData() {
-            const domain = document.getElementById('domainName').value.trim();
+            const domain = normalizeDomain(document.getElementById('domainName').value);
             const status = document.getElementById('whoisStatus');
             const lang = settings.language;
             if (!domain) return showToast('Please enter a domain name first.', 'warning');
-            
+
             status.style.display = 'block'; status.style.color = 'var(--text-muted)';
             status.textContent = translations[lang].fetching;
-            
+
             try {
-                const res = await fetch(`https://networkcalc.com/api/dns/whois/${domain}`);
-                const data = await res.json();
-                if (data.status === 'OK' && Object.keys(data.whois).length > 0) {
-                    if (data.whois.creation_date) document.getElementById('purchaseDate').value = new Date(data.whois.creation_date).toISOString().substring(0, 10);
-                    if (data.whois.expiry_date) document.getElementById('renewalDate').value = new Date(data.whois.expiry_date).toISOString().substring(0, 10);
+                const res = await window.DomainVaultAPI.lookup(domain, 'whois');
+                const data = res && res.success ? res.data : null;
+                if (data && data.status === 'OK' && data.whois && Object.keys(data.whois).length > 0) {
+                    document.getElementById('domainName').value = domain;
+                    const created = isoDay(data.whois.creation_date);
+                    const expires = isoDay(data.whois.expiry_date);
+                    if (created) document.getElementById('purchaseDate').value = created;
+                    if (expires) document.getElementById('renewalDate').value = expires;
                     if (data.whois.registrar) {
                         const sel = document.getElementById('domainProvider');
-                        const rName = data.whois.registrar.toLowerCase();
-                        let match = Array.from(sel.options).find(o => o.value && rName.includes(o.value.toLowerCase()));
+                        const rName = String(data.whois.registrar).toLowerCase();
+                        let match = Array.from(sel.options).find(o => o.value && o.value !== 'other' && rName.includes(o.value.toLowerCase()));
                         if(match) sel.value = match.value;
                         else {
                             sel.value = 'other';
@@ -1204,44 +1437,55 @@
                     }
                     status.style.color = 'var(--success)'; status.textContent = translations[lang].whoisSuccess;
                 } else {
-                    status.style.color = 'var(--danger)'; status.textContent = translations[lang].whoisError;
+                    status.style.color = 'var(--danger)';
+                    status.textContent = (res && res.success === false && (res.error || res.message)) || translations[lang].whoisError;
                 }
             } catch(e) {
                 status.style.color = 'var(--danger)'; status.textContent = translations[lang].whoisError;
             }
         }
 
-        async function fetchDnsRecords(domain) {
+        async function fetchDnsRecords(input) {
+            const domain = normalizeDomain(input);
+            const showError = (text) => {
+                document.getElementById('dnsLoading').style.display = 'none';
+                document.getElementById('dnsError').style.display = 'block';
+                document.getElementById('dnsError').textContent = text;
+            };
             document.getElementById('dnsDomainLabel').textContent = domain;
             document.getElementById('dnsModal').style.display = 'flex';
             document.getElementById('dnsTableWrapper').style.display = 'none';
             document.getElementById('dnsError').style.display = 'none';
             document.getElementById('dnsLoading').style.display = 'block';
-            
+
             try {
-                const types = ['A', 'AAAA', 'MX', 'TXT', 'CNAME', 'NS'];
-                const results = await Promise.all(types.map(t => fetch(`https://dns.google/resolve?name=${domain}&type=${t}`).then(r => r.json())));
-                
+                const res = await window.DomainVaultAPI.lookup(domain, 'dns', ['A', 'AAAA', 'MX', 'TXT', 'CNAME', 'NS']);
+                if (!res || res.success === false) return showError((res && (res.error || res.message)) || "Error connecting to DNS API.");
+
                 document.getElementById('dnsLoading').style.display = 'none';
-                let answers = [];
-                results.forEach(d => { if(d.Answer) answers = answers.concat(d.Answer); });
-                
+                // A CNAME shows up in the answer to several record types; list it once.
+                const seen = new Set();
+                const answers = [];
+                Object.values(res.data || {}).forEach(d => {
+                    (d && Array.isArray(d.Answer) ? d.Answer : []).forEach(r => {
+                        const k = r.type + '|' + r.data;
+                        if (!seen.has(k)) { seen.add(k); answers.push(r); }
+                    });
+                });
+
                 if (answers.length > 0) {
                     const tbody = document.getElementById('dnsTableBody');
                     tbody.innerHTML = '';
                     const map = { 1: 'A', 2: 'NS', 5: 'CNAME', 15: 'MX', 16: 'TXT', 28: 'AAAA' };
                     answers.sort((a, b) => a.type - b.type).forEach(r => {
-                        tbody.innerHTML += `<tr><td><span class="dns-badge">${map[r.type]||'Type '+r.type}</span></td><td style="word-break: break-all;">${escapeHTML(r.data)}</td></tr>`;
+                        tbody.innerHTML += `<tr><td><span class="dns-badge">${map[r.type]||'Type '+escapeHTML(String(r.type))}</span></td><td style="word-break: break-all;">${escapeHTML(r.data)}</td></tr>`;
                     });
                     document.getElementById('dnsTableWrapper').style.display = 'block';
                 } else {
-                    document.getElementById('dnsError').style.display = 'block';
-                    document.getElementById('dnsError').textContent = translations[settings.language].noDnsFound;
+                    showError(translations[settings.language].noDnsFound);
                 }
             } catch(e) {
-                document.getElementById('dnsLoading').style.display = 'none';
-                document.getElementById('dnsError').style.display = 'block';
-                document.getElementById('dnsError').textContent = "Error connecting to DNS API.";
+                showError("Error connecting to DNS API.");
             }
         }
 
@@ -1281,11 +1525,20 @@
                 document.getElementById('providerPass').value = '';
                 document.getElementById('providerPass').placeholder =
                     data.hasPassword ? '•••••••• (unchanged)' : 'No password stored';
+                document.getElementById('providerRemovePass').checked = false;
+                document.getElementById('providerRemovePassGroup').style.display = data.hasPassword ? '' : 'none';
                 document.getElementById('providerUid').value = data.uid || '';
             } else if(id === 'credentialsModal') {
                 m.querySelector('#credentialsModalTitle').textContent = `${data.name} ${translations[lang].providerCredentials}`;
                 document.getElementById('credUser').textContent = data.user || 'Not set';
-                document.getElementById('credPass').textContent = data.hasPassword ? '••••••••' : 'Not set';
+                credentialsProviderId = data.id;
+                revealedPassword = null;
+                const credPass = document.getElementById('credPass');
+                credPass.textContent = data.hasPassword ? '••••••••' : 'Not set';
+                credPass.dataset.shown = '';
+                ['credRevealBtn', 'credCopyBtn', 'credPassNote'].forEach(el => {
+                    document.getElementById(el).style.display = data.hasPassword ? '' : 'none';
+                });
                 document.getElementById('credUid').textContent = data.uid || 'Not set';
             }
             m.style.display = 'flex';
@@ -1293,6 +1546,11 @@
 
         function closeModal(m) {
             m.style.display = 'none';
+            if (m.id === 'credentialsModal') {
+                // Do not keep a revealed password around once it is off screen.
+                revealedPassword = null;
+                document.getElementById('credPass').textContent = '';
+            }
             if (m.querySelector('form')) m.querySelector('form').reset();
             if (m.id === 'domainModal') document.getElementById('otherProviderGroup').style.display = 'none';
         }
@@ -1304,17 +1562,18 @@
 
             if (pName === 'other') {
                 const oName = document.getElementById('otherProvider').value.trim();
-                if (oName && !providers.some(p => p.name.toLowerCase() === oName.toLowerCase())) {
-                    providers.push({ id: (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'prov_' + Date.now()), name: oName, url: '', user: '', pass: '', uid: '' });
+                if (!oName) return showToast("Enter the provider's name.", "warning");
+                if (!providers.some(p => p.name.toLowerCase() === oName.toLowerCase())) {
+                    providers.push({ id: newId('prov'), name: oName, url: '', user: '', uid: '', hasPassword: false });
                     isNewProvider = true;
                 }
                 pName = oName;
             }
 
-            const id = document.getElementById('domainId').value || (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'dom_' + Date.now());
+            const id = document.getElementById('domainId').value || newId('dom');
             const domain = {
                 id: id,
-                name: document.getElementById('domainName').value,
+                name: document.getElementById('domainName').value.trim(),
                 provider: pName,
                 purchaseDate: document.getElementById('purchaseDate').value,
                 renewalDate: document.getElementById('renewalDate').value,
@@ -1328,49 +1587,62 @@
 
             closeModal(document.getElementById('domainModal'));
             renderAll();
-            showToast("Syncing with Google Sheets...", "warning");
-            
-            try {
-                await apiCall('saveDomains', { domains: domains, email: currentUser.email });
-                if (isNewProvider) {
-                    await apiCall('saveProviders', { providers: providers, email: currentUser.email });
-                    renderProviders();
-                }
-                showToast("Saved to Database!", "success");
-            } catch (err) {
-                showToast("Failed to save to database.", "danger");
+
+            if (!await persist('saveDomains', { domains }, isNewProvider ? null : "Domain saved.")) return;
+            if (isNewProvider && await persist('saveProviders', { providers: providersPayload() }, "Domain saved.")) {
+                clearPendingSecrets();
+                renderProviders();
             }
+            reportRenewalsToDesktop();
         }
 
         async function deleteDomain(id) {
             if(confirm("Delete this domain?")) {
                 domains = domains.filter(d => String(d.id) !== String(id));
                 renderAll();
-                try {
-                    await apiCall('saveDomains', { domains: domains, email: currentUser.email });
-                    showToast("Domain deleted.");
-                } catch (err) {
-                    showToast("Failed to sync deletion.", "danger");
-                }
+                if (await persist('saveDomains', { domains }, "Domain deleted.")) reportRenewalsToDesktop();
             }
+        }
+
+        /**
+         * What saveProviders sends. A password goes out only when the user just
+         * typed one; a blank one tells the server to keep what it stores.
+         */
+        function providersPayload() {
+            return providers.map(p => ({
+                id: p.id, name: p.name, url: p.url, user: p.user, uid: p.uid,
+                pass: p.pass || '',
+                removePassword: p.removePassword === true
+            }));
+        }
+
+        /** After a save, typed passwords and delete flags have done their job. */
+        function clearPendingSecrets() {
+            providers.forEach(p => { delete p.pass; delete p.removePassword; });
         }
 
         async function saveProvider(e) {
             e.preventDefault();
-            const id = document.getElementById('providerId').value || (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'prov_' + Date.now());
-            const newName = document.getElementById('providerName').value;
+            const id = document.getElementById('providerId').value || newId('prov');
+            const newName = document.getElementById('providerName').value.trim();
+            const idx = providers.findIndex(p => String(p.id) === String(id));
+            const existing = idx > -1 ? providers[idx] : null;
+            const pass = document.getElementById('providerPass').value;
+            const removePassword = !pass && document.getElementById('providerRemovePass').checked;
+
             const provider = {
                 id: id, name: newName,
-                url: document.getElementById('providerUrl').value,
-                user: document.getElementById('providerUser').value,
-                pass: document.getElementById('providerPass').value,
-                uid: document.getElementById('providerUid').value
+                url: document.getElementById('providerUrl').value.trim(),
+                user: document.getElementById('providerUser').value.trim(),
+                uid: document.getElementById('providerUid').value.trim(),
+                pass: pass,
+                removePassword: removePassword,
+                hasPassword: pass ? true : (removePassword ? false : !!(existing && existing.hasPassword))
             };
 
-            const idx = providers.findIndex(p => String(p.id) === String(id));
             let nameChanged = false;
-            if (idx > -1) {
-                const oldName = providers[idx].name;
+            if (existing) {
+                const oldName = existing.name;
                 if(oldName !== newName) {
                     domains.forEach(d => { if(d.provider === oldName) d.provider = newName; });
                     nameChanged = true;
@@ -1382,87 +1654,269 @@
 
             closeModal(document.getElementById('providerModal'));
             renderAll();
-            
-            try {
-                await apiCall('saveProviders', { providers: providers, email: currentUser.email });
-                if(nameChanged) await apiCall('saveDomains', { domains: domains, email: currentUser.email });
-                showToast("Provider saved.");
-            } catch (err) {
-                showToast("Failed to save provider.", "danger");
-            }
+
+            const saved = await persist('saveProviders', { providers: providersPayload() }, "Provider saved.");
+            clearPendingSecrets();
+            if (saved && nameChanged) await persist('saveDomains', { domains });
         }
 
         async function deleteProvider(id) {
             const p = providers.find(x => String(x.id) === String(id));
+            if (!p) return;
             if(domains.some(d => d.provider === p.name)) return showToast('Cannot delete a provider with active domains.', 'danger');
-            
+
             if(confirm(`Delete ${p.name}?`)) {
                 providers = providers.filter(x => String(x.id) !== String(id));
                 renderProviders();
-                try {
-                    await apiCall('saveProviders', { providers: providers, email: currentUser.email });
-                    showToast("Provider deleted.");
-                } catch (err) {
-                    showToast("Failed to sync deletion.", "danger");
-                }
+                await persist('saveProviders', { providers: providersPayload() }, "Provider deleted.");
             }
         }
 
         async function saveSettings(e) {
             e.preventDefault();
-            settings.username = document.getElementById('settingUsername').value;
-            
-            // Handle Profile Picture
+            settings.username = document.getElementById('settingUsername').value.trim();
+
             const fileInput = document.getElementById('profilePicUpload');
-            if (fileInput.files.length > 0) {
-                const reader = new FileReader();
-                reader.onload = async function(event) {
-                    settings.profilePicture = event.target.result;
-                    applySettings();
-                    try {
-                        await apiCall('saveSettings', { settings: settings, email: currentUser.email });
-                        showToast("Settings and Picture saved.");
-                    } catch (err) { showToast("Failed to save settings.", "danger"); }
-                }
-                reader.readAsDataURL(fileInput.files[0]);
-            } else {
+            const file = fileInput.files[0];
+            if (!file) {
                 applySettings();
-                try {
-                    await apiCall('saveSettings', { settings: settings, email: currentUser.email });
-                    showToast("Settings saved.");
-                } catch (err) { showToast("Failed to save settings.", "danger"); }
+                await persist('saveSettings', { settings }, "Settings saved.", false);
+                return;
+            }
+
+            // Same limits the server applies; say so before uploading.
+            fileInput.value = '';
+            if (!/^image\/(png|jpe?g|webp|gif)$/i.test(file.type)) return showToast("Use a PNG, JPEG, WebP or GIF image.", "warning");
+            if (file.size > 2 * 1024 * 1024) return showToast("Profile pictures must be under 2 MB.", "warning");
+
+            const dataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            const previous = settings.profilePicture;
+            settings.profilePicture = dataUrl;
+            applySettings();
+            const res = await persist('saveSettings', { settings }, "Settings and picture saved.", false);
+            // Keep the stored URL rather than the image itself, so later saves
+            // do not upload the picture all over again.
+            settings.profilePicture = res ? (res.profilePicture || '') : previous;
+            applySettings();
+        }
+
+        async function submitPasswordChange(e) {
+            e.preventDefault();
+            const current = document.getElementById('currentPassword').value;
+            const next = document.getElementById('newPassword').value;
+            if (next.length < 10) return showToast("Your new password must be at least 10 characters.", "warning");
+            if (next !== document.getElementById('confirmNewPassword').value) return showToast("The new passwords do not match.", "warning");
+
+            const res = await persist('changePassword', { currentPassword: current, newPassword: next }, null, false);
+            if (res) {
+                e.target.reset();
+                document.getElementById('settingsAccountEmail').value = currentUser.email;
+                showToast(res.message || "Password changed.");
             }
         }
 
+        // --- CALENDAR SUBSCRIPTION ---
+
+        async function openCalendarFeed() {
+            setFeedUrl(null);
+            document.getElementById('calendarFeedModal').style.display = 'flex';
+            const res = await persist('getCalendarFeed', {}, null, false);
+            if (res && res.token) setFeedUrl(res.token);
+        }
+
+        function setFeedUrl(token) {
+            const input = document.getElementById('calendarFeedUrl');
+            const google = document.getElementById('googleFeedLink');
+            const webcal = document.getElementById('webcalFeedLink');
+            if (!token) {
+                input.value = 'Loading…';
+                google.removeAttribute('href');
+                webcal.removeAttribute('href');
+                return;
+            }
+            const url = window.DomainVaultAPI.calendarFeedUrl(token);
+            const webcalUrl = url.replace(/^https?:\/\//, 'webcal://');
+            input.value = url;
+            // Google's "add by URL" dialog, pre-filled.
+            google.href = 'https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(webcalUrl);
+            webcal.href = webcalUrl;
+        }
+
+        // --- STORED PASSWORDS ---
+
+        /** The provider's stored password, fetched once per opening of the credentials modal. */
+        async function fetchStoredPassword() {
+            if (revealedPassword !== null) return revealedPassword;
+            const res = await persist('revealCredential', { providerId: credentialsProviderId }, null, false);
+            if (!res) return null;
+            revealedPassword = res.password;
+            return revealedPassword;
+        }
+
+        async function copyToClipboard(text, doneMessage) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast(doneMessage);
+            } catch (e) {
+                showToast("Copying is blocked here. Select the text and copy it by hand.", "warning");
+            }
+        }
+
+        // --- EXPORTS ---
+
+        function todayStamp() { return new Date().toISOString().split('T')[0]; }
+
+        function newId(prefix) {
+            return window.crypto && crypto.randomUUID ? crypto.randomUUID() : `${prefix}_${Date.now()}`;
+        }
+
+        function downloadFile(filename, mime, content) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+            a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+
+        /** One CSV field: quoted, and defused if a spreadsheet would run it as a formula. */
+        function csvField(value) {
+            let v = value === null || value === undefined ? '' : String(value);
+            if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+            return '"' + v.replace(/"/g, '""') + '"';
+        }
+
+        function domainsCsv(list) {
+            const rows = [['Domain Name', 'Provider', 'Purchase Date', 'Renewal Date', 'Purchase Price', 'Renewal Price', 'Auto Renew']];
+            list.forEach(d => rows.push([
+                d.name, d.provider,
+                (d.purchaseDate || '').split('T')[0], (d.renewalDate || '').split('T')[0],
+                Number(d.purchasePrice || 0).toFixed(2), Number(d.renewalPrice || 0).toFixed(2),
+                d.autoRenew ? 'Yes' : 'No'
+            ]));
+            return rows.map(r => r.map(csvField).join(',')).join('\r\n') + '\r\n';
+        }
+
+        /** Everything in the vault except stored registrar passwords. */
+        function exportJson() {
+            const data = {
+                exportedAt: new Date().toISOString(),
+                account: { email: currentUser.email, plan: currentUser.plan },
+                domains: domains.map(d => ({
+                    name: d.name, provider: d.provider,
+                    purchaseDate: (d.purchaseDate || '').split('T')[0] || null,
+                    renewalDate: (d.renewalDate || '').split('T')[0] || null,
+                    purchasePrice: Number(d.purchasePrice || 0), renewalPrice: Number(d.renewalPrice || 0),
+                    autoRenew: !!d.autoRenew
+                })),
+                providers: providers.map(p => ({
+                    name: p.name, url: p.url, username: p.user, userId: p.uid, hasStoredPassword: !!p.hasPassword
+                })),
+                settings: {
+                    username: settings.username, language: settings.language, theme: settings.theme,
+                    reminders: settings.reminders
+                },
+                purchases: purchases
+            };
+            downloadFile(`domain_vault_${todayStamp()}.json`, 'application/json', JSON.stringify(data, null, 2));
+        }
+
+        function renderPurchases() {
+            const list = document.getElementById('purchasesList');
+            if (!list) return;
+            if (purchases.length === 0) {
+                list.innerHTML = `<p class="field-hint" style="font-size:0.9em;">${translations[settings.language].noPurchases}</p>`;
+                return;
+            }
+            list.innerHTML = purchases.map(p => {
+                const amount = p.amount === null || p.amount === undefined ? '' : `${Number(p.amount).toFixed(2)} ${p.currency || ''}`;
+                const status = String(p.status || '');
+                return `<div class="purchase-row">
+                    <span><strong>${escapeHTML(p.plan || '')}</strong> · ${escapeHTML(String(p.created_at || '').slice(0, 10))}</span>
+                    <span>${escapeHTML(amount)} · ${escapeHTML(status.charAt(0).toUpperCase() + status.slice(1))}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // --- DISMISSED NOTIFICATIONS ---
+        // Kept per account in this browser, keyed by domain and renewal date,
+        // so a dismissed alert stays dismissed until the next renewal cycle.
+
+        function dismissedKey() { return `dv.dismissed.${currentUser ? currentUser.id : ''}`; }
+
+        function loadDismissed() {
+            try { return JSON.parse(localStorage.getItem(dismissedKey())) || []; } catch (e) { return []; }
+        }
+
+        function rememberDismissed(key) {
+            if (!key) return;
+            const live = new Set(domains.map(d => `${d.id}|${(d.renewalDate || '').split('T')[0]}`));
+            const list = loadDismissed().filter(k => live.has(k));
+            list.push(key);
+            try { localStorage.setItem(dismissedKey(), JSON.stringify(list)); } catch (e) { /* storage blocked */ }
+        }
+
+        const compactDate = (iso) => String(iso || '').split('T')[0].replace(/-/g, '');
+
+        /** All-day events end on the following day (the end date is exclusive). */
+        const nextDayCompact = (iso) => {
+            const d = new Date(String(iso).split('T')[0] + 'T00:00:00Z');
+            d.setUTCDate(d.getUTCDate() + 1);
+            return d.toISOString().slice(0, 10).replace(/-/g, '');
+        };
+
         const generateGoogleCalendarLink = (d) => {
             const text = encodeURIComponent(`Renew domain: ${d.name}`);
-            const date = new Date(d.renewalDate).toISOString().slice(0, 10).replace(/-/g, '');
             const details = encodeURIComponent(`Reminder to renew ${d.name} with ${d.provider}. Annual cost: $${d.renewalPrice}.`);
-            return `https://www.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${date}/${date}&details=${details}`;
+            return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${compactDate(d.renewalDate)}/${nextDayCompact(d.renewalDate)}&details=${details}`;
+        };
+
+        /** RFC 5545 text value. */
+        const icsText = (v) => String(v).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+
+        /** Fold lines longer than 75 octets, as calendar files require. */
+        const icsFold = (line) => {
+            const enc = new TextEncoder();
+            if (enc.encode(line).length <= 75) return line;
+            const parts = [];
+            let cur = '', size = 0;
+            for (const ch of line) {
+                const n = enc.encode(ch).length;
+                if (size + n > (parts.length ? 74 : 75)) { parts.push(cur); cur = ''; size = 0; }
+                cur += ch; size += n;
+            }
+            parts.push(cur);
+            return parts.join('\r\n ');
         };
 
         const generateICal = (arr, bulk = false) => {
-            let ical = `BEGIN:VCALENDAR\nVERSION:2.0\n`;
+            const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+            const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Bebell Digital Solutions//Domain Vault//EN', 'CALSCALE:GREGORIAN'];
             arr.forEach(d => {
-                if(!d.renewalDate) return;
-                const rdStr = d.renewalDate.split('T')[0];
-                const date = new Date(rdStr + 'T00:00:00').toISOString().slice(0, 10).replace(/-/g, '');
-                ical += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${date}\nDTEND;VALUE=DATE:${date}\nSUMMARY:Renew domain: ${d.name}\nDESCRIPTION:Reminder to renew ${d.name} with ${d.provider}. Annual cost: $${d.renewalPrice}.\nEND:VEVENT\n`;
+                if (!d || !d.renewalDate) return;
+                lines.push(
+                    'BEGIN:VEVENT',
+                    `UID:${d.id}-${compactDate(d.renewalDate)}@domain-vault`,
+                    `DTSTAMP:${stamp}`,
+                    `DTSTART;VALUE=DATE:${compactDate(d.renewalDate)}`,
+                    `DTEND;VALUE=DATE:${nextDayCompact(d.renewalDate)}`,
+                    `SUMMARY:${icsText('Renew domain: ' + d.name)}`,
+                    `DESCRIPTION:${icsText(`Reminder to renew ${d.name} with ${d.provider}. Annual cost: $${d.renewalPrice}.`)}`,
+                    'END:VEVENT');
             });
-            ical += `END:VCALENDAR`;
-            const blob = new Blob([ical], { type: 'text/calendar' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = bulk ? 'all_renewals.ics' : `renew_${arr[0].name}.ics`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            lines.push('END:VCALENDAR');
+            downloadFile(bulk ? 'all_renewals.ics' : `renew_${arr[0].name}.ics`, 'text/calendar', lines.map(icsFold).join('\r\n') + '\r\n');
         };
 
         // Utility
         document.getElementById('removePicBtn').addEventListener('click', async () => {
-            settings.profilePicture = null;
+            settings.profilePicture = '';
             applySettings();
-            if(currentUser) await apiCall('saveSettings', { settings: settings, email: currentUser.email });
-            showToast("Profile picture removed.");
+            if(currentUser) await persist('saveSettings', { settings }, "Profile picture removed.", false);
         });
         document.getElementById('uploadPicBtn').addEventListener('click', () => document.getElementById('profilePicUpload').click());
         document.getElementById('profilePicUpload').addEventListener('change', () => document.getElementById('settingsProfileForm').dispatchEvent(new Event('submit')));

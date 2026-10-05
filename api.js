@@ -50,6 +50,17 @@
 
   var session = loadSession();
 
+  /** Make a session the API handed back the current one, keeping the user. */
+  function adoptSession(fresh, user) {
+    session = {
+      access_token: fresh.access_token,
+      refresh_token: fresh.refresh_token,
+      expires_at: fresh.expires_at,
+      user: user || (session ? session.user : null)
+    };
+    saveSession(session);
+  }
+
   function isExpired(s) {
     if (!s || !s.expires_at) return true;
     // Refresh a minute early so a request cannot expire mid-flight.
@@ -87,19 +98,49 @@
 
   /* ---------------------------------------------------------------- transport */
 
-  function post(action, payload, token) {
+  /** POST a JSON body to one edge function; resolves with { status, body }. */
+  function postTo(fn, body, token) {
     var headers = { "Content-Type": "application/json" };
     if (ANON_KEY) headers.apikey = ANON_KEY;
     if (token) headers.Authorization = "Bearer " + token;
 
-    return fetch(FUNCTIONS_URL + "/api", {
+    return fetch(FUNCTIONS_URL + "/" + fn, {
       method: "POST",
       headers: headers,
-      body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+      body: JSON.stringify(body || {})
     }).then(function (res) {
       return res.json()
         .catch(function () { return { success: false, message: "Server error." }; })
         .then(function (body) { return { status: res.status, body: body }; });
+    });
+  }
+
+  function post(action, payload, token) {
+    return postTo("api", Object.assign({ action: action }, payload || {}), token);
+  }
+
+  var EXPIRED = { success: false, expired: true, message: "Your session expired. Please log in again." };
+
+  /**
+   * Send a request as the signed-in user: refresh the token first if it is
+   * about to expire, and retry once with a fresh one if it is rejected.
+   * `send(token)` performs the request and resolves with { status, body }.
+   */
+  function authed(send) {
+    var ready = isExpired(session) ? refreshSession() : Promise.resolve(session);
+
+    return ready.then(function (s) {
+      if (!s || !s.access_token) return EXPIRED;
+
+      return send(s.access_token).then(function (res) {
+        if (res.status === 401) {
+          return refreshSession().then(function (refreshed) {
+            if (!refreshed) return EXPIRED;
+            return send(refreshed.access_token).then(unwrap);
+          });
+        }
+        return unwrap(res);
+      });
     });
   }
 
@@ -114,44 +155,27 @@
 
     // Public actions need no token. Keep in sync with PUBLIC_ACTIONS in the
     // api function.
-    if (action === "registerUser" || action === "getPrices") {
+    if (action === "registerUser" || action === "getPrices" || action === "requestPasswordReset") {
       return post(action, payload).then(unwrap);
     }
 
     if (action === "loginUser") {
       return post(action, payload).then(function (res) {
         if (res.body && res.body.success && res.body.session) {
-          session = {
-            access_token: res.body.session.access_token,
-            refresh_token: res.body.session.refresh_token,
-            expires_at: res.body.session.expires_at,
-            user: res.body.user
-          };
-          saveSession(session);
+          adoptSession(res.body.session, res.body.user);
         }
         return unwrap(res);
       });
     }
 
-    var ready = isExpired(session) ? refreshSession() : Promise.resolve(session);
-
-    return ready.then(function (s) {
-      if (!s || !s.access_token) {
-        return { success: false, message: "Your session expired. Please log in again." };
+    return authed(function (token) { return post(action, payload, token); }).then(function (body) {
+      // A password change ends every other session, this tab's included, and
+      // hands back the one that made the change.
+      if (body && body.success && body.session && body.session.access_token) {
+        adoptSession(body.session);
+        delete body.session;
       }
-
-      return post(action, payload, s.access_token).then(function (res) {
-        // One transparent retry if the token was rejected.
-        if (res.status === 401) {
-          return refreshSession().then(function (refreshed) {
-            if (!refreshed) {
-              return { success: false, message: "Your session expired. Please log in again." };
-            }
-            return post(action, payload, refreshed.access_token).then(unwrap);
-          });
-        }
-        return unwrap(res);
-      });
+      return body;
     });
   }
 
@@ -164,6 +188,74 @@
   /** Reveal one stored registrar password. Rate limited and audited server-side. */
   function revealPassword(providerId) {
     return call("revealCredential", { providerId: providerId });
+  }
+
+  /**
+   * WHOIS or DNS through the lookup function, which validates the name,
+   * caches answers and rate limits per user. kind: "whois" | "dns".
+   * Resolves with { success, data } or { success: false, error }.
+   */
+  function lookup(domain, kind, types) {
+    if (!FUNCTIONS_URL) return Promise.reject(new Error("DOMAIN_VAULT_CONFIG.functionsUrl is not set"));
+    var body = { domain: domain, kind: kind === "dns" ? "dns" : "whois" };
+    if (types) body.types = types;
+    return authed(function (token) { return postTo("lookup", body, token); });
+  }
+
+  /** Private subscription URL for a calendar feed token (see the calendar function). */
+  function calendarFeedUrl(token) {
+    return FUNCTIONS_URL + "/calendar?token=" + encodeURIComponent(token);
+  }
+
+  /* ------------------------------------------------------- password reset */
+
+  /**
+   * The reset email links back here with the outcome in the URL fragment:
+   * tokens and type=recovery on success, error_description when the link was
+   * expired or already used. Returns null when this page load is not one.
+   */
+  function recoveryFromUrl() {
+    var hash = (global.location.hash || "").replace(/^#/, "");
+    if (!hash) return null;
+    var params = new URLSearchParams(hash);
+    if (params.get("type") === "recovery" && params.get("access_token")) {
+      return { accessToken: params.get("access_token") };
+    }
+    if (params.get("error") || params.get("error_description")) {
+      return { error: params.get("error_description") || "This reset link is invalid." };
+    }
+    return null;
+  }
+
+  /**
+   * Set a new password with the short-lived recovery token, then sign that
+   * account out everywhere: whoever had the old password loses their session.
+   * The user logs in normally afterwards, which re-checks their account status.
+   */
+  function setPasswordWithRecovery(accessToken, newPassword) {
+    var headers = {
+      "Content-Type": "application/json",
+      "apikey": ANON_KEY,
+      "Authorization": "Bearer " + accessToken
+    };
+    return fetch(SUPABASE_URL + "/auth/v1/user", {
+      method: "PUT",
+      headers: headers,
+      body: JSON.stringify({ password: newPassword })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok) {
+          return {
+            success: false,
+            message: body.msg || body.message || body.error_description ||
+              "Could not set the new password. Request a new reset link."
+          };
+        }
+        return fetch(SUPABASE_URL + "/auth/v1/logout?scope=global", { method: "POST", headers: headers })
+          .catch(function () { /* the password is changed either way */ })
+          .then(function () { return { success: true }; });
+      });
+    });
   }
 
   /** Restore a signed-in user after a page reload; null if not signed in. */
@@ -187,6 +279,10 @@
 
   global.DomainVaultAPI = {
     call: call,
+    lookup: lookup,
+    calendarFeedUrl: calendarFeedUrl,
+    recoveryFromUrl: recoveryFromUrl,
+    setPasswordWithRecovery: setPasswordWithRecovery,
     revealPassword: revealPassword,
     restore: restore,
     signOut: signOut,

@@ -330,7 +330,9 @@
         /* Toast & Notifications */
         .toast { position: fixed; bottom: 20px; right: 20px; background-color: var(--bg-hover); color: var(--text-main); padding: 15px 25px; border-left: 4px solid var(--primary); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 3000; opacity: 0; transform: translateY(20px); transition: var(--transition); font-weight: 500; }
         .toast.show { opacity: 1; transform: translateY(0); }
-        #persistent-notifications-container { position: fixed; top: 80px; right: 20px; z-index: 2500; display: flex; flex-direction: column; gap: 10px; }
+        #persistent-notifications-container { position: fixed; top: 80px; right: 20px; z-index: 2500; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        #persistent-notifications-container > * { pointer-events: auto; max-width: calc(100vw - 40px); transition: opacity 0.4s; }
+        #persistent-notifications-container > .fading { opacity: 0; }
         .persistent-notification { background-color: var(--bg-card); border: 1px solid var(--border); border-left: 5px solid var(--warning); padding: 15px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); width: 320px; display: flex; justify-content: space-between; align-items: center; animation: modal-fade-in 0.3s; color: var(--text-main); }
         .persistent-notification.expired { border-left-color: var(--danger); }
         .persistent-notification p { margin: 0; font-size: 14px; }
@@ -364,6 +366,17 @@
 
         /* Settings Page Styles */
         .settings-grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        .link-btn { background: none; border: none; padding: 0; color: var(--primary); font: inherit; font-size: 0.85em; cursor: pointer; }
+        .link-btn:hover { text-decoration: underline; }
+        .auth-links { margin-top: 14px; text-align: center; }
+        .auth-intro { color: var(--text-muted); font-size: 0.9em; margin-bottom: 18px; text-align: center; }
+        .field-hint { color: var(--text-muted); font-size: 11px; }
+        .cred-row { display: flex; gap: 8px; align-items: stretch; }
+        .cred-row .form-control { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+        .purchase-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9em; }
+        .purchase-row:last-child { border-bottom: none; }
+        .main-footer a { color: var(--text-muted); margin: 0 6px; }
+        .main-footer a:hover { color: var(--primary); }
         @media (min-width: 992px) { .settings-grid { grid-template-columns: 1fr 1fr; } }
         .color-palette { display: flex; gap: 15px; margin-top: 10px; flex-wrap: wrap; }
         .color-swatch { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
@@ -421,31 +434,40 @@
                 <div class="auth-tab" id="tab-register">Register</div>
             </div>
 
-            <form id="authForm">
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" id="authEmail" class="form-control" placeholder="you@example.com" required>
+            <form id="authForm" novalidate>
+                <p id="authIntro" class="auth-intro" style="display:none;"></p>
+                <div class="form-group" id="authEmailGroup">
+                    <label class="form-label" for="authEmail">Email</label>
+                    <input type="email" id="authEmail" class="form-control" placeholder="you@example.com" autocomplete="email" required>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Password</label>
+                <div class="form-group" id="authPasswordGroup">
+                    <label class="form-label" for="authPassword" id="authPasswordLabel">Password</label>
                     <div class="password-wrapper">
-                        <input type="password" id="authPassword" class="form-control" placeholder="••••••••" required>
+                        <input type="password" id="authPassword" class="form-control" placeholder="••••••••" autocomplete="current-password" required>
                         <i data-lucide="eye" class="toggle-password" id="toggleLoginPassword"></i>
                     </div>
+                    <small id="authPasswordHint" class="field-hint" style="display:none;">At least 10 characters.</small>
                 </div>
-                
+                <div class="form-group" id="authConfirmGroup" style="display:none;">
+                    <label class="form-label" for="authPasswordConfirm">Confirm new password</label>
+                    <input type="password" id="authPasswordConfirm" class="form-control" placeholder="••••••••" autocomplete="new-password">
+                </div>
                 <div id="registerFields" style="display:none;">
                     <div class="form-group">
-                        <label class="form-label">WhatsApp Number</label>
-                        <input type="tel" id="authPhone" class="form-control" placeholder="+1234567890">
-                        <small style="color:var(--text-muted); font-size: 11px;">Required for renewal reminders.</small>
+                        <label class="form-label" for="authPhone">WhatsApp Number</label>
+                        <input type="tel" id="authPhone" class="form-control" placeholder="+1234567890" autocomplete="tel">
+                        <small class="field-hint">Optional. Needed only for WhatsApp renewal reminders.</small>
                     </div>
+                    <p class="field-hint" style="text-align:center;">By creating an account you agree to the <a href="../p/terms" target="_blank" style="color:var(--primary)">Terms</a> and <a href="../p/privacy" target="_blank" style="color:var(--primary)">Privacy Policy</a>.</p>
                 </div>
-
                 <div style="margin-top:20px;">
-                    <button type="button" id="authSubmitBtn" class="btn btn-primary" style="width:100%;">Log In</button>
+                    <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width:100%;">Log In</button>
                 </div>
-                <p id="authMessage" style="margin-top:15px; text-align:center; display:none; font-size: 0.9em;"></p>
+                <p class="auth-links">
+                    <button type="button" class="link-btn" id="forgotPasswordLink">Forgot your password?</button>
+                    <button type="button" class="link-btn" id="backToLoginLink" style="display:none;">Back to log in</button>
+                </p>
+                <p id="authMessage" role="status" style="margin-top:15px; text-align:center; display:none; font-size: 0.9em;"></p>
             </form>
         </div>
     </div>
@@ -826,6 +848,36 @@
                             </div>
                         </form>
                     </div>
+                    <div class="card">
+                        <h3 class="card-title" data-translate-key="security" style="margin-bottom:20px;">Security</h3>
+                        <form id="settingsPasswordForm">
+                            <input type="email" id="settingsAccountEmail" autocomplete="username" hidden>
+                            <div class="form-group">
+                                <label class="form-label" for="currentPassword" data-translate-key="currentPassword">Current password</label>
+                                <input type="password" id="currentPassword" class="form-control" autocomplete="current-password" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="newPassword" data-translate-key="newPassword">New password</label>
+                                <input type="password" id="newPassword" class="form-control" autocomplete="new-password" minlength="10" required>
+                                <small class="field-hint" data-translate-key="passwordRule">At least 10 characters.</small>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="confirmNewPassword" data-translate-key="confirmPassword">Confirm new password</label>
+                                <input type="password" id="confirmNewPassword" class="form-control" autocomplete="new-password" minlength="10" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary" data-translate-key="changePassword">Change Password</button>
+                        </form>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title" data-translate-key="yourData" style="margin-bottom:6px;">Your Data</h3>
+                        <p data-translate-key="yourDataHelp" style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 20px;">Download everything in your vault. Stored registrar passwords are never included.</p>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 25px;">
+                            <button type="button" class="btn btn-secondary" id="exportCsvBtn"><i data-lucide="file-spreadsheet"></i> <span data-translate-key="exportCsv">Export CSV</span></button>
+                            <button type="button" class="btn btn-secondary" id="exportJsonBtn"><i data-lucide="file-json"></i> <span data-translate-key="exportJson">Export JSON</span></button>
+                        </div>
+                        <h4 data-translate-key="purchases" style="color: var(--text-main); margin-bottom: 8px;">Purchases</h4>
+                        <div id="purchasesList"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -833,6 +885,7 @@
         <!-- Footer -->
         <footer class="main-footer">
             <p data-translate-key="footer">Powered by Project Freedom ✊</p>
+            <p style="margin-top:6px; font-size:12px;"><a href="../p/privacy" target="_blank">Privacy</a>·<a href="../p/terms" target="_blank">Terms</a></p>
         </footer>
     </div>
 
@@ -967,9 +1020,14 @@
                     <div class="form-group">
                         <label class="form-label" data-translate-key="password">Password</label>
                         <div class="password-wrapper">
-                            <input type="password" id="providerPass" class="form-control">
+                            <input type="password" id="providerPass" class="form-control" autocomplete="new-password">
                             <i data-lucide="eye" class="toggle-password" id="toggleProviderPassword"></i>
                         </div>
+                        <small class="field-hint" data-translate-key="passwordOptionalHint">Optional. Stored encrypted; only you can reveal it.</small>
+                    </div>
+                    <div class="form-group form-check" id="providerRemovePassGroup" style="display:none;">
+                        <input type="checkbox" id="providerRemovePass" class="form-check-input">
+                        <label class="form-check-label" for="providerRemovePass" data-translate-key="removeStoredPassword" style="cursor: pointer; color: var(--text-main);">Delete the stored password</label>
                     </div>
                      <div class="form-group">
                         <label class="form-label" data-translate-key="userIdOptional">User ID (optional)</label>
@@ -999,7 +1057,12 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label" data-translate-key="password">Password</label>
-                    <p id="credPass" class="form-control" style="background:var(--bg-hover); font-family:var(--font-code);"></p>
+                    <div class="cred-row">
+                        <p id="credPass" class="form-control" style="background:var(--bg-hover); font-family:var(--font-code);"></p>
+                        <button type="button" class="btn btn-secondary btn-icon-only" id="credRevealBtn" title="Show password"><i data-lucide="eye"></i></button>
+                        <button type="button" class="btn btn-secondary btn-icon-only" id="credCopyBtn" title="Copy password"><i data-lucide="copy"></i></button>
+                    </div>
+                    <small id="credPassNote" class="field-hint" data-translate-key="revealNote">Each reveal is logged, up to 10 per hour.</small>
                 </div>
                 <div class="form-group">
                     <label class="form-label" data-translate-key="userId">User ID</label>
@@ -1009,6 +1072,30 @@
         </div>
     </div>
 
+    <!-- Calendar Subscription Modal -->
+    <div class="modal" id="calendarFeedModal">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 data-translate-key="calendarFeedTitle">Subscribe to your renewals</h3>
+                <div class="modal-close"><i data-lucide="x"></i></div>
+            </div>
+            <div class="modal-body">
+                <p data-translate-key="calendarFeedIntro" style="color: var(--text-muted); margin-bottom: 18px;">Add this private link to Google Calendar, Apple Calendar or Outlook. Every renewal date appears there and stays current as you add, edit or renew domains.</p>
+                <div class="form-group">
+                    <label class="form-label" for="calendarFeedUrl" data-translate-key="calendarFeedLink">Private calendar link</label>
+                    <div class="input-group">
+                        <input type="text" id="calendarFeedUrl" class="form-control" readonly value="Loading…">
+                        <button type="button" class="btn btn-secondary btn-icon-only" id="copyFeedBtn" title="Copy link"><i data-lucide="copy"></i></button>
+                    </div>
+                    <small class="field-hint" data-translate-key="calendarFeedPrivate">Anyone with this link can see your domain names and renewal dates. Keep it private.</small>
+                </div>
+                <a id="googleFeedLink" class="btn btn-primary" target="_blank" rel="noopener" style="width:100%; margin-bottom:10px;"><i data-lucide="calendar-plus"></i> <span data-translate-key="addToGoogle">Add to Google Calendar</span></a>
+                <a id="webcalFeedLink" class="btn btn-secondary" style="width:100%; margin-bottom:14px;"><i data-lucide="calendar"></i> <span data-translate-key="openInCalendarApp">Open in Apple Calendar / Outlook</span></a>
+                <p class="field-hint" data-translate-key="calendarFeedDelay" style="margin-bottom: 18px;">Calendar apps refresh subscriptions on their own schedule (Google: every few hours), so a change can take a while to show up.</p>
+                <button type="button" class="btn btn-danger-outline" id="resetFeedBtn" style="width:100%;" data-translate-key="resetFeedLink">Reset link</button>
+            </div>
+        </div>
+    </div>
     <!-- DNS Records Modal -->
     <div class="modal" id="dnsModal">
         <div class="modal-content" style="max-width: 700px;">
