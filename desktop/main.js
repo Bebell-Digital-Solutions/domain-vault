@@ -19,7 +19,7 @@ const {
   ALLOWED_ORIGINS, dueReminders, isAllowedUrl, normalizeDomains, normalizePrefs, pruneNotified,
 } = require('./lib');
 
-const APP_URL = process.env.DOMAIN_VAULT_URL || 'https://domain-vault.elnegocio.digital/app/';
+const APP_URL = process.env.DOMAIN_VAULT_URL || 'https://app.getdomainvault.com/';
 const NOTIFIED_FILE = () => path.join(app.getPath('userData'), 'notified.json');
 const RENEWALS_FILE = () => path.join(app.getPath('userData'), 'renewals.json');
 const CHECK_EVERY_MS = 60 * 60 * 1000;   // hourly; a day boundary is caught within the hour

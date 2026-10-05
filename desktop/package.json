@@ -1,11 +1,11 @@
 {
   "name": "domain-vault-desktop",
   "productName": "Domain Vault",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Domain Vault desktop client",
   "author": "Bebell Digital Solutions <hello@bebelldigitalsolutions.com>",
-  "homepage": "https://domain-vault.elnegocio.digital",
+  "homepage": "https://getdomainvault.com",
   "license": "UNLICENSED",
   "main": "main.js",
   "scripts": {

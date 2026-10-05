@@ -23,8 +23,11 @@ project, as of 2026-10-05:
 | `config.js` pointing at the new project | ⏳ ready locally, not yet published |
 | Existing accounts on the old project | ⏳ copy across or ask users to re-register |
 | Owner items (§1) | ⏳ unchanged |
-| New domain: homepage on `getdomainvault.com`, app on `app.getdomainvault.com`, both on Cloudflare Pages built by `deploy/build.sh` | ⏳ client creates the two Pages projects; CORS and reset redirects already allow the new app address |
-| Email from `getdomainvault.com` (added to Resend; replaces `elnegocio.digital`) | ⏳ client adds the DNS records |
+| New domain: homepage on `getdomainvault.com` (+ `www`), app on `app.getdomainvault.com`; Cloudflare Pages projects `getdomainvault` and `getdomainvault-app`, built by `deploy/build.sh` | ✅ live and verified end to end in a browser (2026-10-06). Old `/app/` links on the homepage domain 301 to the app, query string kept |
+| Email from `noreply@getdomainvault.com` (Resend domain verified; `MAIL_FROM`, Auth SMTP sender) | ✅ welcome and password-reset emails delivered |
+| `SITE_URL` = `https://getdomainvault.com`; Auth Site URL = `https://app.getdomainvault.com` | ✅ |
+| Auth SMTP uses **port 587**: on 465 the reset email failed with "Error sending recovery email" | ✅ |
+| `domain-vault.elnegocio.digital` (GitHub Pages) | ⏳ still serves the old single-site copy against the new backend; redirect it to the new domain, then desktop 1.0.2 |
 
 The PayPal `notify_url` in §3 now points at the new project.
 
@@ -144,7 +147,8 @@ select vault.create_secret('<CRON_SECRET from .env.production>', 'dv_cron_secret
 - **Providers → Email → Minimum password length:** `10`, matching sign-up.
   Password resets go straight to Auth, so this is what enforces it there.
 - **SMTP Settings:** enable custom SMTP with Resend (host `smtp.resend.com`,
-  port 465, user `resend`, password = the Resend API key). Supabase's built-in
+  port **587**, user `resend`, password = the Resend API key; port 465 failed
+  from the hosted Auth service). Supabase's built-in
   mailer is for testing only and is heavily rate limited. Password-reset
   emails go through this.
 

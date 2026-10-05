@@ -11,7 +11,8 @@
     user's real browser, so a stray link cannot turn the app into a browser
     for arbitrary sites. */
 const ALLOWED_ORIGINS = [
-  'https://domain-vault.elnegocio.digital',
+  'https://app.getdomainvault.com',
+  'https://domain-vault.elnegocio.digital',   // previous address, while it forwards
   'https://www.paypal.com',
   'https://www.sandbox.paypal.com',
 ];

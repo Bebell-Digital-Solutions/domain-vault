@@ -21,6 +21,7 @@ const iso = (d) => [d.getFullYear(), d.getMonth() + 1, d.getDate()]
 const plus = (days) => iso(shift(days));
 
 test('navigation stays inside the app and PayPal', () => {
+  assert.equal(isAllowedUrl('https://app.getdomainvault.com/admin.html'), true);
   assert.equal(isAllowedUrl('https://domain-vault.elnegocio.digital/admin.html'), true);
   assert.equal(isAllowedUrl('https://www.paypal.com/checkout'), true);
   assert.equal(isAllowedUrl('http://127.0.0.1:5500/index.html'), true, 'local dev');
@@ -30,6 +31,7 @@ test('navigation to anywhere else is refused', () => {
   for (const url of [
     'https://evil.example/phish',
     'https://domain-vault.elnegocio.digital.evil.example',   // suffix trick
+    'https://app.getdomainvault.com.evil.example',
     'file:///etc/passwd',
     'javascript:alert(1)',
     'http://192.168.1.10/admin',                             // non-local plain http
