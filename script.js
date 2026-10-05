@@ -114,9 +114,11 @@
 
         // --- DATA ARRAYS FOR TOOLS & RECOMMENDATIONS ---
         const recommendedProvidersData = [
-            { name: "Namecheap", desc: "Best for budget domains", rating: 5, url: "https://namecheap.com/", icon: "tag", tags: ["domains"] },
+            { name: "Namecheap", desc: "Best for budget domains", rating: 5, url: "https://namecheap.pxf.io/bebelldigitalsolutions", icon: "tag", tags: ["domains"] },
             { name: "Porkbun", desc: "Great UI & pricing", rating: 5, url: "https://porkbun.com/", icon: "piggy-bank", tags: ["domains"] },
-            { name: "Hostinger", desc: "Domain + Hosting bundles", rating: 4.5, url: "https://hostinger.com/", icon: "server", tags: ["domains", "hosting"] }
+            { name: "Hostinger", desc: "Domain + Hosting bundles", rating: 4.5, url: "https://hostinger.com/", icon: "server", tags: ["domains", "hosting"] },
+            { name: "IONOS", desc: "Affordable domain registration", rating: 4.3, url: "https://ionos.com/domains/", icon: "globe", tags: ["domains", "budget"] },
+            { name: "Cloudflare", desc: "Cheapest renewals, at-cost", rating: 4.8, url: "https://www.cloudflare.com/products/registrar/", icon: "globe", tags: ["domains", "cheap-renewal"] }    
         ];
         const expandedRecommendationsData = [
             ...recommendedProvidersData,
