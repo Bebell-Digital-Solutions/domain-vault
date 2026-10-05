@@ -25,7 +25,7 @@ window.DOMAIN_VAULT_CONFIG = (function () {
      that receives payments. For each button set:
        - Item ID (item_number): startup / business / agency
        - Price and currency: exactly what is set in the admin panel
-       - Return URL: https://domain-vault.elnegocio.digital/app/?payment=success
+       - Return URL: https://app.getdomainvault.com/?payment=success
        - Notification URL (IPN):
            https://gqxzawcxuhzcodvuiyzf.supabase.co/functions/v1/billing-webhook
      Then paste each button's hosted_button_id below. A pack whose id is
