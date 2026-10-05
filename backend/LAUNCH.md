@@ -23,6 +23,8 @@ project, as of 2026-10-05:
 | `config.js` pointing at the new project | ⏳ ready locally, not yet published |
 | Existing accounts on the old project | ⏳ copy across or ask users to re-register |
 | Owner items (§1) | ⏳ unchanged |
+| New domain: homepage on `getdomainvault.com`, app on `app.getdomainvault.com`, both on Cloudflare Pages built by `deploy/build.sh` | ⏳ client creates the two Pages projects; CORS and reset redirects already allow the new app address |
+| Email from `getdomainvault.com` (added to Resend; replaces `elnegocio.digital`) | ⏳ client adds the DNS records |
 
 The PayPal `notify_url` in §3 now points at the new project.
 
