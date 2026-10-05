@@ -14,8 +14,9 @@
 //   * Writes are atomic upserts instead of delete-everything-then-reinsert.
 // ============================================================================
 
-import { json, preflight } from "../_shared/cors.ts";
+import { isAllowedOrigin, json, preflight } from "../_shared/cors.ts";
 import {
+  anonClient,
   type Caller,
   clientIp,
   HttpError,
@@ -40,6 +41,9 @@ import {
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
 const ADMIN_PHONE = Deno.env.get("ADMIN_PHONE") ?? null;
+const SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/+$/, "");
+
+const MIN_PASSWORD_LENGTH = 10;
 
 const MAX_DOMAINS = 5000;
 const MAX_PROVIDERS = 500;
@@ -92,8 +96,8 @@ async function registerUser(req: Request, p: any) {
   const location = str(p?.location, 120);
 
   if (!email) return { success: false, message: "Please enter a valid email address." };
-  if (password.length < 10) {
-    return { success: false, message: "Password must be at least 10 characters." };
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { success: false, message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
   }
 
   // Throttle by IP so the endpoint cannot be used to enumerate or spam.
@@ -194,6 +198,130 @@ async function loginUser(req: Request, p: any) {
       expires_at: data.session.expires_at,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Passwords
+// ---------------------------------------------------------------------------
+
+/**
+ * Where the reset link lands: the page that asked for it, if the site is
+ * served from that origin, otherwise the app on the main site. Auth checks
+ * the target against its own redirect allow-list as well.
+ */
+function resetRedirect(requested: unknown): string | undefined {
+  if (typeof requested === "string") {
+    try {
+      const url = new URL(requested);
+      if (isAllowedOrigin(url.origin)) return url.origin + url.pathname;
+    } catch { /* fall through */ }
+  }
+  return SITE_URL ? `${SITE_URL}/app/` : undefined;
+}
+
+/** Public: email a password-reset link. The answer never says whether the address has an account. */
+// deno-lint-ignore no-explicit-any
+async function requestPasswordReset(req: Request, p: any) {
+  const email = isValidEmail(p?.email) ? p.email.trim().toLowerCase() : null;
+  if (!email) return { success: false, message: "Please enter a valid email address." };
+
+  await rateLimit(`reset:${clientIp(req)}`, 5, 3600);
+  await rateLimit(`reset:${email}`, 3, 3600);
+
+  const { error } = await anonClient().auth.resetPasswordForEmail(email, {
+    redirectTo: resetRedirect(p?.redirectTo),
+  });
+  if (error) console.error("password reset email failed", error.message);
+
+  return {
+    success: true,
+    message: "If that address has an account, a reset link is on its way. Check your inbox.",
+  };
+}
+
+/** Change the password of the signed-in user, who must prove they know the current one. */
+// deno-lint-ignore no-explicit-any
+async function changePassword(caller: Caller, p: any) {
+  const current = typeof p?.currentPassword === "string" ? p.currentPassword : "";
+  const next = typeof p?.newPassword === "string" ? p.newPassword : "";
+
+  if (!current) return { success: false, message: "Enter your current password." };
+  if (next.length < MIN_PASSWORD_LENGTH) {
+    return { success: false, message: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+  }
+  if (next === current) {
+    return { success: false, message: "The new password must differ from the current one." };
+  }
+
+  // Same budget as a login: this endpoint can also be used to test passwords.
+  await rateLimit(`password:${caller.id}`, 5, 900);
+
+  // Proving the current password opens a fresh session, and the change is
+  // made through it. Auth then ends every other session (other devices, and
+  // this tab's old one) and keeps this one, which goes back to the browser.
+  // The admin API would end them all; a change through the caller's own
+  // session can require re-authentication if the project's "secure password
+  // change" setting is on. A session minutes old satisfies both.
+  const verifier = anonClient();
+  const { data: check, error: checkError } = await verifier.auth.signInWithPassword({
+    email: caller.email,
+    password: current,
+  });
+  if (checkError || !check.session) {
+    return { success: false, message: "Your current password is incorrect." };
+  }
+
+  const { error } = await verifier.auth.updateUser({ password: next });
+  if (error) {
+    // Auth's own policy (length, leaked-password check) is worded for users.
+    return { success: false, message: error.message || "Could not change the password." };
+  }
+
+  return {
+    success: true,
+    message: "Password changed. Your other devices have been signed out.",
+    session: {
+      access_token: check.session.access_token,
+      refresh_token: check.session.refresh_token,
+      expires_at: check.session.expires_at,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Calendar subscription feed (served by the calendar function)
+// ---------------------------------------------------------------------------
+
+/** 32 random bytes, base64url: 43 characters, matching calendar_feeds_token_shape. */
+function newFeedToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** The caller's feed token, created on first use. The browser builds the URL. */
+async function getCalendarFeed(caller: Caller) {
+  const admin = serviceClient();
+  // Insert-if-absent, then read: two tabs asking at once still agree.
+  await admin.from("calendar_feeds").upsert(
+    { user_id: caller.id, token: newFeedToken() },
+    { onConflict: "user_id", ignoreDuplicates: true },
+  );
+  const { data, error } = await admin
+    .from("calendar_feeds").select("token").eq("user_id", caller.id).single();
+  if (error || !data) throw new HttpError(500, "Could not create the calendar link.");
+  return { success: true, token: data.token };
+}
+
+/** Replace the token. Calendars subscribed to the old link stop updating. */
+async function resetCalendarFeed(caller: Caller) {
+  const token = newFeedToken();
+  const { error } = await serviceClient().from("calendar_feeds").upsert(
+    { user_id: caller.id, token, created_at: new Date().toISOString() },
+    { onConflict: "user_id" },
+  );
+  if (error) throw new HttpError(500, "Could not reset the calendar link.");
+  return { success: true, token };
 }
 
 async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
@@ -369,7 +497,10 @@ async function saveSettings(caller: Caller, db: ReturnType<typeof userClient>, p
     theme: str(s.theme, 32) ?? "dark",
     language: str(s.language, 8) ?? "en",
     username: str(s.username, 80),
-    ...(pictureUrl ? { profile_pic_url: pictureUrl } : {}),
+    // An empty picture removes it; leaving the key out keeps the stored one.
+    ...(pictureUrl
+      ? { profile_pic_url: pictureUrl }
+      : (typeof s === "object" && s !== null && "profilePicture" in s ? { profile_pic_url: null } : {})),
   };
 
   // Reminder preferences are optional: a client that does not send them
@@ -426,7 +557,8 @@ async function uploadAvatar(userId: string, dataUrl: string): Promise<string | n
     return null;
   }
 
-  return admin.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+  // Same path on every upload; the version makes browsers fetch the new one.
+  return `${admin.storage.from("avatars").getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
 }
 
 function escapeHtml(value: string): string {
@@ -446,7 +578,7 @@ async function getPrices() {
 // Router
 // ---------------------------------------------------------------------------
 
-const PUBLIC_ACTIONS = new Set(["registerUser", "loginUser", "getPrices"]);
+const PUBLIC_ACTIONS = new Set(["registerUser", "loginUser", "getPrices", "requestPasswordReset"]);
 const ADMIN_ACTIONS = new Set([
   "adminOverview", "adminListUsers", "adminUpdateUser",
   "adminSales", "adminGetPrices", "adminSetPrice", "adminAudit",
@@ -467,6 +599,7 @@ Deno.serve(async (req: Request) => {
     if (PUBLIC_ACTIONS.has(action)) {
       if (action === "registerUser") return json(req, await registerUser(req, body));
       if (action === "loginUser") return json(req, await loginUser(req, body));
+      if (action === "requestPasswordReset") return json(req, await requestPasswordReset(req, body));
       await rateLimit(`prices:${clientIp(req)}`, 60, 60);
       return json(req, await getPrices());
     }
@@ -506,6 +639,12 @@ Deno.serve(async (req: Request) => {
         return json(req, await saveSettings(caller, db, body));
       case "revealCredential":
         return json(req, await revealCredential(req, caller, body));
+      case "changePassword":
+        return json(req, await changePassword(caller, body));
+      case "getCalendarFeed":
+        return json(req, await getCalendarFeed(caller));
+      case "resetCalendarFeed":
+        return json(req, await resetCalendarFeed(caller));
       default:
         return json(req, { success: false, message: "Unknown API action" }, 400);
     }

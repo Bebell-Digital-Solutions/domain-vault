@@ -98,7 +98,7 @@ async function alertAdmin(subject: string, lines: Record<string, unknown>) {
     ADMIN_EMAIL,
     `[Domain Vault] ${subject}`,
     `<h3>${escapeHtml(subject)}</h3><table>${rows}</table>
-     ${SITE_URL ? `<p><a href="${SITE_URL}/admin.html">Open the admin panel</a></p>` : ""}`,
+     ${SITE_URL ? `<p><a href="${SITE_URL}/app/admin.html">Open the admin panel</a></p>` : ""}`,
   );
 }
 
@@ -194,7 +194,7 @@ async function handleCompleted(p: URLSearchParams, txnId: string): Promise<Respo
       effective && effective !== plan ? ` (your current plan is <b>${effective}</b>)` : ""
     }.</p>
      <p>Transaction: ${escapeHtml(txnId)}</p>
-     ${SITE_URL ? `<p><a href="${SITE_URL}">Open Domain Vault</a></p>` : ""}`,
+     ${SITE_URL ? `<p><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}`,
   );
 
   return ok("applied");

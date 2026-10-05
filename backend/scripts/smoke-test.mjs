@@ -103,6 +103,92 @@ ok("updateUser refreshes the stored session", JSON.parse(store.get("dv.session")
 const restored = await API.restore();
 ok("session survives reload", restored?.email === email);
 
+// ---------------------------------------------------- refusals are visible
+r = await API.call("saveDomains", { domains: [
+  { name: "client-a.com", renewalDate: "2027-01-01" },
+  { name: "client-a.com", renewalDate: "2027-02-01" },
+] });
+ok("a refused save says why", r.success === false && typeof r.message === "string" && r.message.length > 0, r.message);
+
+// ------------------------------------------------------- stored passwords
+const providerId = (await API.call("getUserData", {})).providers[0].id;
+r = await API.call("saveProviders", { providers: [
+  { id: providerId, name: "Namecheap", url: "https://namecheap.com", user: "me", pass: "", removePassword: true },
+] });
+ok("a stored password can be deleted", r.success === true && r.providers?.[0]?.hasPassword === false);
+r = await API.revealPassword(providerId);
+ok("nothing left to reveal after deleting", r.success === false);
+
+// ---------------------------------------------------------- profile picture
+sql(`update settings set profile_pic_url = 'http://example.com/a.png'
+       where user_id = (select id from profiles where email = '${email}');`);
+await API.call("saveSettings", { settings: { username: "Client", language: "en", theme: "#12abef" } });
+r = await API.call("getUserData", {});
+ok("saving without a picture keeps the stored one", r.settings?.profilePicture === "http://example.com/a.png");
+ok("a custom accent colour is stored as the theme", r.settings?.theme === "#12abef", r.settings?.theme);
+await API.call("saveSettings", { settings: { username: "Client", language: "en", theme: "orange", profilePicture: "" } });
+r = await API.call("getUserData", {});
+ok("removing the picture is saved", r.settings?.profilePicture === "", r.settings?.profilePicture);
+
+// ------------------------------------------------------------ lookups
+r = await API.lookup("not a domain", "whois");
+ok("lookup rejects an invalid name", r.success === false && /valid domain/i.test(r.error || ""), r.error);
+r = await API.lookup("example.com", "dns", ["A"]);
+if (r.success) ok("DNS lookup goes through the lookup function", Array.isArray(r.data?.A?.Answer));
+else console.log(`SKIP  DNS lookup (upstream unreachable from the runtime: ${r.error || r.message})`);
+
+// ------------------------------------------------------ calendar feed
+r = await API.call("getCalendarFeed", {});
+const token = r.token;
+ok("calendar feed token issued", r.success === true && /^[A-Za-z0-9_-]{43}$/.test(token || ""), token);
+r = await API.call("getCalendarFeed", {});
+ok("the same link is returned next time", r.token === token);
+
+let feed = await fetch(API.calendarFeedUrl(token));
+let body = await feed.text();
+ok("feed serves text/calendar without any headers",
+  feed.status === 200 && /text\/calendar/.test(feed.headers.get("content-type") || ""), String(feed.status));
+ok("feed lists the renewal as an all-day event",
+  body.includes("SUMMARY:Renew client-a.com") && body.includes("DTSTART;VALUE=DATE:20270101") &&
+  body.includes("DTEND;VALUE=DATE:20270102") && /\r\nEND:VCALENDAR\r\n$/.test(body));
+
+r = await API.call("resetCalendarFeed", {});
+ok("reset issues a different link", r.success === true && r.token && r.token !== token);
+feed = await fetch(API.calendarFeedUrl(token));
+ok("the old link stops working", feed.status === 404, String(feed.status));
+feed = await fetch(API.calendarFeedUrl(r.token));
+ok("the new link works", feed.status === 200, String(feed.status));
+feed = await fetch(API.calendarFeedUrl("x".repeat(43)));
+ok("an unknown link is a plain 404", feed.status === 404, String(feed.status));
+
+// ------------------------------------------------------------- passwords
+r = await API.call("changePassword", { currentPassword: "wrong-password-1", newPassword: "a-new-password-1" });
+ok("password change needs the current password", r.success === false && /incorrect/i.test(r.message), r.message);
+r = await API.call("changePassword", { currentPassword: PW, newPassword: "short" });
+ok("password change enforces the minimum length", r.success === false && /10 characters/.test(r.message), r.message);
+const NEW_PW = "a-new-password-1";
+const otherDevice = browser().api;
+await otherDevice.call("loginUser", { email, password: PW });
+r = await API.call("changePassword", { currentPassword: PW, newPassword: NEW_PW });
+ok("password change", r.success === true, r.message);
+ok("the new session is not handed to the page", r.session === undefined);
+r = await API.call("getUserData", {});
+ok("this session stays signed in after the change", Array.isArray(r.domains), r.message);
+r = await otherDevice.call("getUserData", {});
+ok("other devices are signed out", r.success === false, r.message);
+{
+  const other = browser().api;
+  ok("old password no longer works", (await other.call("loginUser", { email, password: PW })).success === false);
+  ok("new password works", (await other.call("loginUser", { email, password: NEW_PW })).success === true);
+}
+
+r = await API.call("requestPasswordReset", { email: "not-an-email" });
+ok("reset request validates the address", r.success === false);
+r = await API.call("requestPasswordReset", { email: `nobody-${stamp}@example.com` });
+ok("reset request does not reveal unknown addresses", r.success === true, r.message);
+r = await API.call("requestPasswordReset", { email, redirectTo: "http://127.0.0.1:5500/app/" });
+ok("reset request for a real account", r.success === true, r.message);
+
 API.signOut();
 ok("signOut clears storage", !store.has("dv.session"));
 

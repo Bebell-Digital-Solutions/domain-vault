@@ -37,3 +37,10 @@ language sql immutable as $$ select string_to_array(name, '/'); $$;
 grant usage on schema auth to anon, authenticated, service_role;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 grant usage on schema storage to anon, authenticated, service_role;
+
+-- New functions in public are executable by every API role unless a
+-- migration revokes it, exactly as on a hosted project. Declared here, before
+-- the migrations run, so each migration's revokes are tested on top of it.
+grant usage on schema public to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant execute on functions to anon, authenticated, service_role;

@@ -1,11 +1,12 @@
 \set QUIET on
 \set ON_ERROR_STOP on
 -- Supabase grants these to the authenticated role by default; recreate that
--- baseline so the migration's own revokes are tested on top of it.
+-- baseline so the migration's own revokes are tested on top of it. Function
+-- EXECUTE comes from the default privileges in 00_stubs.sql, applied as each
+-- function is created, so a migration's revoke still takes effect.
 grant select, insert, update, delete on public.profiles, public.providers,
   public.domains, public.settings, public.notifications to authenticated;
 grant select on public.plan_limits to authenticated;
-grant execute on all functions in schema public to authenticated;
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-4000-8000-000000000001', 'alice@example.com'),
@@ -338,4 +339,74 @@ begin
   update public.profiles set status = 'suspended' where email = 'rem@example.com';
   select count(*) into n from public.due_reminders(current_date);
   raise notice '%', case when n = 0 then 'PASS t24 (suspended is silent)' else 'FAIL t24 got ' || n end;
+end $$;
+
+-- ===========================================================================
+-- Calendar subscription feed (20261005000100)
+-- ===========================================================================
+\set QUIET on
+insert into auth.users (id, email) values
+  ('ffffffff-0000-4000-8000-000000000006', 'cal@example.com');
+update public.profiles set status = 'active' where email = 'cal@example.com';
+insert into public.calendar_feeds (user_id, token) values
+  ('ffffffff-0000-4000-8000-000000000006', 'calTokenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+\set QUIET off
+
+\echo '--- T25: a feed shows its owner''s dated renewals, and only those'
+do $$
+declare n int; n_unknown int; foreign_rows int;
+begin
+  perform set_config('request.jwt.claim.sub','ffffffff-0000-4000-8000-000000000006',true);
+  execute 'set local role authenticated';
+  perform public.sync_domains('[
+    {"name":"feed-one.com","renewalDate":"2027-04-01","renewalPrice":"9.99"},
+    {"name":"feed-two.com","renewalDate":"2027-05-01"},
+    {"name":"undated.com"}]'::jsonb);
+  execute 'reset role';
+
+  select count(*) into n from public.calendar_feed('calTokenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+  select count(*) into n_unknown from public.calendar_feed('nopeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+  select count(*) into foreign_rows
+    from public.calendar_feed('calTokenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA') f
+   where f.domain_name not like 'feed-%';
+
+  raise notice '%', case when n = 2 and n_unknown = 0 and foreign_rows = 0
+    then 'PASS t25 (2 dated renewals, unknown token empty, no other user''s rows)'
+    else 'FAIL t25 n=' || n || ' unknown=' || n_unknown || ' foreign=' || foreign_rows end;
+end $$;
+
+\echo '--- T26: users cannot read feed tokens or call the feed function'
+do $$
+declare blocked_table boolean := false; blocked_fn boolean := false;
+begin
+  perform set_config('request.jwt.claim.sub','ffffffff-0000-4000-8000-000000000006',true);
+  execute 'set local role authenticated';
+  begin
+    perform 1 from public.calendar_feeds;
+  exception when insufficient_privilege then blocked_table := true;
+  end;
+  begin
+    perform 1 from public.calendar_feed('calTokenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+  exception when insufficient_privilege then blocked_fn := true;
+  end;
+  execute 'reset role';
+  raise notice '%', case when blocked_table and blocked_fn
+    then 'PASS t26 (tokens and feed are service-role only)'
+    else 'FAIL t26 table=' || blocked_table || ' fn=' || blocked_fn end;
+end $$;
+
+\echo '--- T27: a suspended account''s feed goes dark; malformed tokens are refused'
+do $$
+declare n int; rejected boolean := false;
+begin
+  update public.profiles set status = 'suspended' where email = 'cal@example.com';
+  select count(*) into n from public.calendar_feed('calTokenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+  begin
+    insert into public.calendar_feeds (user_id, token)
+    values ('aaaaaaaa-0000-4000-8000-000000000001', 'short');
+  exception when check_violation then rejected := true;
+  end;
+  raise notice '%', case when n = 0 and rejected
+    then 'PASS t27 (suspended feed empty, short token rejected)'
+    else 'FAIL t27 rows=' || n || ' rejected=' || rejected end;
 end $$;

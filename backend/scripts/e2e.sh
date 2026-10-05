@@ -66,6 +66,11 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
+# A browser run that was interrupted leaves its accounts behind, and their
+# domains would show up in the reminder sweep below.
+docker exec -i supabase_db_backend psql -U postgres -qtA \
+  -c "delete from auth.users where email like 'ui-%@example.com';" >/dev/null
+
 echo; echo "=== client + admin ==="; node scripts/smoke-test.mjs
 echo; echo "=== payments ===";       node scripts/webhook-test.mjs
 echo; echo "=== reminders ==="

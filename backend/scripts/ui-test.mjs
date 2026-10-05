@@ -11,6 +11,7 @@
  */
 import { chromium } from 'playwright-core';
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 const SITE = process.env.SITE_URL_UNDER_TEST || 'http://127.0.0.1:5500';
 const SHOTS = process.env.SHOTS;
@@ -20,6 +21,8 @@ const t = Date.now();
 const customer = `ui-customer-${t}@example.com`;
 const admin = `ui-admin-${t}@example.com`;
 const newcomer = `ui-newcomer-${t}@example.com`;
+const member = `ui-member-${t}@example.com`;
+const MAILPIT = 'http://127.0.0.1:54324';
 let failures = 0;
 const sql = (q) => execSync('docker exec -i supabase_db_backend psql -U postgres -qtA', { input: q }).toString().trim();
 const ok = (l, c, x = '') => { if (!c) failures++; console.log(`${c ? 'PASS' : 'FAIL'}  ${l}${x ? '  ' + x : ''}`); };
@@ -30,8 +33,8 @@ sql(`delete from rate_limits; update plan_prices set amount = null;
      delete from purchases where txn_id like 'UI-%';
      delete from admin_audit_log where admin_email like 'ui-admin-%';
      delete from auth.users where email like 'ui-%@example.com';`);
-for (const e of [customer, admin, newcomer]) await register(e);
-sql(`update profiles set status='active' where email in ('${customer}','${admin}');
+for (const e of [customer, admin, newcomer, member]) await register(e);
+sql(`update profiles set status='active' where email in ('${customer}','${admin}','${member}');
      update profiles set is_admin=true where email='${admin}';`);
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: true });
@@ -43,14 +46,21 @@ function watch(page, bucket) {
   page.on('response', r => { if (r.status() >= 400) bucket.push(`http ${r.status()}: ${r.url()}`); });
 }
 
-async function login(page, email) {
+async function login(page, email, password = PW) {
   await page.goto(SITE + '/app/index.html');
   await page.fill('#authEmail', email);
-  await page.fill('#authPassword', PW);
+  await page.fill('#authPassword', password);
   await page.click('#authSubmitBtn');
   await page.waitForSelector('#auth-overlay', { state: 'hidden', timeout: 20000 });
   await page.waitForFunction(() => document.getElementById('userPlanBadgeText').textContent.length > 0);
   // Dashboard data loads after the overlay closes and resets the active page.
+  await page.waitForLoadState('networkidle');
+}
+
+/** Reload with the stored session, as a returning user would. */
+async function reload(page) {
+  await page.reload();
+  await page.waitForSelector('#auth-overlay', { state: 'hidden', timeout: 20000 });
   await page.waitForLoadState('networkidle');
 }
 
@@ -105,6 +115,147 @@ async function login(page, email) {
   ok('mobile menu navigates', await page.locator('#page-providers').evaluate(el => el.classList.contains('active')));
   ok('drawer closes after navigating', !(await page.locator('#mobileNav').evaluate(el => el.classList.contains('open'))));
   ok('no JavaScript errors (mobile)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+// ------------------------------------------------- account features (member)
+{
+  // Refusals answered with 4xx are part of this journey; anything else is not.
+  const errors = [];
+  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  const page = await ctx.newPage(); watch(page, errors);
+  // The duplicate-domain refusal below, as the network and the console report it.
+  const expected = (e) => /http 409: .*functions\/v1\/api$/.test(e) || /status of 409 \(Conflict\)/.test(e);
+
+  const hostile = `<img src=x onerror="window.__pwned=1">.com`;
+  const soon = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+  await login(page, member);
+  await page.evaluate(async ([name, date]) => {
+    await window.DomainVaultAPI.call('saveDomains', { domains: [{ name, renewalDate: date }] });
+    await window.DomainVaultAPI.call('saveProviders', { providers: [
+      { name: 'Porkbun', url: 'https://porkbun.com', user: 'me', pass: 'porkbun-secret-1' }] });
+  }, [hostile, soon]);
+  await reload(page);
+  await page.click('.sidebar .menu-item[data-page="notifications"]');
+  await page.waitForSelector('#notificationsList .notification-item');
+  ok('notifications render a hostile domain name as text (no XSS)',
+    !(await page.evaluate(() => window.__pwned)) &&
+    (await page.locator('#notificationsList').textContent()).includes('<img'));
+
+  // Renewal pop-ups go away on their own; a user in a hurry closes them.
+  for (const b of await page.locator('.notification-dismiss-btn').all()) await b.click().catch(() => {});
+  await page.waitForFunction(() => document.getElementById('persistent-notifications-container').children.length === 0);
+  ok('renewal pop-ups can be dismissed', true);
+
+  // A save the server refuses must say so and leave the screen matching the server.
+  await page.click('.sidebar .menu-item[data-page="domains"]');
+  for (const _ of [1, 2]) {
+    await page.click('#addDomainBtnSecondary');
+    await page.fill('#domainName', 'twice.com');
+    await page.selectOption('#domainProvider', 'Porkbun');
+    await page.fill('#purchaseDate', '2025-01-01');
+    await page.fill('#renewalDate', '2027-01-01');
+    await page.fill('#purchasePrice', '1');
+    await page.fill('#renewalPrice', '1');
+    await page.click('#formSubmitBtn');
+    await page.waitForTimeout(1500);
+  }
+  await page.waitForFunction(() => /already have a domain/i.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  await page.waitForTimeout(1500);
+  ok('a refused save shows the server\'s reason', true);
+  ok('…and the table goes back to what is stored',
+    await page.locator('#domainsTableBody tr', { hasText: 'twice.com' }).count() === 1);
+
+  // Stored registrar password: reveal on request.
+  await page.click('.sidebar .menu-item[data-page="providers"]');
+  await page.click('.credentials-btn');
+  ok('stored password starts masked', (await page.locator('#credPass').textContent()).includes('•'));
+  await page.click('#credRevealBtn');
+  await page.waitForFunction(() => document.getElementById('credPass').textContent === 'porkbun-secret-1', null, { timeout: 15000 });
+  ok('reveal shows the stored password', true);
+  await page.click('#credentialsModal .modal-close');
+  ok('closing the modal forgets it', (await page.locator('#credPass').textContent()) === '');
+
+  // Calendar subscription.
+  await page.click('.sidebar .menu-item[data-page="calendar"]');
+  await page.click('#syncGCalBtn');
+  await page.waitForFunction(() => /\/calendar\?token=/.test(document.getElementById('calendarFeedUrl').value), null, { timeout: 15000 });
+  const feedUrl = await page.inputValue('#calendarFeedUrl');
+  const feed = await fetch(feedUrl);
+  ok('"Sync to Google" gives a working calendar link', feed.status === 200 && (await feed.text()).includes('BEGIN:VEVENT'));
+  ok('Google Calendar button pre-fills the subscription',
+    (await page.getAttribute('#googleFeedLink', 'href')).startsWith('https://calendar.google.com/calendar/r?cid=webcal'));
+  await page.click('#calendarFeedModal .modal-close');
+
+  // Exports.
+  await page.click('.sidebar .menu-item[data-page="settings"]');
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#exportJsonBtn')]);
+  const exported = JSON.parse(readFileSync(await download.path(), 'utf8'));
+  ok('JSON export has the vault and no passwords',
+    exported.domains.length === 2 && exported.providers[0].hasStoredPassword === true &&
+    !JSON.stringify(exported).includes('porkbun-secret-1'));
+
+  // Custom accent colour survives a reload.
+  await page.evaluate(() => {
+    const picker = document.getElementById('customColorPicker');
+    picker.value = '#12abef';
+    picker.dispatchEvent(new Event('change'));
+  });
+  await page.waitForFunction(() => /Accent color saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  await reload(page);
+  ok('custom accent colour is saved', (await page.evaluate(() =>
+    document.documentElement.style.getPropertyValue('--primary').trim())) === '#12abef');
+
+  // Change password from Settings.
+  const NEW_PW = 'another-horse-battery';
+  await page.click('.sidebar .menu-item[data-page="settings"]');
+  await page.fill('#currentPassword', PW);
+  await page.fill('#newPassword', NEW_PW);
+  await page.fill('#confirmNewPassword', NEW_PW);
+  await page.click('#settingsPasswordForm button[type=submit]');
+  await page.waitForFunction(() => /Password changed/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  await page.click('#logoutBtn');
+  await login(page, member, NEW_PW);
+  ok('password changed from Settings', true);
+
+  // Forgotten password, start to finish: request, email, link, new password.
+  await page.click('#logoutBtn');
+  await page.click('#forgotPasswordLink');
+  ok('forgot-password form hides the password field', await page.locator('#authPassword').isHidden());
+  await page.fill('#authEmail', member);
+  await page.click('#authSubmitBtn');
+  await page.waitForFunction(() => /reset link is on its way/i.test(document.getElementById('authMessage').textContent), null, { timeout: 15000 });
+  let link = null;
+  for (let i = 0; i < 20 && !link; i++) {
+    const found = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent('to:' + member)}`).then(r => r.json());
+    const id = found.messages?.[0]?.ID;
+    if (id) {
+      const msg = await fetch(`${MAILPIT}/api/v1/message/${id}`).then(r => r.json());
+      link = (msg.Text || '').match(/https?:\/\/\S+\/auth\/v1\/verify\?\S+/)?.[0] ?? null;
+    }
+    if (!link) await new Promise(r => setTimeout(r, 500));
+  }
+  ok('reset email arrives with a link', !!link);
+  const verified = await fetch(link, { redirect: 'manual' });
+  const fragment = (verified.headers.get('location') || '').split('#')[1] || '';
+  ok('the link verifies as a recovery', /type=recovery/.test(fragment));
+  // The link arrives as a fresh page load (from the mail client, through Auth's
+  // redirect); a same-page hash change would not be one.
+  await page.goto('about:blank');
+  await page.goto(`${SITE}/app/index.html#${fragment}`);
+  await page.waitForSelector('#authConfirmGroup', { state: 'visible' });
+  ok('the app opens the "set a new password" form', !page.url().includes('access_token'),
+    'token removed from the address bar');
+  const RESET_PW = 'reset-horse-battery';
+  await page.fill('#authPassword', RESET_PW);
+  await page.fill('#authPasswordConfirm', RESET_PW);
+  await page.click('#authSubmitBtn');
+  await page.waitForFunction(() => /Password updated/.test(document.getElementById('authMessage').textContent), null, { timeout: 15000 });
+  await login(page, member, RESET_PW);
+  ok('logs in with the reset password', true);
+
+  const unexpected = errors.filter(e => !expected(e));
+  ok('no unexpected JavaScript or HTTP errors (account features)', unexpected.length === 0, unexpected.join(' | '));
   await ctx.close();
 }
 
@@ -268,7 +419,7 @@ async function login(page, email) {
 await browser.close();
 sql(`delete from purchases where txn_id = 'UI-${t}';
      delete from admin_audit_log where admin_email = '${admin}';
-     delete from auth.users where email in ('${customer}','${admin}','${newcomer}');
+     delete from auth.users where email in ('${customer}','${admin}','${newcomer}','${member}');
      update plan_prices set amount = null; delete from rate_limits;`);
 console.log(failures ? `\n${failures} UI check(s) FAILED` : '\nAll UI checks passed.');
 process.exit(failures ? 1 : 0);

@@ -193,7 +193,7 @@ export async function adminUpdateUser(admin: Caller, p: any) {
       "Your Domain Vault account is active",
       `<h3>You're in!</h3>
        <p>Your Domain Vault account has been activated. You can log in now.</p>
-       ${SITE_URL ? `<p><a href="${SITE_URL}">Open Domain Vault</a></p>` : ""}`,
+       ${SITE_URL ? `<p><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}`,
     );
   }
 

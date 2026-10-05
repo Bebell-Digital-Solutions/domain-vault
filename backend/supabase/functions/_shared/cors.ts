@@ -9,6 +9,11 @@ const ALLOWED = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
   .map((o) => o.trim())
   .filter(Boolean);
 
+/** True for an origin the site is served from (used to vet redirect targets). */
+export function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED.includes(origin);
+}
+
 export function corsHeaders(origin: string | null): Record<string, string> {
   const allow = origin && ALLOWED.includes(origin) ? origin : (ALLOWED[0] ?? "");
   return {

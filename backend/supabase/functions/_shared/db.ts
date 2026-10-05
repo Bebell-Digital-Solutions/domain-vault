@@ -30,6 +30,18 @@ export function serviceClient(): SupabaseClient {
   });
 }
 
+/**
+ * Client with no user attached, for Auth calls made on someone's behalf
+ * before they have a session (password check, reset email). Implicit flow:
+ * the reset link must land with tokens in the URL fragment, which is what the
+ * app reads.
+ */
+export function anonClient(): SupabaseClient {
+  return createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, flowType: "implicit" },
+  });
+}
+
 export interface Caller {
   id: string;
   email: string;

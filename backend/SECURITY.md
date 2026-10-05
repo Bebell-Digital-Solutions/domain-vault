@@ -40,6 +40,7 @@ The migration script imports no passwords of either kind for this reason.
 | Service role key needed for the daily job | Dedicated cron secret, stored in Vault |
 | Delete-all-then-reinsert | Atomic upsert + targeted delete |
 | Lookups called from the browser | Proxied, validated, cached, rate limited |
+| No way to recover or change a password | Reset by email link (token removed from the URL at once); change requires the current password and signs out every other session |
 
 ---
 
@@ -105,6 +106,11 @@ Not built yet. Listed in rough order of importance.
 - **The rate limiter fails open.** If its table is unavailable, requests are
   allowed rather than blocking every user. This is deliberate. Login is also
   protected by Supabase Auth's own limits.
+- **Calendar feed URLs are bearer secrets.** Anyone holding one can read that
+  user's domain names, renewal dates, providers and prices (never passwords).
+  Calendar apps cannot send headers, so the token has to live in the URL. It
+  is 256 bits, rate limited, served only for active accounts, and the user can
+  reset it from the Calendar page.
 - **Avatars are in a public bucket**, under a path containing the user id.
   Fine for profile pictures; move to signed URLs if that ever matters.
 - **Idle local runtime.** Not a security issue, but `supabase functions serve`

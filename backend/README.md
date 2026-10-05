@@ -21,9 +21,11 @@ has to provide and the deployment steps in order.
 | Registrar passwords | Optional. AES-256-GCM encrypted with a key that lives only in the function environment. Reveal is rate limited and audited. |
 | Plans | One-time PayPal purchase of a domain pack (no subscription). The plan is **derived from a purchase ledger**, so refunds and chargebacks take back exactly what they granted. |
 | Payments | PayPal IPN, verified with PayPal, checked against our receiver account and **against the price list** (amount and currency), deduplicated, and recorded, including the ones refused. |
-| Admin | `admin.html`: activate and suspend users, override plans, set prices, sales report with CSV export, audit log. |
+| Admin | `app/admin.html`: activate and suspend users, override plans, set prices, sales report with CSV export, audit log. |
 | Reminders | Daily pg_cron job. Fires on the most urgent milestone a domain has *crossed* (default 30/7/1/0 days), so a domain added late or a missed run still produces exactly one reminder. One digest per user, not one email per domain. Per-user opt-out, channels and lead days. |
-| Lookups | WHOIS / DNS proxied, validated, cached and rate limited. |
+| Lookups | WHOIS / DNS proxied, validated, cached and rate limited. The app calls only this proxy. |
+| Calendar | A private subscription feed per user (`calendar` function). Google, Apple and Outlook poll it, so renewals stay current in the user's own calendar. Resettable. |
+| Passwords | Reset by email link (Supabase Auth) and change from Settings, which proves the current password first and signs out every other device. |
 
 The problems in the old backend, and how each one is handled, are covered in
 [SECURITY.md](SECURITY.md).
@@ -34,10 +36,12 @@ The problems in the old backend, and how each one is handled, are covered in
 
 ```
 domain-vault/                    (repo root = the website, served by GitHub Pages)
-├── index.html  script.js        the app
-├── admin.html  admin.js         the admin panel
+├── index.html  es/  p/          landing page (EN/ES) and legal pages
+├── app/index.html               the app (loads ../config.js, ../api.js, ../script.js)
+├── app/admin.html  admin.js     the admin panel
+├── script.js                    the app's logic
 ├── config.js                    public config: backend URL, anon key, PayPal button ids
-├── api.js                       browser client for the api function
+├── api.js                       browser client for the edge functions
 └── backend/
     ├── LAUNCH.md                go-live checklist
     ├── SECURITY.md              threat model, known gaps, key management
@@ -50,13 +54,16 @@ domain-vault/                    (repo root = the website, served by GitHub Page
     │   │   ├── …000400_cron.sql           first schedule (superseded by cron_vault)
     │   │   ├── …000500_storage.sql        avatars bucket
     │   │   ├── …0917000100_billing_admin.sql  prices, purchase ledger, admin role, audit
-    │   │   └── …0917000200_cron_vault.sql     reminder schedule via Vault
+    │   │   ├── …0917000200_cron_vault.sql     reminder schedule via Vault
+    │   │   ├── …0928000100_reminders.sql      milestone reminders, digests, preferences
+    │   │   └── …1005000100_calendar_feed.sql  calendar subscription tokens
     │   ├── functions/
     │   │   ├── _shared/         cors, crypto, validation, db/auth, email + WhatsApp
     │   │   ├── api/             user + admin actions (index.ts, admin.ts)
     │   │   ├── lookup/          WHOIS + DNS proxy
     │   │   ├── billing-webhook/ PayPal IPN
-    │   │   └── reminders/       daily renewal sweep
+    │   │   ├── reminders/       daily renewal sweep
+    │   │   └── calendar/        private .ics subscription feed
     │   └── tests/               SQL security tests + test function environment
     └── scripts/
         ├── import-from-sheets.mjs   one-time migration from the old sheet
@@ -92,13 +99,14 @@ In a second terminal, serve the site from the repo root:
 python3 -m http.server 5500 --bind 127.0.0.1
 ```
 
-Open http://127.0.0.1:5500. Use `127.0.0.1` or `localhost`, not `file://`:
+Open http://127.0.0.1:5500/app/. Use `127.0.0.1` or `localhost`, not `file://`:
 `config.js` picks the local backend based on the hostname.
 
 | Local service | URL |
 |---|---|
-| App | http://127.0.0.1:5500 |
-| Admin panel | http://127.0.0.1:5500/admin.html |
+| Landing page | http://127.0.0.1:5500 |
+| App | http://127.0.0.1:5500/app/ |
+| Admin panel | http://127.0.0.1:5500/app/admin.html |
 | Supabase Studio (tables, SQL) | http://127.0.0.1:54323 |
 | Mail catcher (every outbound email) | http://127.0.0.1:54324 |
 
@@ -143,12 +151,14 @@ Always stop `serve` with Ctrl+C before starting another.
 ## Testing
 
 ```bash
-npm test            # SQL: 7 migrations on a clean Postgres 16 + security assertions
+npm test            # SQL: every migration on a clean Postgres 16 + security assertions
 npm run test:e2e    # starts a PayPal stub + test functions, then runs:
-                    #   smoke-test     customer and admin journeys through api.js
+                    #   smoke-test     customer and admin journeys through api.js,
+                    #                  incl. lookups, calendar feed, password change
                     #   webhook-test   17 payment scenarios
                     #   reminders-test the daily sweep, end to end (needs a mail key)
-                    #   ui-test        index.html + admin.html in headless Chrome
+                    #   ui-test        app + admin panel in headless Chrome, incl. the
+                    #                  password-reset email round trip (Mailpit)
 ```
 
 `test:e2e` needs `supabase start` first. It serves the functions with
@@ -173,7 +183,12 @@ What the suites prove, among other things:
   the reveal action;
 - the admin panel's actions work end to end, are all audited, and render
   database content as text (no XSS);
-- the mobile menu works.
+- the mobile menu works;
+- a save the server refuses says why and the screen reverts to what is stored;
+- a calendar link serves only its owner's renewals, stops working when reset,
+  and goes dark when the account is suspended;
+- changing a password needs the current one and signs out other devices; a
+  reset link sets a new password and is removed from the address bar.
 
 ---
 
@@ -196,8 +211,9 @@ PayPal only, one-time purchase per pack:
 4. PayPal notifies `billing-webhook`. The webhook verifies the notification,
    checks the receiver, pack, amount and currency, records it in `purchases`,
    and recomputes the customer's plan.
-5. PayPal returns the customer to `/?payment=success`. The app polls until the
-   new plan shows up.
+5. PayPal returns the customer to `/app/?payment=success`. The app polls until
+   the new plan shows up. (A return to the bare `/?payment=success` is
+   forwarded to the app by the landing page.)
 
 The effective plan is the admin override if one is set, otherwise the
 highest-ranked pack with a completed purchase, otherwise Personal. The first
@@ -274,20 +290,22 @@ The full sequence, including what to verify afterwards, is in
 supabase link --project-ref <project-ref>
 supabase db push
 supabase secrets set --env-file .env.production
-supabase functions deploy api lookup billing-webhook reminders
+supabase functions deploy api lookup billing-webhook reminders calendar
 ```
 
 `supabase/config.toml` turns gateway JWT verification off for `api`,
-`billing-webhook` and `reminders`. Each authenticates callers itself:
+`billing-webhook`, `reminders` and `calendar`. Each authenticates callers
+itself:
 
 - `api` authenticates per action; register, login and prices are public
   because the caller has no token yet.
 - `billing-webhook` verifies with PayPal.
 - `reminders` checks the cron secret.
+- `calendar` checks the feed token in the URL (calendar apps send no headers).
 
-With gateway verification on, all three are rejected before our code runs. If
+With gateway verification on, all four are rejected before our code runs. If
 your CLI version ignores `config.toml`, add `--no-verify-jwt` when deploying
-those three.
+those four.
 
 ---
 
@@ -336,6 +354,7 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | Action | Who | Payload | Notes |
 |---|---|---|---|
 | `registerUser` | public | `email`, `password`, `phone`, `location` | Password ≥ 10 chars. 5/hour per IP. |
+| `requestPasswordReset` | public | `email`, `redirectTo?` | Emails a reset link back to `redirectTo` if its origin is in `ALLOWED_ORIGINS`, else `SITE_URL/app/`. Same answer for unknown addresses. 5/hour per IP, 3 per address. |
 | `loginUser` | public | `email`, `password` | Returns `user` (incl. `plan`, `isAdmin`) and `session`. |
 | `getPrices` | public | — | Pack prices; `amount: null` = not for sale. |
 | `getUserData` | user | — | Domains, providers, settings, current `plan`, `isAdmin`, own `purchases`. |
@@ -343,6 +362,9 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `saveProviders` | user | `providers[]` | Empty `pass` keeps the stored password; `removePassword: true` deletes it. |
 | `saveSettings` | user | `settings{}` | Base64 avatars are moved to Storage. |
 | `revealCredential` | user | `providerId` | 10/hour, audited. |
+| `changePassword` | user | `currentPassword`, `newPassword` | Current password checked; ≥ 10 chars. Signs out every other session; `api.js` adopts the returned one. 5 per 15 min. |
+| `getCalendarFeed` | user | — | `{ token }` for the private feed, created on first use. `DomainVaultAPI.calendarFeedUrl(token)` builds the URL. |
+| `resetCalendarFeed` | user | — | New token; the old URL returns 404. |
 | `adminOverview` | admin | — | Counts by status and plan, domains, sales, payments needing review. |
 | `adminListUsers` | admin | `status?`, `search?`, `limit?`, `offset?` | With domain counts. |
 | `adminUpdateUser` | admin | `userId`, `status?`, `planOverride?`, `isAdmin?` | Audited. Emails the user on activation. Can't demote or suspend yourself. |
@@ -355,3 +377,5 @@ Other endpoints:
 - `POST /functions/v1/lookup` with `domain`, `kind`, `types[]` (signed-in users)
 - `POST /functions/v1/billing-webhook` (PayPal IPN)
 - `POST /functions/v1/reminders` (`x-cron-secret`)
+- `GET /functions/v1/calendar?token=…` (public; `text/calendar`, 404 for unknown
+  tokens and suspended accounts)

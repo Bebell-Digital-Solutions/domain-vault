@@ -106,7 +106,7 @@ function emailBody(rows: Due[]): string {
            themselves — renew them with your registrar before the date above.</p>`
       : ""
   }
-      ${SITE_URL ? `<p style="margin:18px 0 0"><a href="${SITE_URL}">Open Domain Vault</a></p>` : ""}
+      ${SITE_URL ? `<p style="margin:18px 0 0"><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}
       <p style="margin:22px 0 0;font-size:12px;color:#999">
         You can change or switch off these reminders in Domain Vault under Settings.
       </p>
