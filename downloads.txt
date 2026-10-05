@@ -105,6 +105,38 @@
             transform: scale(1.1);
         }
 
+
+
+/* --- Matrix background --- */
+        .matrix-container {
+    position: relative;
+    overflow: hidden;
+    background-color: #000000; /* Dark background */
+    width: 100%;
+    min-height: 100vh; /* Adjust height to your needs */
+}
+
+.matrix-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    opacity: 0.8;
+    pointer-events: none; /* Ensures the canvas doesn't block interactions/clicks */
+}
+
+/* Ensure your text/content sits above the matrix */
+.content {
+    position: relative;
+    z-index: 10;
+}
+
+
+
+        
+
         /* --- Download Page Specific Styles --- */
         .downloads {
             padding: 120px 24px 130px;
@@ -342,6 +374,12 @@
 
     <!-- === MAIN DOWNLOADS SECTION === -->
     <main class="downloads flex-1">
+        <!-- The Parent Container -->
+<div class="matrix-container">
+    <!-- Animated Matrix Background Canvas -->
+    <canvas id="matrix-canvas" class="matrix-canvas"></canvas>
+
+    
         <span class="eyebrow">Downloads</span>
 
         <h1>Up and running in a minute.</h1>
@@ -386,6 +424,8 @@
         </div>
 
         <p class="web-app">Prefer the browser? <a href="/app/">Open Domain Vault in the cloud</a>.</p>
+
+</div>
     </main>
 
     <!-- === FOOTER === -->
@@ -456,6 +496,10 @@
             </div>
 
          </div>
+
+
+
+        
     </footer>
 
     <!-- Scripts -->
@@ -511,5 +555,99 @@
     <script>
         lucide.createIcons();
     </script>
+
+
+
+<script>
+
+// ==========================================
+// Matrix Background Animation Logic
+// ==========================================
+const canvas = document.getElementById('matrix-canvas');
+const ctx = canvas.getContext('2d');
+const container = canvas.parentElement; // Uses the parent container to size the canvas
+
+// Resize Canvas to fit the container dynamically
+function resizeCanvas() {
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// The Characters for Matrix Effect (Katakana + Latin + Digits)
+const matrixChars = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレゲゼデベペオォコソトノホモヨョロゴゾドボポヴッン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const characters = matrixChars.split('');
+
+const fontSize = 16;
+let columns = canvas.width / fontSize;
+let drops = [];
+
+// Initialize drop positions for each column
+for (let x = 0; x < columns; x++) {
+    drops[x] = Math.random() * canvas.height; // Randomize start heights
+}
+
+function drawMatrix() {
+    // Re-calculate columns if window resized
+    if (drops.length < canvas.width / fontSize) {
+        const oldLength = drops.length;
+        columns = canvas.width / fontSize;
+        for (let x = oldLength; x < columns; x++) {
+            drops[x] = Math.random() * canvas.height;
+        }
+    }
+
+    // Draw translucent black background over everything to create trail effect
+    // Lower opacity creates longer trails (0.05 is the extracted value)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = fontSize + 'px "Fira Code", monospace';
+    ctx.textAlign = 'center';
+
+    // Loop over all drops
+    for (let i = 0; i < drops.length; i++) {
+        // Get a random character
+        const text = characters[Math.floor(Math.random() * characters.length)];
+
+        // Randomly highlight some letters to bright white/orange
+        if (Math.random() > 0.95) {
+             ctx.fillStyle = '#ffffff'; // Occasional bright white character
+        } else if (Math.random() > 0.8) {
+             ctx.fillStyle = '#ff7b47'; // Lighter orange for variation
+        } else {
+             ctx.fillStyle = 'rgba(255, 80, 17, 0.95)'; // Base brand primary orange
+        }
+
+        // x = i * fontSize, y = value of drop * fontSize
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        // Reset drop to the top randomly after it crosses the screen
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+            drops[i] = 0;
+        }
+
+        // Increment Y coordinate
+        drops[i]++;
+    }
+}
+
+// Run the animation loop at ~30 FPS
+setInterval(drawMatrix, 45);
+
+
+</script>
+
+
+
+
+
+
+
+
+
+    
 </body>
 </html>
