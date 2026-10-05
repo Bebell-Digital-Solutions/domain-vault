@@ -16,9 +16,9 @@ window.DOMAIN_VAULT_CONFIG = (function () {
         anonKey:      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
       }
     : {
-        supabaseUrl:  'https://gscyjgujprtzjmblwgnx.supabase.co',
-        functionsUrl: 'https://gscyjgujprtzjmblwgnx.supabase.co/functions/v1',
-        anonKey:      'sb_publishable_AO-Kdp2fMp6w1fB8Bw2C5A_roXQxAe5'   // publishable key (public by design)
+        supabaseUrl:  'https://gqxzawcxuhzcodvuiyzf.supabase.co',
+        functionsUrl: 'https://gqxzawcxuhzcodvuiyzf.supabase.co/functions/v1',
+        anonKey:      'sb_publishable_uZxk5yuJlIlMxX7whyWWWA_AvTvLZN7'   // publishable key (public by design)
       };
 
   /* PayPal "Buy Now" buttons, one per pack, created in the PayPal account
@@ -27,7 +27,7 @@ window.DOMAIN_VAULT_CONFIG = (function () {
        - Price and currency: exactly what is set in the admin panel
        - Return URL: https://domain-vault.elnegocio.digital/app/?payment=success
        - Notification URL (IPN):
-           https://gscyjgujprtzjmblwgnx.supabase.co/functions/v1/billing-webhook
+           https://gqxzawcxuhzcodvuiyzf.supabase.co/functions/v1/billing-webhook
      Then paste each button's hosted_button_id below. A pack whose id is
      still REPLACE_... cannot be bought from the site. */
   backend.paypal = {

@@ -4,7 +4,29 @@ Everything the product needs is built and tested locally. What's left is
 configuration that only the business owner can provide, plus deploying it in
 the right order.
 
-## Status — 2026-09-17
+## Status — 2026-10-05: moved to the client's Supabase project
+
+Production is moving from `gscyjgujprtzjmblwgnx` (developer account) to
+**`gqxzawcxuhzcodvuiyzf`** (the client's account, eu-central-1). On the new
+project, as of 2026-10-05:
+
+| Step | State |
+|---|---|
+| All 9 migrations | ✅ applied to an empty database |
+| Function settings (encryption key, cron secret, site URL, origins, Resend, PayPal mode) | ✅ copied from `.env.production`; **same encryption key**, so registrar passwords can be copied across |
+| Functions `api`, `lookup`, `billing-webhook`, `reminders`, `calendar` | ✅ deployed, JWT verification as in §2b |
+| Reminder schedule (Vault entries, cron jobs) | ✅ created |
+| End-to-end check through `api.js` (20 checks, probe account deleted) | ✅ |
+| Auth settings: Site URL, redirect URL `/app/**`, minimum password length 10, Resend SMTP (§2d) | ✅ set (first attempts hit a transient HTTP 544) |
+| Resend: client's API key on the new project and in `.env.production` | ✅ |
+| Resend: `elnegocio.digital` added to the client's Resend account | ⏳ DNS records must be added in Cloudflare, then **Verify** in Resend. Until then no email reaches customers |
+| `config.js` pointing at the new project | ⏳ ready locally, not yet published |
+| Existing accounts on the old project | ⏳ copy across or ask users to re-register |
+| Owner items (§1) | ⏳ unchanged |
+
+The PayPal `notify_url` in §3 now points at the new project.
+
+## Status — 2026-09-17 (old project)
 
 | Step | State |
 |---|---|
@@ -22,6 +44,7 @@ the right order.
 | First admin, button ids in `config.js`, merge to `main`, live checks | ⏳ §2e, §4, §5 |
 | Desktop client (Electron) + release pipeline built; Linux build verified | ✅ tag `desktop-v*` to build all three, then §7 |
 | Code-signing certificates for macOS / Windows | ⏳ §7 |
+| **2026-10-05 release** — calendar feed (new migration + `calendar` function), password reset/change, `api` and email-link fixes | ⏳ §2b again (`db push`, deploy all five functions), §2d redirect URLs + password length |
 
 **Back up `CREDENTIAL_ENCRYPTION_KEY` from `backend/.env.production` in a
 password manager now.**
@@ -57,7 +80,7 @@ Items 1–5 and 7 block launch. 6 and 8 should be decided before launch.
 
 ```bash
 cd backend
-supabase link --project-ref gscyjgujprtzjmblwgnx
+supabase link --project-ref gqxzawcxuhzcodvuiyzf
 ```
 
 ### 2a. Production secrets
@@ -90,11 +113,11 @@ supabase secrets set --env-file .env.production
 
 ```bash
 supabase db push
-supabase functions deploy api lookup billing-webhook reminders
+supabase functions deploy api lookup billing-webhook reminders calendar
 ```
 
 Then confirm that gateway JWT verification is **off** for `api`,
-`billing-webhook` and `reminders`, and **on** for `lookup`:
+`billing-webhook`, `reminders` and `calendar`, and **on** for `lookup`:
 
 ```bash
 supabase functions list
@@ -105,13 +128,19 @@ supabase functions list
 In the Supabase dashboard's SQL editor:
 
 ```sql
-select vault.create_secret('https://gscyjgujprtzjmblwgnx.supabase.co/functions/v1', 'dv_functions_base_url');
+select vault.create_secret('https://gqxzawcxuhzcodvuiyzf.supabase.co/functions/v1', 'dv_functions_base_url');
 select vault.create_secret('<CRON_SECRET from .env.production>', 'dv_cron_secret');
 ```
 
 ### 2d. Auth settings (dashboard → Authentication)
 
 - **URL Configuration → Site URL:** `https://domain-vault.elnegocio.digital`
+- **URL Configuration → Redirect URLs:** add
+  `https://domain-vault.elnegocio.digital/app/**`. Password-reset links return
+  to the app. (Without it they land on the Site URL; the landing page forwards
+  them to `/app/`, so it still works, one redirect later.)
+- **Providers → Email → Minimum password length:** `10`, matching sign-up.
+  Password resets go straight to Auth, so this is what enforces it there.
 - **SMTP Settings:** enable custom SMTP with Resend (host `smtp.resend.com`,
   port 465, user `resend`, password = the Resend API key). Supabase's built-in
   mailer is for testing only and is heavily rate limited. Password-reset
@@ -125,7 +154,7 @@ The owner registers on the live site. Then, in the SQL editor:
 update profiles set status = 'active', is_admin = true where email = '<owner email>';
 ```
 
-The owner then opens `/admin.html` → **Prices** and enters the prices
+The owner then opens `/app/admin.html` → **Prices** and enters the prices
 (owner item 1).
 
 ---
@@ -140,8 +169,8 @@ per pack:
 | Item name | Domain Vault Start-up | Domain Vault Business | Domain Vault Agency |
 | Item ID | `startup` | `business` | `agency` |
 | Price / currency | exactly as set in Admin → Prices | ← | ← |
-| Return URL (on success) | `https://domain-vault.elnegocio.digital/?payment=success` | ← | ← |
-| Advanced variable | `notify_url=https://gscyjgujprtzjmblwgnx.supabase.co/functions/v1/billing-webhook` | ← | ← |
+| Return URL (on success) | `https://domain-vault.elnegocio.digital/app/?payment=success` | ← | ← |
+| Advanced variable | `notify_url=https://gqxzawcxuhzcodvuiyzf.supabase.co/functions/v1/billing-webhook` | ← | ← |
 
 Also turn on IPN for the account (Account Settings → Notifications → Instant
 Payment Notifications) with the same notification URL.
@@ -160,7 +189,7 @@ Send the three **hosted button ids** to tech.
 Edit `config.js` (repo root):
 
 ```js
-anonKey: '<publishable/anon key>',   // supabase projects api-keys --project-ref gscyjgujprtzjmblwgnx
+anonKey: '<publishable/anon key>',   // supabase projects api-keys --project-ref gqxzawcxuhzcodvuiyzf
 buttons: {
   'Start-up': '<hosted_button_id>',
   'Business': '<hosted_button_id>',
@@ -182,11 +211,14 @@ Tick each one:
 - [ ] Register a test account → "pending activation" message → welcome email arrives
 - [ ] Admin panel lists it under "Waiting for activation" → Activate → activation email arrives
 - [ ] Log in, add a domain, add a provider with a password, reveal it
+- [ ] "Forgot your password?" → email arrives → link opens "Set new password" → log in with it
+- [ ] Settings → Security: change the password; another browser that was signed in is signed out
+- [ ] Calendar → Sync to Google → "Add to Google Calendar" → the renewals appear in Google Calendar (allow a few minutes)
 - [ ] Upgrade modal shows the three prices
 - [ ] **Real purchase** of the cheapest pack → returned to the site → plan badge updates within a minute → receipt email → Admin → Sales shows it `completed`
 - [ ] Refund that payment in PayPal → plan drops back → admin alert email → Sales shows `refunded`
 - [ ] Trigger reminders by hand. With a test domain renewing in 7 days:
-      `curl -X POST https://gscyjgujprtzjmblwgnx.supabase.co/functions/v1/reminders -H "x-cron-secret: <CRON_SECRET>"`
+      `curl -X POST https://gqxzawcxuhzcodvuiyzf.supabase.co/functions/v1/reminders -H "x-cron-secret: <CRON_SECRET>"`
       → reminder email arrives
 - [ ] Next day: Dashboard → Integrations → Cron → `domain-vault-reminders` shows a successful run
 - [ ] Phone: the menu button opens the navigation
