@@ -1,7 +1,8 @@
 /* ==========================================================================
    Domain Vault — site configuration
-   Shared by index.html and admin.html. Everything in this file is public by
-   design: the anon key identifies the Supabase project, it does not grant
+   Shared by the app (app/index.html), the admin panel and downloads.html.
+   Everything in this file is public by design: the anon key identifies the
+   Supabase project, it does not grant
    access (Row Level Security does that). Never put the service role key, the
    encryption key, or any other secret here.
    ========================================================================== */
@@ -24,7 +25,7 @@ window.DOMAIN_VAULT_CONFIG = (function () {
      that receives payments. For each button set:
        - Item ID (item_number): startup / business / agency
        - Price and currency: exactly what is set in the admin panel
-       - Return URL: https://domain-vault.elnegocio.digital/?payment=success
+       - Return URL: https://domain-vault.elnegocio.digital/app/?payment=success
        - Notification URL (IPN):
            https://gscyjgujprtzjmblwgnx.supabase.co/functions/v1/billing-webhook
      Then paste each button's hosted_button_id below. A pack whose id is
@@ -46,13 +47,15 @@ window.DOMAIN_VAULT_CONFIG = (function () {
      Update these when cutting a new desktop-v* release. */
   backend.downloads = {
     macos: {
-      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-1.0.0-arm64.dmg',
-      alt: { label: 'Intel Mac (x64)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-1.0.0-x64.dmg' }
+      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-1.0.1-arm64.dmg',
+      alt: { label: 'Intel Mac (x64)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-1.0.1-x64.dmg' }
     },
-    windows: { url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-Setup-1.0.0.exe' },
+    windows: { url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-Setup-1.0.1.exe' },
+    // The .deb first: it sets up the sandbox rules Ubuntu 24.04+ requires,
+    // which an AppImage cannot do for itself.
     linux: {
-      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-1.0.0-x86_64.AppImage',
-      alt: { label: 'Debian / Ubuntu (.deb)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.0/DomainVault-1.0.0-amd64.deb' }
+      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-1.0.1-amd64.deb',
+      alt: { label: 'other distributions (.AppImage)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-1.0.1-x86_64.AppImage' }
     }
   };
 
