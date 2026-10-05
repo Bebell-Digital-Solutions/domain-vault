@@ -114,7 +114,9 @@ Within 24 hours, Mon–Fri
 
 <br />
 
-<img src="assets/edgechat-banner.png" alt="EdgeChat banner" width="100%" />
+<a href="https://edgechat.ai/download">
+  <img src="assets/edgechat-banner.png" alt="Download EdgeChat" width="100%" />
+</a>
 
 </td>
 </tr>
