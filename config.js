@@ -47,15 +47,15 @@ window.DOMAIN_VAULT_CONFIG = (function () {
      Update these when cutting a new desktop-v* release. */
   backend.downloads = {
     macos: {
-      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-1.0.1-arm64.dmg',
-      alt: { label: 'Intel Mac (x64)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-1.0.1-x64.dmg' }
+      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.2/DomainVault-1.0.2-arm64.dmg',
+      alt: { label: 'Intel Mac (x64)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.2/DomainVault-1.0.2-x64.dmg' }
     },
-    windows: { url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-Setup-1.0.1.exe' },
+    windows: { url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.2/DomainVault-Setup-1.0.2.exe' },
     // The .deb first: it sets up the sandbox rules Ubuntu 24.04+ requires,
     // which an AppImage cannot do for itself.
     linux: {
-      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-1.0.1-amd64.deb',
-      alt: { label: 'other distributions (.AppImage)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.1/DomainVault-1.0.1-x86_64.AppImage' }
+      url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.2/DomainVault-1.0.2-amd64.deb',
+      alt: { label: 'other distributions (.AppImage)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.2/DomainVault-1.0.2-x86_64.AppImage' }
     }
   };
 
