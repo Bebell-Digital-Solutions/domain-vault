@@ -126,6 +126,7 @@
 
 		
         <section class="w-full max-w-md bg-surface-card relative z-10 border border-surface-border rounded-xl p-6 shadow-2xl">
+			
 			                   <!-- Top glowing line -->
                 <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-100"></div>   
     
