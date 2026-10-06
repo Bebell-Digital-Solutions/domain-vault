@@ -306,70 +306,39 @@
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
-
-        // ==========================================
-        // Matrix Background Animation Logic
-        // ==========================================
-        const canvas = document.getElementById('matrix-canvas');
-        const ctx = canvas.getContext('2d');
-        const header = canvas.parentElement;
-
-        function resizeCanvas() {
-            canvas.width = header.offsetWidth;
-            canvas.height = header.offsetHeight;
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        const matrixChars = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレゲゼデベペオォコソトノホモヨョロゴゾドボポヴッン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const characters = matrixChars.split('');
-
-        const fontSize = 16;
-        let columns = canvas.width / fontSize;
-        let drops = [];
-
-        for (let x = 0; x < columns; x++) {
-            drops[x] = Math.random() * canvas.height;
-        }
-
-        function drawMatrix() {
-            if (drops.length < canvas.width / fontSize) {
-                const oldLength = drops.length;
-                columns = canvas.width / fontSize;
-                for (let x = oldLength; x < columns; x++) {
-                    drops[x] = Math.random() * canvas.height;
-                }
-            }
-
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; 
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.font = fontSize + 'px "Fira Code", monospace';
-            ctx.textAlign = 'center';
-
-            for (let i = 0; i < drops.length; i++) {
-                const text = characters[Math.floor(Math.random() * characters.length)];
-
-                if (Math.random() > 0.95) {
-                     ctx.fillStyle = '#ffffff'; 
-                } else if (Math.random() > 0.8) {
-                     ctx.fillStyle = '#ff7b47'; 
-                } else {
-                     ctx.fillStyle = 'rgba(255, 80, 17, 0.95)'; 
-                }
-
-                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-
-                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                    drops[i] = 0;
-                }
-
-                drops[i]++;
-            }
-        }
-
-        setInterval(drawMatrix, 45);
     </script>
+
+
+    
+<script>
+	const canvas = document.getElementById("canvas");
+	const ctx = canvas.getContext("2d");
+
+	const fontSize = 2;
+	const columns = canvas.width / fontSize;
+	const drops = new Array(columns).fill(1);
+	function draw() {
+		ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.fillStyle = "#ff5011";
+		ctx.font = fontSize + "px arial";
+
+		for (let i = 0; i < drops.length; i++) {
+			const text = String.fromCharCode(Math.floor(Math.random() * 94 + 33));
+			ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+			if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+				drops[i] = 0;
+			}
+
+			drops[i]++;
+		}
+	}
+
+	setInterval(draw, 33);
+</script>
+
+
+
 </body>
 </html>
