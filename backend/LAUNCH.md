@@ -27,6 +27,9 @@ project, as of 2026-10-05:
 | Email from `noreply@getdomainvault.com` (Resend domain verified; `MAIL_FROM`, Auth SMTP sender) | ✅ welcome and password-reset emails delivered |
 | `SITE_URL` = `https://getdomainvault.com`; Auth Site URL = `https://app.getdomainvault.com` | ✅ |
 | Auth SMTP uses **port 587**: on 465 the reset email failed with "Error sending recovery email" | ✅ |
+| PayPal: 4 yearly **subscription** buttons (Personal 29, Start-up 48, Business 79, Agency 98 USD), IPN pointed at the new project's `billing-webhook` | ✅ created by the owner (2026-10-06); ids in `config.js` |
+| Subscription billing (migrations `…1006000100/200`, `billing-webhook`, `api`) + yearly prices in `plan_prices` + `PAYPAL_RECEIVER_EMAIL` = `hello.bebelldesignstudio@gmail.com` | ⏳ deploy in this order: migrations, functions, receiver email, prices, then the site. Until the receiver is set the webhook answers 500 and PayPal retries, so no payment is lost meanwhile |
+| Owner decisions in **Admin → Prices → Plan settings**: Free tier for unpaid accounts? approval for new sign-ups? | ⏳ defaults keep the original behaviour (Personal free, approval on) |
 | `domain-vault.elnegocio.digital` (GitHub Pages) | ⏳ still serves the old single-site copy against the new backend; redirect it to the new domain, then desktop 1.0.2 |
 
 The PayPal `notify_url` in §3 now points at the new project.

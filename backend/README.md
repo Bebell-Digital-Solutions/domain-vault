@@ -19,8 +19,9 @@ has to provide and the deployment steps in order.
 | Accounts | Supabase Auth (bcrypt). New sign-ups start `pending` until an admin activates them, or until they pay. |
 | Data isolation | Row Level Security on every table. A user's token can only ever reach that user's rows. |
 | Registrar passwords | Optional. AES-256-GCM encrypted with a key that lives only in the function environment. Reveal is rate limited and audited. |
-| Plans | One-time PayPal purchase of a domain pack (no subscription). The plan is **derived from a purchase ledger**, so refunds and chargebacks take back exactly what they granted. |
-| Payments | PayPal IPN, verified with PayPal, checked against our receiver account and **against the price list** (amount and currency), deduplicated, and recorded, including the ones refused. |
+| Plans | Yearly PayPal subscriptions (Personal, Start-up, Business, Agency), plus optional one-time "lifetime deals". The plan is **derived from a payment ledger**: each subscription payment grants a year, so a lapsed subscription, a refund or a chargeback takes back exactly what was paid for. |
+| Payments | PayPal IPN, verified with PayPal, checked against our receiver account and **against the price list for that kind of payment** (yearly or lifetime; amount and currency), deduplicated, and recorded, including the ones refused. Subscription signups, cancellations, failed renewals and ends of term are tracked. |
+| Owner settings | From the admin panel: what accounts without a paid plan get (Personal for free, or Free with no domains), and whether new sign-ups wait for approval. |
 | Admin | `app/admin.html`: activate and suspend users, override plans, set prices, sales report with CSV export, audit log. |
 | Reminders | Daily pg_cron job. Fires on the most urgent milestone a domain has *crossed* (default 30/7/1/0 days), so a domain added late or a missed run still produces exactly one reminder. One digest per user, not one email per domain. Per-user opt-out, channels and lead days. |
 | Lookups | WHOIS / DNS proxied, validated, cached and rate limited. The app calls only this proxy. |
@@ -56,7 +57,9 @@ domain-vault/                    (repo root = the website, served by GitHub Page
     │   │   ├── …0917000100_billing_admin.sql  prices, purchase ledger, admin role, audit
     │   │   ├── …0917000200_cron_vault.sql     reminder schedule via Vault
     │   │   ├── …0928000100_reminders.sql      milestone reminders, digests, preferences
-    │   │   └── …1005000100_calendar_feed.sql  calendar subscription tokens
+    │   │   ├── …1005000100_calendar_feed.sql  calendar subscription tokens
+    │   │   ├── …1006000100_free_tier.sql      Free tier (enum value only)
+    │   │   └── …1006000200_subscriptions.sql  yearly subscriptions, owner settings
     │   ├── functions/
     │   │   ├── _shared/         cors, crypto, validation, db/auth, email + WhatsApp
     │   │   ├── api/             user + admin actions (index.ts, admin.ts)
@@ -152,11 +155,13 @@ Always stop `serve` with Ctrl+C before starting another.
 
 ```bash
 npm test            # SQL: every migration on a clean Postgres 16 + security assertions
-npm run test:e2e    # starts a PayPal stub + test functions, then runs:
+npm run test:e2e    # starts a PayPal stub + test functions (no mail key), then runs:
                     #   smoke-test     customer and admin journeys through api.js,
                     #                  incl. lookups, calendar feed, password change
                     #   webhook-test   17 payment scenarios
-                    #   reminders-test the daily sweep, end to end (needs a mail key)
+                    #   reminders-test the daily sweep, end to end; only with
+                    #                  MAIL_TESTS=1, which borrows the real mail key
+                    #                  and writes only to Resend's test inbox
                     #   ui-test        app + admin panel in headless Chrome, incl. the
                     #                  password-reset email round trip (Mailpit)
 ```
@@ -194,39 +199,70 @@ What the suites prove, among other things:
 
 ## Payments
 
-PayPal only, one-time purchase per pack:
+PayPal only. Every plan is a **yearly subscription**; a plan can also be sold
+as a one-time **lifetime deal** once it has a lifetime price and button.
 
-| Pack | Domains | Button `item_number` |
-|---|---|---|
-| Personal | 5 | free, no button |
-| Start-up | 20 | `startup` |
-| Business | 50 | `business` |
-| Agency | unlimited | `agency` |
+| Plan | Domains | Yearly (USD) | Button `item_number` |
+|---|---|---|---|
+| Free | 0 | — | not sold; see "Owner settings" |
+| Personal | 5 | 29 | `personal` |
+| Start-up | 20 | 48 | `start-up` (or `startup`) |
+| Business | 50 | 79 | `business` |
+| Agency | unlimited | 98 | `agency` |
 
-1. The admin sets each pack's price in **Admin → Prices**. A pack with no price
-   cannot be bought.
-2. Each pack has a PayPal "Buy Now" button charging **exactly** that price. Its
-   id goes into `config.js`.
-3. The site sends the customer to PayPal with their account email in `custom`.
+1. The admin sets each plan's prices in **Admin → Prices**: the yearly price,
+   and optionally a lifetime price. A plan with no price for a kind cannot be
+   bought that way.
+2. Each plan has a PayPal button charging **exactly** that price: a
+   "Subscribe" button (yearly) and, for lifetime deals, a "Buy Now" button.
+   Their ids go into `config.js` (`buttons` / `lifetimeButtons`).
+3. The app sends the customer to PayPal with their account email in `custom`.
 4. PayPal notifies `billing-webhook`. The webhook verifies the notification,
-   checks the receiver, pack, amount and currency, records it in `purchases`,
-   and recomputes the customer's plan.
-5. PayPal returns the customer to `/app/?payment=success`. The app polls until
-   the new plan shows up. (A return to the bare `/?payment=success` is
-   forwarded to the app by the landing page.)
+   checks the receiver, plan, amount and currency **against the price for
+   that kind of payment** (a one-time payment of the yearly price buys
+   nothing), records it in `purchases`, and recomputes the customer's plan.
+5. PayPal returns the customer to `https://app.getdomainvault.com/?payment=success`.
+   The app polls until the new plan shows up.
+
+**Subscriptions.** Each completed subscription payment grants its plan until
+a year after the payment plus `billing_config.grace_days` (3), so PayPal's
+retries for a late renewal don't interrupt the customer. The next yearly
+payment extends it. Cancelling (in PayPal) keeps the plan until the paid year
+runs out; PayPal's end-of-term message, or simply the date passing (an hourly
+job, `refresh_plans`), takes it back. Failed renewals email the customer and
+the admin. A customer who subscribes to a second plan is told to cancel the
+first in PayPal, which we cannot do for them.
+
+**Matching payments to accounts.** By `custom` (the account email the app
+sends). If a payment carries none — a button used outside the app — the
+payer's PayPal email is used when an account has that address; PayPal has
+verified it. Otherwise the payment is held as `unmatched` for the admin.
+Unmatched payments are **not** claimed automatically when someone later
+registers with that email: sign-up emails are not verified, so that would let
+anyone register a payer's address and take their payment.
 
 The effective plan is the admin override if one is set, otherwise the
-highest-ranked pack with a completed purchase, otherwise Personal. The first
-completed purchase also activates a pending account. A downgrade never deletes
-domains; the customer just can't add more until they're under the limit again.
+highest-ranked plan with a payment that is still running, otherwise the
+"unpaid" plan from the owner settings. The first completed payment also
+activates a pending account. A downgrade never deletes domains; the customer
+just can't add more until they're under the limit again.
 
-Payments the webhook refuses still appear in **Admin → Sales**:
+**Owner settings** (Admin → Prices → Plan settings, table `billing_config`):
 
-- `rejected`: wrong amount, currency or pack.
+- *Accounts without a paid plan get* `Personal` (5 domains, free — the
+  original behaviour) or `Free` (no domains until they subscribe). Changing
+  it re-derives every account's plan at once.
+- *New sign-ups need approval*: on (original behaviour), or off — accounts
+  are active straight away and can subscribe from inside the app.
+
+Payments and subscriptions the webhook refuses still appear in
+**Admin → Sales** and are emailed to `ADMIN_EMAIL`:
+
+- `rejected`: wrong amount, currency, period or plan.
 - `unmatched`: no account with that email.
 
 The customer was charged in both cases, so refund them in PayPal, or grant
-the pack with a plan override.
+the plan with a plan override.
 
 ---
 
@@ -356,8 +392,8 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `registerUser` | public | `email`, `password`, `phone`, `location` | Password ≥ 10 chars. 5/hour per IP. |
 | `requestPasswordReset` | public | `email`, `redirectTo?` | Emails a reset link back to `redirectTo` if its origin is in `ALLOWED_ORIGINS`, else `SITE_URL/app/`. Same answer for unknown addresses. 5/hour per IP, 3 per address. |
 | `loginUser` | public | `email`, `password` | Returns `user` (incl. `plan`, `isAdmin`) and `session`. |
-| `getPrices` | public | — | Pack prices; `amount: null` = not for sale. |
-| `getUserData` | user | — | Domains, providers, settings, current `plan`, `isAdmin`, own `purchases`. |
+| `getPrices` | public | — | Per plan: `amount` (yearly), `lifetimeAmount` (one-time), `currency`; `null` = not for sale that way. |
+| `getUserData` | user | — | Domains, providers, settings, current `plan`, `isAdmin`, own `purchases` (with `kind`, `paid_until`) and `subscriptions` (with `paidUntil`). |
 | `saveDomains` | user | `domains[]` | Atomic sync. Plan limit enforced. |
 | `saveProviders` | user | `providers[]` | Empty `pass` keeps the stored password; `removePassword: true` deletes it. |
 | `saveSettings` | user | `settings{}` | Base64 avatars are moved to Storage. |
@@ -369,7 +405,8 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `adminListUsers` | admin | `status?`, `search?`, `limit?`, `offset?` | With domain counts. |
 | `adminUpdateUser` | admin | `userId`, `status?`, `planOverride?`, `isAdmin?` | Audited. Emails the user on activation. Can't demote or suspend yourself. |
 | `adminSales` | admin | `from?`, `to?`, `status?` | Ledger plus totals per currency. |
-| `adminGetPrices` / `adminSetPrice` | admin | `plan`, `amount`, `currency` | `amount: null` takes a pack off sale. Audited. |
+| `adminGetPrices` / `adminSetPrice` | admin | `plan`, `amount`, `lifetimeAmount`, `currency` | Returns prices and the owner settings (`config`). `null` takes a price off sale; an omitted field is left alone. Audited. |
+| `adminSetBillingConfig` | admin | `unpaidPlan` (`Free`/`Personal`), `requireApproval` | Owner settings. Changing `unpaidPlan` re-derives every plan. Audited. |
 | `adminAudit` | admin | `limit?` | Recent admin changes, before and after. |
 
 Other endpoints:

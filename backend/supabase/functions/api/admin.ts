@@ -14,8 +14,9 @@ import { type Caller, HttpError, serviceClient } from "../_shared/db.ts";
 import { BadRequest, isUuid, str } from "../_shared/validate.ts";
 import { sendEmail } from "../_shared/notify.ts";
 
-const PLANS = ["Personal", "Start-up", "Business", "Agency"] as const;
-const PAID_PLANS = ["Start-up", "Business", "Agency"] as const;
+const PLANS = ["Free", "Personal", "Start-up", "Business", "Agency"] as const;
+const PAID_PLANS = ["Personal", "Start-up", "Business", "Agency"] as const;
+const UNPAID_PLANS = ["Free", "Personal"] as const;
 const STATUSES = ["pending", "active", "suspended"] as const;
 const PURCHASE_STATUSES = [
   "completed", "pending", "refunded", "reversed", "rejected", "unmatched", "failed",
@@ -51,10 +52,11 @@ function isoDate(value: unknown): string | null {
 export async function adminOverview() {
   const db = serviceClient();
 
-  const [profiles, domains, purchases] = await Promise.all([
+  const [profiles, domains, purchases, subscriptions] = await Promise.all([
     db.from("profiles").select("status, plan"),
     db.from("domains").select("id", { count: "exact", head: true }),
     db.from("purchases").select("status, amount, currency"),
+    db.from("subscriptions").select("status"),
   ]);
   if (profiles.error) throw new HttpError(500, profiles.error.message);
 
@@ -82,6 +84,10 @@ export async function adminOverview() {
       completed: (purchases.data ?? []).filter((p) => p.status === "completed").length,
       revenue,
       needsAttention,
+    },
+    subscriptions: {
+      active: (subscriptions.data ?? []).filter((s) => s.status === "active").length,
+      cancelled: (subscriptions.data ?? []).filter((s) => s.status === "cancelled").length,
     },
   };
 }
@@ -114,10 +120,38 @@ export async function adminListUsers(p: any) {
     for (const r of rows ?? []) counts.set(r.user_id, Number(r.domain_count));
   }
 
+  // Each user's current subscription (active, else the latest cancelled one)
+  // and how long what they paid for runs.
+  const subs = new Map<string, { plan: string; status: string; paid_until: string | null }>();
+  if (ids.length) {
+    const [s, paid] = await Promise.all([
+      db.from("subscriptions").select("user_id, plan, status, updated_at")
+        .in("user_id", ids).in("status", ["active", "cancelled"]).order("updated_at", { ascending: false }),
+      db.from("purchases").select("user_id, paid_until")
+        .in("user_id", ids).eq("kind", "subscription").eq("status", "completed"),
+    ]);
+    const until = new Map<string, string>();
+    for (const r of paid.data ?? []) {
+      if (r.paid_until && (!until.has(r.user_id) || r.paid_until > until.get(r.user_id)!)) {
+        until.set(r.user_id, r.paid_until);
+      }
+    }
+    for (const r of s.data ?? []) {
+      const current = subs.get(r.user_id);
+      if (!current || (current.status !== "active" && r.status === "active")) {
+        subs.set(r.user_id, { plan: r.plan, status: r.status, paid_until: until.get(r.user_id) ?? null });
+      }
+    }
+  }
+
   return {
     success: true,
     total: count ?? 0,
-    users: (data ?? []).map((u) => ({ ...u, domain_count: counts.get(u.id) ?? 0 })),
+    users: (data ?? []).map((u) => ({
+      ...u,
+      domain_count: counts.get(u.id) ?? 0,
+      subscription: subs.get(u.id) ?? null,
+    })),
   };
 }
 
@@ -205,7 +239,7 @@ export async function adminSales(p: any) {
   const db = serviceClient();
   let query = db
     .from("purchases")
-    .select("id, txn_id, email, payer_email, plan, amount, currency, status, reason, source, created_at, updated_at")
+    .select("id, txn_id, email, payer_email, plan, amount, currency, status, reason, source, kind, subscr_id, paid_until, created_at, updated_at")
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -238,40 +272,106 @@ export async function adminSales(p: any) {
   return { success: true, purchases: data ?? [], totals, byPlan };
 }
 
+async function billingConfig() {
+  const { data, error } = await serviceClient()
+    .from("billing_config").select("unpaid_plan, require_approval").eq("id", true).single();
+  if (error) throw new HttpError(500, error.message);
+  return { unpaidPlan: data.unpaid_plan, requireApproval: data.require_approval };
+}
+
 export async function adminGetPrices() {
   const { data, error } = await serviceClient()
-    .from("plan_prices").select("plan, amount, currency, updated_at").order("plan");
+    .from("plan_prices").select("plan, amount, lifetime_amount, currency, updated_at").order("plan");
   if (error) throw new HttpError(500, error.message);
-  return { success: true, prices: data ?? [] };
+  return {
+    success: true,
+    prices: (data ?? []).map((r) => ({
+      plan: r.plan,
+      amount: r.amount === null ? null : Number(r.amount),
+      lifetimeAmount: r.lifetime_amount === null ? null : Number(r.lifetime_amount),
+      currency: r.currency,
+      updated_at: r.updated_at,
+    })),
+    config: await billingConfig(),
+  };
+}
+
+/** A price field: a positive number, null/"" to take it off sale, undefined to leave it alone. */
+function priceField(value: unknown, label: string): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0 || n > 100000) {
+    throw new BadRequest(`${label} must be a positive number, or empty to take it off sale`);
+  }
+  return Math.round(n * 100) / 100;
 }
 
 // deno-lint-ignore no-explicit-any
 export async function adminSetPrice(admin: Caller, p: any) {
-  if (!PAID_PLANS.includes(p?.plan)) throw new BadRequest("plan must be Start-up, Business or Agency");
-
-  const amount = p.amount === null || p.amount === "" ? null : Number(p.amount);
-  if (amount !== null && (!Number.isFinite(amount) || amount <= 0 || amount > 100000)) {
-    throw new BadRequest("amount must be a positive number, or empty to take the pack off sale");
+  if (!PAID_PLANS.includes(p?.plan)) {
+    throw new BadRequest("plan must be Personal, Start-up, Business or Agency");
   }
+  const amount = priceField(p.amount, "The yearly price");
+  const lifetime = priceField(p.lifetimeAmount, "The lifetime price");
   const currency = typeof p.currency === "string" ? p.currency.trim().toUpperCase() : "USD";
   if (!/^[A-Z]{3}$/.test(currency)) throw new BadRequest("currency must be a 3-letter code, e.g. USD");
 
   const db = serviceClient();
   const { data: before } = await db
-    .from("plan_prices").select("amount, currency").eq("plan", p.plan).maybeSingle();
+    .from("plan_prices").select("amount, lifetime_amount, currency").eq("plan", p.plan).maybeSingle();
 
-  const rounded = amount === null ? null : Math.round(amount * 100) / 100;
-  const { error } = await db.from("plan_prices")
-    .upsert({ plan: p.plan, amount: rounded, currency }, { onConflict: "plan" });
+  const row: Record<string, unknown> = { plan: p.plan, currency };
+  if (amount !== undefined) row.amount = amount;
+  if (lifetime !== undefined) row.lifetime_amount = lifetime;
+
+  const { error } = await db.from("plan_prices").upsert(row, { onConflict: "plan" });
   if (error) throw new HttpError(500, error.message);
 
   await audit(admin, "set_price", null, {
     plan: p.plan,
     before,
-    after: { amount: rounded, currency },
+    after: {
+      amount: amount === undefined ? before?.amount ?? null : amount,
+      lifetime_amount: lifetime === undefined ? before?.lifetime_amount ?? null : lifetime,
+      currency,
+    },
   });
 
   return adminGetPrices();
+}
+
+/**
+ * The owner's two plan decisions: what an account without a paid plan gets
+ * (Personal, free; or Free, no domains), and whether new sign-ups wait for
+ * approval. Changing the first re-derives every account's plan.
+ */
+// deno-lint-ignore no-explicit-any
+export async function adminSetBillingConfig(admin: Caller, p: any) {
+  const changes: Record<string, unknown> = {};
+  if (p?.unpaidPlan !== undefined) {
+    if (!UNPAID_PLANS.includes(p.unpaidPlan)) throw new BadRequest("unpaidPlan must be Free or Personal");
+    changes.unpaid_plan = p.unpaidPlan;
+  }
+  if (p?.requireApproval !== undefined) {
+    if (typeof p.requireApproval !== "boolean") throw new BadRequest("requireApproval must be true or false");
+    changes.require_approval = p.requireApproval;
+  }
+  if (Object.keys(changes).length === 0) throw new BadRequest("Nothing to change.");
+
+  const db = serviceClient();
+  const before = await billingConfig();
+  const { error } = await db.from("billing_config").update(changes).eq("id", true);
+  if (error) throw new HttpError(500, error.message);
+
+  if (changes.unpaid_plan !== undefined && changes.unpaid_plan !== before.unpaidPlan) {
+    const { error: rpcError } = await db.rpc("refresh_plans", { p_all: true });
+    if (rpcError) throw new HttpError(500, rpcError.message);
+  }
+
+  const after = await billingConfig();
+  await audit(admin, "set_billing_config", null, { before, after });
+  return { success: true, config: after };
 }
 
 // deno-lint-ignore no-explicit-any

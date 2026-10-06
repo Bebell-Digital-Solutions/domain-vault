@@ -410,3 +410,111 @@ begin
     then 'PASS t27 (suspended feed empty, short token rejected)'
     else 'FAIL t27 rows=' || n || ' rejected=' || rejected end;
 end $$;
+
+-- ===========================================================================
+-- Yearly subscriptions and the Free tier (20261006000100/200)
+-- ===========================================================================
+\set QUIET on
+insert into auth.users (id, email) values
+  ('abababab-0000-4000-8000-000000000007', 'subs@example.com'),
+  ('cdcdcdcd-0000-4000-8000-000000000008', 'unpaid@example.com');
+update public.profiles set status = 'active' where email = 'unpaid@example.com';
+-- subs@example.com stays pending: its first payment must activate it.
+\set QUIET off
+
+\echo '--- T28: an unpaid account gets the configured base plan (Personal by default)'
+do $$
+begin
+  raise notice '%', case when (select plan from public.profiles where email = 'unpaid@example.com') = 'Personal'
+                          and (select rank from public.plan_limits where plan = 'Free')
+                            < (select rank from public.plan_limits where plan = 'Personal')
+    then 'PASS t28 (unpaid account on Personal; Free ranks below it)'
+    else 'FAIL t28' end;
+end $$;
+
+\echo '--- T29: a running subscription payment grants its plan and activates the account'
+do $$
+declare u uuid := 'abababab-0000-4000-8000-000000000007'; v text; s text;
+begin
+  insert into public.purchases (txn_id, user_id, email, plan, amount, currency, status, kind, subscr_id, paid_until)
+  values ('SUB-PAY-1', u, 'subs@example.com', 'Business', 79, 'USD', 'completed', 'subscription', 'S-TEST1', now() + interval '1 year');
+  v := public.recompute_plan(u);
+  select status into s from public.profiles where id = u;
+  raise notice '%', case when v = 'Business' and s = 'active'
+    then 'PASS t29 (Business until next year, account activated)'
+    else 'FAIL t29 plan=' || v || ' status=' || s end;
+end $$;
+
+\echo '--- T30: when its paid time runs out, the hourly refresh takes the plan back'
+do $$
+declare u uuid := 'abababab-0000-4000-8000-000000000007'; n int; v text;
+begin
+  update public.purchases set paid_until = now() - interval '1 minute' where txn_id = 'SUB-PAY-1';
+  n := public.refresh_plans(false);
+  select plan into v from public.profiles where id = u;
+  raise notice '%', case when v = 'Personal' and n >= 1
+    then 'PASS t30 (lapsed subscription drops to the base plan)'
+    else 'FAIL t30 plan=' || v || ' refreshed=' || n end;
+end $$;
+
+\echo '--- T31: a lifetime purchase never lapses, and the highest running plan wins'
+do $$
+declare u uuid := 'abababab-0000-4000-8000-000000000007'; v1 text; v2 text;
+begin
+  insert into public.purchases (txn_id, user_id, email, plan, amount, currency, status, kind)
+  values ('LTD-1', u, 'subs@example.com', 'Start-up', 99, 'USD', 'completed', 'lifetime');
+  v1 := public.recompute_plan(u);
+  update public.purchases set paid_until = now() + interval '1 year' where txn_id = 'SUB-PAY-1';
+  v2 := public.recompute_plan(u);
+  raise notice '%', case when v1 = 'Start-up' and v2 = 'Business'
+    then 'PASS t31 (lifetime Start-up kept; running Business subscription ranks higher)'
+    else 'FAIL t31 lifetimeOnly=' || v1 || ' both=' || v2 end;
+end $$;
+
+\echo '--- T32: switching unpaid accounts to Free applies to everyone and blocks new domains'
+do $$
+declare n_free text; n_paid text; blocked boolean := false;
+begin
+  update public.billing_config set unpaid_plan = 'Free';
+  perform public.refresh_plans(true);
+  select plan into n_free from public.profiles where email = 'unpaid@example.com';
+  select plan into n_paid from public.profiles where email = 'subs@example.com';
+
+  perform set_config('request.jwt.claim.sub','cdcdcdcd-0000-4000-8000-000000000008',true);
+  execute 'set local role authenticated';
+  begin
+    perform public.sync_domains('[{"name":"free-tier.com","renewalDate":"2027-01-01"}]'::jsonb);
+  exception when others then blocked := true;
+  end;
+  execute 'reset role';
+
+  update public.billing_config set unpaid_plan = 'Personal';
+  perform public.refresh_plans(true);
+  raise notice '%', case when n_free = 'Free' and n_paid = 'Business' and blocked
+    then 'PASS t32 (unpaid -> Free with 0 domains; paying customer untouched)'
+    else 'FAIL t32 unpaid=' || n_free || ' paid=' || n_paid || ' blocked=' || blocked end;
+end $$;
+
+\echo '--- T33: customers cannot change billing settings or touch subscriptions'
+do $$
+declare cfg_blocked boolean := false; sub_blocked boolean := false; others int;
+begin
+  insert into public.subscriptions (subscr_id, user_id, email, plan, status)
+  values ('S-TEST1', 'abababab-0000-4000-8000-000000000007', 'subs@example.com', 'Business', 'active');
+
+  perform set_config('request.jwt.claim.sub','cdcdcdcd-0000-4000-8000-000000000008',true);
+  execute 'set local role authenticated';
+  begin
+    update public.billing_config set unpaid_plan = 'Personal';
+  exception when insufficient_privilege then cfg_blocked := true;
+  end;
+  begin
+    insert into public.subscriptions (subscr_id, user_id, plan) values ('S-FORGED', 'cdcdcdcd-0000-4000-8000-000000000008', 'Agency');
+  exception when insufficient_privilege then sub_blocked := true;
+  end;
+  select count(*) into others from public.subscriptions;
+  execute 'reset role';
+  raise notice '%', case when cfg_blocked and sub_blocked and others = 0
+    then 'PASS t33 (settings and subscriptions are server-side only; others'' rows invisible)'
+    else 'FAIL t33 cfg=' || cfg_blocked || ' sub=' || sub_blocked || ' visible=' || others end;
+end $$;

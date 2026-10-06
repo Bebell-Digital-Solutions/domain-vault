@@ -50,9 +50,12 @@ const txn = (name) => `${run}-${name}`;
 
 // ---------------------------------------------------------------- setup
 sql(`delete from rate_limits;`);
-sql(`update plan_prices set amount = case plan
-       when 'Start-up' then 29 when 'Business' then 99 when 'Agency' then 299 end,
-     currency = 'USD';`);
+// One-time payments are checked against the lifetime price, subscriptions
+// against the yearly price.
+sql(`update plan_prices set
+       lifetime_amount = case plan when 'Start-up' then 29 when 'Business' then 99 when 'Agency' then 299 end,
+       amount = case plan when 'Personal' then 29 when 'Start-up' then 48 when 'Business' then 79 when 'Agency' then 98 end,
+       currency = 'USD';`);
 
 const reg = await fetch(`${BASE}/api`, {
   method: "POST",
@@ -117,11 +120,72 @@ r = await ipn({ txn_id: txn("deny"), payment_status: "Pending", item_number: "bu
 r = await ipn({ txn_id: txn("deny"), payment_status: "Denied", item_number: "business", mc_gross: "99.00" });
 check("denied pending payment is marked failed", purchase(txn("deny")) === "failed" && account() === "Agency/active", r.text);
 
+r = await ipn({ txn_id: txn("ltd-yearly-price"), payment_status: "Completed", item_number: "agency", mc_gross: "98.00" });
+check("a one-time payment of the yearly price buys nothing", purchase(txn("ltd-yearly-price")) === "rejected", r.text);
+
+// ====================================================== yearly subscriptions
+const SUB_EMAIL = `subscriber-${Date.now()}@example.com`;
+const S = (name) => `S-${run}-${name}`;
+const subAccount = () => sql(`select plan || '/' || status from profiles where email = '${SUB_EMAIL}';`);
+const subStatus = (id) => sql(`select coalesce(status,'') from subscriptions where subscr_id = '${id}';`);
+const paidUntilDays = (t) => Number(sql(`select round(extract(epoch from paid_until - now()) / 86400) from purchases where txn_id = '${t}';`));
+const sub = (fields) => ipn({ custom: SUB_EMAIL, payer_email: "subscriber@paypal.example", ...fields });
+
+await fetch(`${BASE}/api`, {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ action: "registerUser", email: SUB_EMAIL, password: "correct-horse-battery" }),
+});
+check("subscriber registered (pending)", subAccount() === "Personal/pending", subAccount());
+
+r = await sub({ txn_type: "subscr_signup", subscr_id: S("bad-period"), item_number: "business", mc_amount3: "79.00", period3: "1 M" });
+check("a monthly subscription to a yearly plan is rejected", subStatus(S("bad-period")) === "rejected", r.text);
+
+r = await sub({ txn_type: "subscr_signup", subscr_id: S("biz"), item_number: "business", item_name: "Domain Vault Business", mc_amount3: "79.00", period3: "1 Y" });
+check("signup is recorded but grants nothing yet", subStatus(S("biz")) === "active" && subAccount() === "Personal/pending", r.text);
+
+r = await sub({ txn_type: "subscr_payment", subscr_id: S("biz"), txn_id: txn("biz-1"), payment_status: "Completed", item_number: "business", mc_gross: "70.00" });
+check("a subscription payment of the wrong amount is rejected", purchase(txn("biz-1")) === "rejected" && subAccount() === "Personal/pending", r.text);
+
+r = await sub({ txn_type: "subscr_payment", subscr_id: S("biz"), txn_id: txn("biz-2"), payment_status: "Completed", item_number: "business", mc_gross: "79.00" });
+const days = paidUntilDays(txn("biz-2"));
+check("the first payment grants Business for a year (plus grace) and activates the account",
+  purchase(txn("biz-2")) === "completed" && subAccount() === "Business/active" && days >= 366 && days <= 370,
+  `${r.text}; ${subAccount()}; ${days} days`);
+
+r = await sub({ txn_type: "subscr_payment", subscr_id: S("biz"), txn_id: txn("biz-2"), payment_status: "Completed", item_number: "business", mc_gross: "79.00" });
+check("a replayed payment changes nothing", sql(`select count(*) from purchases where txn_id = '${txn("biz-2")}';`) === "1", r.text);
+
+r = await sub({ txn_type: "subscr_cancel", subscr_id: S("biz") });
+check("cancelling keeps the plan until the paid year ends", subStatus(S("biz")) === "cancelled" && subAccount() === "Business/active", r.text);
+
+r = await sub({ txn_type: "subscr_cancel", subscr_id: S("biz") });
+check("a replayed cancellation is ignored", r.text === "duplicate", r.text);
+
+r = await sub({ txn_type: "subscr_eot", subscr_id: S("biz") });
+check("end of term takes the plan back", subStatus(S("biz")) === "ended" && subAccount() === "Personal/active", `${r.text}; ${subAccount()}`);
+
+// A payment started outside the app carries no account email; the payer's
+// PayPal address is used when an account has it.
+r = await ipn({ custom: "", payer_email: SUB_EMAIL, txn_type: "subscr_signup", subscr_id: S("agency"), item_number: "agency", mc_amount3: "98.00", period3: "1 Y" });
+r = await ipn({ custom: "", payer_email: SUB_EMAIL, txn_type: "subscr_payment", subscr_id: S("agency"), txn_id: txn("agency-1"), payment_status: "Completed", item_number: "agency", mc_gross: "98.00" });
+check("matched by the payer's PayPal email when the app's email is missing", subAccount() === "Agency/active", `${r.text}; ${subAccount()}`);
+
+r = await ipn({ txn_id: txn("agency-1-ref"), parent_txn_id: txn("agency-1"), payment_status: "Refunded", mc_gross: "-98.00" });
+check("refunding a subscription payment withdraws the plan", purchase(txn("agency-1")) === "refunded" && subAccount() === "Personal/active", r.text);
+
+// The owner switches unpaid accounts to Free: Personal becomes a real purchase.
+sql(`update billing_config set unpaid_plan = 'Free'; select refresh_plans(true);`);
+check("with unpaid accounts on Free, the subscriber drops to Free", subAccount() === "Free/active", subAccount());
+r = await sub({ txn_type: "subscr_payment", subscr_id: S("personal"), txn_id: txn("personal-1"), payment_status: "Completed", item_number: "personal", mc_gross: "29.00" });
+check("a Personal subscription then grants Personal", subAccount() === "Personal/active", `${r.text}; ${subAccount()}`);
+sql(`update billing_config set unpaid_plan = 'Personal'; select refresh_plans(true);`);
+
 // ----------------------------------------------------------------- cleanup
 sql(`delete from purchases where txn_id like '${run}-%';
-     delete from webhook_events where id like '${run}-%';
-     delete from auth.users where email = '${EMAIL}';
-     update plan_prices set amount = null;
+     delete from subscriptions where subscr_id like 'S-${run}-%';
+     delete from webhook_events where id like '%${run}-%';
+     delete from auth.users where email in ('${EMAIL}', '${SUB_EMAIL}');
+     update plan_prices set amount = null, lifetime_amount = null;
      delete from rate_limits;`);
 
 console.log(failures ? `\n${failures} webhook test(s) FAILED` : "\nAll webhook tests passed.");

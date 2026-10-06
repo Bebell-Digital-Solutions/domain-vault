@@ -242,18 +242,59 @@ ok("negative price rejected", r.success === false);
 r = await ADMIN.call("adminSetPrice", { plan: "Start-up", amount: null, currency: "USD" });
 ok("admin takes a pack off sale", r.success && r.prices.find((p) => p.plan === "Start-up")?.amount === null);
 
+// -------------------------------------------- yearly and lifetime prices
+r = await ADMIN.call("adminSetPrice", { plan: "Personal", amount: 29, lifetimeAmount: 149, currency: "USD" });
+const personal = r.prices?.find((p) => p.plan === "Personal");
+ok("Personal can be priced, yearly and lifetime", r.success && personal?.amount === 29 && personal?.lifetimeAmount === 149,
+  JSON.stringify(personal));
+r = await ADMIN.call("adminSetPrice", { plan: "Personal", amount: 30, currency: "USD" });
+ok("saving only the yearly price keeps the lifetime price",
+  r.prices?.find((p) => p.plan === "Personal")?.lifetimeAmount === 149);
+r = await browser().api.call("getPrices", {});
+ok("public prices list every paid plan with both prices",
+  ["Personal", "Start-up", "Business", "Agency"].every((plan) => r.prices?.some((p) => p.plan === plan && "lifetimeAmount" in p)));
+
+// ------------------------------------------------- the owner's plan settings
+r = await ADMIN.call("adminGetPrices", {});
+ok("plan settings default to today's behaviour",
+  r.config?.unpaidPlan === "Personal" && r.config?.requireApproval === true, JSON.stringify(r.config));
+
+r = await ADMIN.call("adminSetBillingConfig", { requireApproval: false });
+ok("approval can be switched off", r.success && r.config.requireApproval === false);
+const walkIn = `walkin-${stamp}@example.com`;
+const walkInApi = browser().api;
+r = await walkInApi.call("registerUser", { email: walkIn, password: PW });
+ok("…then a new sign-up is told it can log in", r.success && /log in now/i.test(r.message), r.message);
+r = await walkInApi.call("loginUser", { email: walkIn, password: PW });
+ok("…and logs in straight away", r.success === true, r.message);
+
+r = await ADMIN.call("adminSetBillingConfig", { unpaidPlan: "Free" });
+r = await walkInApi.call("getUserData", {});
+ok("unpaid accounts can be moved to Free", r.plan === "Free", r.plan);
+r = await walkInApi.call("saveDomains", { domains: [{ name: "free-tier.com", renewalDate: "2027-01-01" }] });
+ok("…where adding a domain asks for a plan", r.success === false && /limit/i.test(r.message), r.message);
+
+r = await ADMIN.call("adminSetBillingConfig", { unpaidPlan: "Gold" });
+ok("an unknown base plan is rejected", r.success === false);
+r = await ADMIN.call("adminSetBillingConfig", { unpaidPlan: "Personal", requireApproval: true });
+ok("settings restored", r.config?.unpaidPlan === "Personal" && r.config?.requireApproval === true);
+r = await walkInApi.call("getUserData", {});
+ok("…and the account is back on Personal", r.plan === "Personal" && Array.isArray(r.subscriptions), r.plan);
+
 r = await ADMIN.call("adminSales", {});
 ok("adminSales", r.success === true && Array.isArray(r.purchases));
 
 r = await ADMIN.call("adminAudit", { limit: 50 });
 const actions = (r.entries || []).filter((e) => e.admin_email === adminEmail).map((e) => e.action);
 ok("every admin change is audited", actions.filter((a) => a === "update_user").length === 3 &&
-  actions.filter((a) => a === "set_price").length === 2, actions.join(","));
+  actions.filter((a) => a === "set_price").length === 4 &&
+  actions.filter((a) => a === "set_billing_config").length === 3, actions.join(","));
 
 // ============================================================== cleanup
 sql(`delete from admin_audit_log where admin_email = '${adminEmail}';
-     delete from auth.users where email in ('${email}', '${adminEmail}', '${newcomer}');
-     update plan_prices set amount = null;
+     delete from auth.users where email in ('${email}', '${adminEmail}', '${newcomer}', '${walkIn}');
+     update plan_prices set amount = null, lifetime_amount = null;
+     update billing_config set unpaid_plan = 'Personal', require_approval = true;
      delete from rate_limits;`);
 
 console.log(failures ? `\n${failures} check(s) FAILED` : "\nAll client and admin flows passed.");

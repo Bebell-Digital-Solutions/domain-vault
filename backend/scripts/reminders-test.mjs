@@ -72,7 +72,9 @@ ok("switching reminders off silences them", r.body.due === 0, JSON.stringify(r.b
 // ------------------------------------- a failed send must not be recorded
 sql(`update settings set reminders_enabled = true
       where user_id = (select id from profiles where email = '${EMAIL}');`);
-const BOUNCE = 'bounce-target@invalid-domain-for-test.invalid';
+// Malformed on purpose: Resend refuses it outright, so the send fails without
+// anything being sent (a real bounce would count against the domain).
+const BOUNCE = 'not-an-email-address';
 sql(`update profiles set email = '${BOUNCE}' where email = '${EMAIL}';`);
 // Give the user something new to be reminded about, then watch it fail.
 sql(`update domains set renewal_date = current_date + 7

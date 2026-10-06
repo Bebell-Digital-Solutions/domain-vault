@@ -35,6 +35,7 @@ import {
   adminListUsers,
   adminOverview,
   adminSales,
+  adminSetBillingConfig,
   adminSetPrice,
   adminUpdateUser,
 } from "./admin.ts";
@@ -125,6 +126,15 @@ async function registerUser(req: Request, p: any) {
     };
   }
 
+  // The owner can let new accounts in straight away (they then subscribe
+  // from inside the app) or keep approving each one by hand.
+  const { data: cfg } = await admin.from("billing_config").select("require_approval").eq("id", true)
+    .maybeSingle();
+  const needsApproval = cfg?.require_approval !== false;
+  if (!needsApproval && data.user) {
+    await admin.from("profiles").update({ status: "active" }).eq("id", data.user.id).eq("status", "pending");
+  }
+
   if (ADMIN_EMAIL) {
     await sendEmail(
       ADMIN_EMAIL,
@@ -134,7 +144,9 @@ async function registerUser(req: Request, p: any) {
        <p><b>Phone:</b> ${escapeHtml(phone ?? "-")}</p>
        <p><b>Location:</b> ${escapeHtml(location ?? "-")}</p>
        <p><b>User ID:</b> ${data.user?.id ?? "-"}</p>
-       <p>Activate them in the admin panel, or set profiles.status = 'active'.</p>`,
+       ${needsApproval
+         ? "<p>Activate them in the admin panel, or set profiles.status = 'active'.</p>"
+         : "<p>The account is active (approval is switched off in the admin panel).</p>"}`,
     );
   }
   await sendWhatsApp(
@@ -144,13 +156,24 @@ async function registerUser(req: Request, p: any) {
   await sendEmail(
     email,
     "Welcome to Domain Vault!",
-    `<h3>Welcome to Domain Vault!</h3>
-     <p>Your account has been created and is pending activation by our team.
-     We'll email you as soon as it is live.</p>`,
+    needsApproval
+      ? `<h3>Welcome to Domain Vault!</h3>
+         <p>Your account has been created and is pending activation by our team.
+         We'll email you as soon as it is live.</p>`
+      : `<h3>Welcome to Domain Vault!</h3>
+         <p>Your account is ready. Log in to start tracking your domains.</p>
+         ${SITE_URL ? `<p><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}`,
   );
-  await sendWhatsApp(phone, "Welcome to Domain Vault! Your account is pending activation.");
+  await sendWhatsApp(phone, needsApproval
+    ? "Welcome to Domain Vault! Your account is pending activation."
+    : "Welcome to Domain Vault! Your account is ready.");
 
-  return { success: true, message: "Account created! Pending admin activation." };
+  return {
+    success: true,
+    message: needsApproval
+      ? "Account created! Pending admin activation."
+      : "Account created! You can log in now.",
+  };
 }
 
 // deno-lint-ignore no-explicit-any
@@ -325,15 +348,19 @@ async function resetCalendarFeed(caller: Caller) {
 }
 
 async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
-  const [domains, providers, settings, secrets, purchases] = await Promise.all([
+  const [domains, providers, settings, secrets, purchases, subscriptions] = await Promise.all([
     db.from("domains").select("*").order("renewal_date", { nullsFirst: false }),
     db.from("providers").select("*").order("name"),
     db.from("settings").select("*").maybeSingle(),
     // Which providers have a stored password — ids only, never the ciphertext.
     serviceClient().from("provider_secrets").select("provider_id").eq("user_id", caller.id),
     db.from("purchases")
-      .select("txn_id, plan, amount, currency, status, created_at")
+      .select("txn_id, plan, amount, currency, status, kind, subscr_id, paid_until, created_at")
       .order("created_at", { ascending: false }),
+    db.from("subscriptions")
+      .select("subscr_id, plan, amount, currency, period, status, started_at, cancelled_at, ended_at")
+      .in("status", ["active", "cancelled", "ended"])
+      .order("started_at", { ascending: false }),
   ]);
 
   if (domains.error) throw new HttpError(500, domains.error.message);
@@ -362,6 +389,15 @@ async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
     plan: caller.plan,
     isAdmin: caller.is_admin === true,
     purchases: purchases.data ?? [],
+    // Each subscription with the date what it paid for runs until.
+    subscriptions: (subscriptions.data ?? []).map((sub) => {
+      const until = (purchases.data ?? [])
+        .filter((p) => p.subscr_id === sub.subscr_id && p.status === "completed" && p.paid_until)
+        .map((p) => p.paid_until as string)
+        .sort()
+        .pop() ?? null;
+      return { ...sub, paidUntil: until };
+    }),
   };
 }
 
@@ -566,12 +602,23 @@ function escapeHtml(value: string): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
-/** Public: pack prices for the upgrade modal. Unpriced packs are listed as null. */
+/**
+ * Public: plan prices for the upgrade modal. `amount` is the yearly
+ * subscription price, `lifetimeAmount` the one-time price; null = not sold.
+ */
 async function getPrices() {
   const { data, error } = await serviceClient()
-    .from("plan_prices").select("plan, amount, currency");
+    .from("plan_prices").select("plan, amount, lifetime_amount, currency").order("plan");
   if (error) throw new HttpError(500, error.message);
-  return { success: true, prices: data ?? [] };
+  return {
+    success: true,
+    prices: (data ?? []).map((r) => ({
+      plan: r.plan,
+      amount: r.amount === null ? null : Number(r.amount),
+      lifetimeAmount: r.lifetime_amount === null ? null : Number(r.lifetime_amount),
+      currency: r.currency,
+    })),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -581,7 +628,7 @@ async function getPrices() {
 const PUBLIC_ACTIONS = new Set(["registerUser", "loginUser", "getPrices", "requestPasswordReset"]);
 const ADMIN_ACTIONS = new Set([
   "adminOverview", "adminListUsers", "adminUpdateUser",
-  "adminSales", "adminGetPrices", "adminSetPrice", "adminAudit",
+  "adminSales", "adminGetPrices", "adminSetPrice", "adminSetBillingConfig", "adminAudit",
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -620,6 +667,8 @@ Deno.serve(async (req: Request) => {
           return json(req, await adminGetPrices());
         case "adminSetPrice":
           return json(req, await adminSetPrice(caller, body));
+        case "adminSetBillingConfig":
+          return json(req, await adminSetBillingConfig(caller, body));
         case "adminAudit":
           return json(req, await adminAudit(body));
       }

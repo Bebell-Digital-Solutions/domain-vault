@@ -85,6 +85,16 @@ async function reload(page) {
   ok('priced pack shows its price', true, await page.locator('#upgradePlanSelect option:not([disabled])').first().textContent());
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/upgrade-modal.png` });
 
+  // The homepage's pricing table links to /app/?register&plan=…; a signed-in
+  // visitor lands straight in that plan's checkout.
+  await page.goto(SITE + '/app/index.html?plan=start-up');
+  await page.waitForSelector('#upgradeModal', { state: 'visible', timeout: 20000 });
+  await page.waitForFunction(() => /49\.00 USD/.test(document.getElementById('upgradePlanSelect').textContent));
+  ok('a plan chosen on the homepage opens its checkout',
+    await page.inputValue('#upgradePlanSelect') === 'Start-up' &&
+    (await page.textContent('#proceedToCheckoutBtn')).includes('Subscribe'));
+  await page.evaluate(() => document.getElementById('upgradeModal').style.display = 'none');
+
   // PayPal return: plan changes server-side, page picks it up without re-login.
   await page.evaluate(() => document.getElementById('upgradeModal').style.display = 'none');
   await page.goto(SITE + '/app/index.html?payment=success');
@@ -297,6 +307,19 @@ async function reload(page) {
   await page.click('button[data-plan="Business"]');
   await page.waitForFunction(() => /Business price saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
   ok('price saved from the prices tab', sql(`select amount from plan_prices where plan='Business'`) === '99.00');
+
+  await page.selectOption('#unpaidPlan', 'Free');
+  await page.click('#saveBillingConfig');
+  await page.waitForFunction(() => /Plan settings saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  ok('plan settings saved from the admin panel', sql(`select unpaid_plan from billing_config`) === 'Free');
+  await page.selectOption('#unpaidPlan', 'Personal');
+  await page.click('#saveBillingConfig');
+  let restored = '';
+  for (let i = 0; i < 20 && restored !== 'Personal'; i++) {
+    await page.waitForTimeout(500);
+    restored = sql(`select unpaid_plan from billing_config`);
+  }
+  ok('…and set back', restored === 'Personal', restored);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/admin-prices.png` });
 
   sql(`insert into purchases (txn_id, email, payer_email, plan, amount, currency, status, reason)
@@ -420,6 +443,8 @@ await browser.close();
 sql(`delete from purchases where txn_id = 'UI-${t}';
      delete from admin_audit_log where admin_email = '${admin}';
      delete from auth.users where email in ('${customer}','${admin}','${newcomer}','${member}');
-     update plan_prices set amount = null; delete from rate_limits;`);
+     update plan_prices set amount = null, lifetime_amount = null;
+     update billing_config set unpaid_plan = 'Personal', require_approval = true;
+     delete from rate_limits;`);
 console.log(failures ? `\n${failures} UI check(s) FAILED` : '\nAll UI checks passed.');
 process.exit(failures ? 1 : 0);
