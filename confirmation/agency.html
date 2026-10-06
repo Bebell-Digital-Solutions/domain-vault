@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
@@ -49,8 +48,6 @@
             }
         }
     </script>
-
-    
 
     <style>
         /* Custom scrollbar for webkit to match the dark aesthetic */
@@ -138,9 +135,9 @@
                 <a href="/#workflow" class="hover:text-brand-textMain transition-colors duration-300">How It Works</a>
                 <a href="/#features" class="hover:text-brand-textMain transition-colors duration-300">Features</a>
                 <a href="/#download" class="hover:text-brand-textMain transition-colors duration-300">Download</a>                
-                <a href="/#pricing" class="hover:text-brand-textMain transition-colors duration-300">Pricing</a>
+                <a href="/pricing" class="hover:text-brand-textMain transition-colors duration-300">Pricing</a>
                 <a href="/#reviews" class="hover:text-brand-textMain transition-colors duration-300">Reviews</a>                
-                <a href="/#faq" class="hover:text-brand-textMain transition-colors duration-300">FAQ</a>
+                <a href="/pricing#faq" class="hover:text-brand-textMain transition-colors duration-300">FAQ</a>
             </div>
 
             <!-- Right: Primary CTA -->
@@ -153,8 +150,8 @@
                     window.location.href = '/es';
                 });
                 </script>        
-                <a href="/app" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow flex items-center gap-2">
-                    Login<i data-lucide="arrow-right" class="w-4 h-4"></i>
+                <a href="/app/" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow flex items-center gap-2">
+                    Open Dashboard <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </a>
             </div>
         </div>
@@ -166,8 +163,8 @@
         <canvas id="matrix-canvas" class="absolute inset-0 z-0 opacity-80"></canvas>
 
         <!-- Gradient Overlays to frame the content -->
-        <div class="absolute inset-0 z-[1] bg-gradient-to-b from-brand-bgDark/40 via-brand-bgDark/80 to-brand-bgDark pointer-events-none"></div>
-        <div class="absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-brand-bgDark/60 to-brand-bgDark pointer-events-none"></div>
+        <div class="absolute inset-0 z-[1] bg-gradient-to-b from-brand-bgDark/20 via-brand-bgDark/60 to-brand-bgDark pointer-events-none"></div>
+        <div class="absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-brand-bgDark/40 to-brand-bgDark pointer-events-none"></div>
 
         <!-- Success Content Wrapper -->
         <div class="relative z-10 w-full max-w-2xl mx-auto flex flex-col items-center">
@@ -201,12 +198,8 @@
                         </span>
                     </div>
                     <div class="flex justify-between items-center mb-3">
-                        <span class="text-brand-muted text-sm font-medium">Purchase Tier</span>
-                        <span class="text-brand-textMain text-sm font-tech">Agency</span>
-                    </div>                  
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-brand-muted text-sm font-medium">Payment Method</span>
-                        <span class="text-brand-textMain text-sm font-tech">PayPal</span>
+                        <span class="text-brand-muted text-sm font-medium">Order Number</span>
+                        <span class="text-brand-textMain text-sm font-tech">#DV-LTD-9982</span>
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-brand-muted text-sm font-medium">Plan Activated</span>
@@ -330,7 +323,7 @@
         let drops = [];
 
         for (let x = 0; x < columns; x++) {
-            drops[x] = Math.random() * canvas.height;
+            drops[x] = Math.random() * (canvas.height / fontSize);
         }
 
         function drawMatrix() {
@@ -338,7 +331,7 @@
                 const oldLength = drops.length;
                 columns = canvas.width / fontSize;
                 for (let x = oldLength; x < columns; x++) {
-                    drops[x] = Math.random() * canvas.height;
+                    drops[x] = Math.random() * (canvas.height / fontSize);
                 }
             }
 
