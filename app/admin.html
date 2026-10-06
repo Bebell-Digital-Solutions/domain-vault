@@ -664,5 +664,37 @@
         // Initialize application when DOM is ready
         document.addEventListener('DOMContentLoaded', () => app.init());
     </script>
+
+
+<script>
+	const canvas = document.getElementById("canvas");
+	const ctx = canvas.getContext("2d");
+
+	const fontSize = 2;
+	const columns = canvas.width / fontSize;
+	const drops = new Array(columns).fill(1);
+	function draw() {
+		ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
+		ctx.fillStyle = "#ff5011";
+		ctx.font = fontSize + "px arial";
+
+		for (let i = 0; i < drops.length; i++) {
+			const text = String.fromCharCode(Math.floor(Math.random() * 94 + 33));
+			ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+			if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+				drops[i] = 0;
+			}
+
+			drops[i]++;
+		}
+	}
+
+	setInterval(draw, 33);
+</script>
+
+
+    
 </body>
 </html>
