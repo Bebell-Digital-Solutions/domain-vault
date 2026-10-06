@@ -148,6 +148,7 @@
             { name: "Namecheap", desc: "Best for budget domains", rating: 5, url: "https://namecheap.com/", icon: "tag", tags: ["domains"] },
             { name: "Porkbun", desc: "Great UI & pricing", rating: 5, url: "https://porkbun.com/", icon: "piggy-bank", tags: ["domains"] },
             { name: "Hostinger", desc: "Domain + Hosting bundles", rating: 4.5, url: "https://hostinger.com/", icon: "server", tags: ["domains", "hosting"] },
+            { name: "IONOS", desc: "Domain registration", rating: 4.3, url: "https://ionos.com/domains/", icon: "globe", tags: ["domains"] }
             { name: "Cloudflare", desc: "Cheapest renewals, at-cost", rating: 4.8, url: "https://www.cloudflare.com/products/registrar/", icon: "globe", tags: ["domains", "cheap-renewal"] },
             { name: "GoDaddy", desc: "Biggest TLD catalog, costly renewals", rating: 3.9, url: "https://www.godaddy.com/domains", icon: "globe", tags: ["domains", "premium-renewal"] }
         ];
