@@ -106,7 +106,7 @@
         <!-- Right: User Info -->
         <div class="flex items-center gap-4 text-sm text-slate-400 justify-end flex-wrap">
             <span id="whoEmail" class="hidden md:inline-block"></span>
-            <a href="/app" class="hover:text-brand transition-colors text-xs sm:text-sm">App View</a>
+            <a href="#" class="hover:text-brand transition-colors text-xs sm:text-sm">App View</a>
             <button id="signOutBtn" class="btn-base btn-primary whitespace-nowrap !h-8 !px-3 !text-xs hidden" onclick="app.logout()">
                 <i data-lucide="log-out" class="w-3 h-3"></i> Sign out
             </button>
@@ -482,7 +482,7 @@
             renderOverview() {
                 // Tiles
                 const tilesHtml = mockData.overview.map(tile => `
-                    <div class="bg-surface-card border ${tile.alert ? 'border-red-500/30' : 'border-surface-border'} rounded-xl p-4 flex flex-col justify-center">
+                    <div class="bg-surface-card border ${tile.alert ? 'border-red-500/30' : 'border-surface-border'} rounded-[7px] p-4 flex flex-col justify-center">
                         <span class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">${tile.label}</span>
                         <span class="text-2xl font-bold font-mono ${tile.alert ? 'text-red-500' : 'text-white'}">${tile.value}</span>
                     </div>
@@ -497,7 +497,7 @@
                         <td>${user.location}</td>
                         <td>${user.date}</td>
                         <td class="text-right">
-                            <button class="btn-primary py-1 px-3 text-xs" onclick="app.activateUser('${user.email}')">
+                            <button class="btn-base btn-primary !h-8 text-xs" onclick="app.activateUser('${user.email}')">
                                 Activate User
                             </button>
                         </td>
