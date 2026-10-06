@@ -5,6 +5,7 @@
 
 
         const PLAN_LIMITS = {
+            'Free': 0,
             'Personal': 5,
             'Start-up': 20,
             'Business': 50,
@@ -12,47 +13,92 @@
         };
 
         // --- PAYMENT CONFIGURATION ---
-        // PayPal only: one-time purchase of a domain pack, no subscription.
-        // Button ids live in config.js; prices live in the database and are
-        // edited from the admin panel.
+        // PayPal only. Each plan is a yearly subscription; a one-time
+        // "lifetime deal" is offered only where both a lifetime price and a
+        // lifetime button exist. Button ids live in config.js; prices live in
+        // the database and are edited from the admin panel.
         const PAYPAL = (window.DOMAIN_VAULT_CONFIG && window.DOMAIN_VAULT_CONFIG.paypal) || { buttons: {} };
-        let packPrices = {};   // plan -> { amount, currency }, loaded from the API
-        const PLAN_RANK = { 'Personal': 0, 'Start-up': 1, 'Business': 2, 'Agency': 3 };
+        let packPrices = {};   // plan -> { amount, lifetimeAmount, currency }, loaded from the API
+        const PLAN_RANK = { 'Free': -1, 'Personal': 0, 'Start-up': 1, 'Business': 2, 'Agency': 3 };
+        const PAYPAL_MANAGE_URL = 'https://www.paypal.com/myaccount/autopay/';
 
-        function paypalCheckoutUrl(plan) {
-            const id = PAYPAL.buttons[plan];
+        /** Domain limit for a plan; unknown plans get the Personal limit. */
+        function planLimit(plan) {
+            return Object.prototype.hasOwnProperty.call(PLAN_LIMITS, plan) ? PLAN_LIMITS[plan] : PLAN_LIMITS.Personal;
+        }
+
+        /** "Business", "business", "start-up", "startup" → the plan's proper name, or null. */
+        function canonicalPlan(value) {
+            const key = String(value || '').toLowerCase().replace(/[\s_-]/g, '');
+            return Object.keys(PLAN_RANK).find(p => p.toLowerCase().replace(/[\s_-]/g, '') === key) || null;
+        }
+
+        function buttonId(plan, mode) {
+            const id = ((mode === 'lifetime' ? PAYPAL.lifetimeButtons : PAYPAL.buttons) || {})[plan];
+            return id && id.indexOf('REPLACE_') !== 0 ? id : null;
+        }
+
+        function billingMode() {
+            const checked = document.querySelector('input[name="upgradeBilling"]:checked');
+            return checked && checked.value === 'lifetime' ? 'lifetime' : 'yearly';
+        }
+
+        function paypalCheckoutUrl(plan, mode) {
+            const id = buttonId(plan, mode);
             const price = packPrices[plan];
-            if (!id || id.indexOf('REPLACE_') === 0 || !price || price.amount === null) return null;
+            const amount = price && (mode === 'lifetime' ? price.lifetimeAmount : price.amount);
+            if (!id || amount === null || amount === undefined) return null;
             // custom carries the account email: it is how the payment webhook
-            // knows which account to upgrade.
+            // knows which account the subscription or purchase is for.
             return `${PAYPAL.checkoutBase}?cmd=_s-xclick&hosted_button_id=${encodeURIComponent(id)}`
                 + `&custom=${encodeURIComponent(currentUser.email)}`;
         }
 
-        async function loadPackPrices() {
+        function openUpgrade(preferredPlan) {
+            document.getElementById('upgradeCurrentPlan').textContent = currentUser?.plan || 'Personal';
+            document.getElementById('upgradeModal').style.display = 'flex';
+            loadPackPrices(preferredPlan);
+        }
+
+        async function loadPackPrices(preferredPlan) {
             try {
                 const res = await apiCall('getPrices', {});
                 packPrices = {};
                 (res.prices || []).forEach(p => { packPrices[p.plan] = p; });
             } catch (e) { /* the modal falls back to "not available" */ }
+
+            // Offer the lifetime choice only when at least one plan can
+            // actually be bought that way.
+            const lifetimeOffered = Object.keys(PLAN_RANK).some(p =>
+                buttonId(p, 'lifetime') && packPrices[p] && packPrices[p].lifetimeAmount !== null && packPrices[p].lifetimeAmount !== undefined);
+            document.getElementById('upgradeBillingGroup').style.display = lifetimeOffered ? '' : 'none';
+            if (!lifetimeOffered) document.querySelector('input[name="upgradeBilling"][value="yearly"]').checked = true;
+            const mode = billingMode();
+            const t = translations[settings.language] || translations.en;
+
             const select = document.getElementById('upgradePlanSelect');
             Array.from(select.options).forEach(opt => {
                 if (!opt.dataset.label) opt.dataset.label = opt.textContent;
                 const price = packPrices[opt.value];
-                const priced = price && price.amount !== null;
-                // Buying a pack the account already has (or exceeds) would charge for nothing.
-                const included = (PLAN_RANK[opt.value] || 0) <= (PLAN_RANK[currentUser && currentUser.plan] || 0);
+                const amount = price && (mode === 'lifetime' ? price.lifetimeAmount : price.amount);
+                const priced = amount !== null && amount !== undefined && (mode === 'yearly' || buttonId(opt.value, 'lifetime'));
+                // Buying a plan the account already has (or exceeds) would charge for nothing.
+                const current = currentUser && currentUser.plan;
+                const included = (PLAN_RANK[opt.value] ?? 0) <= (PLAN_RANK[current] ?? 0);
                 opt.textContent = included
                     ? `${opt.dataset.label} — included in your plan`
                     : priced
-                        ? `${opt.dataset.label} — ${Number(price.amount).toFixed(2)} ${price.currency}`
+                        ? `${opt.dataset.label} — ${Number(amount).toFixed(2)} ${price.currency}${mode === 'yearly' ? ' / year' : ' once'}`
                         : `${opt.dataset.label} — not available yet`;
                 opt.disabled = included || !priced;
             });
+            const wanted = preferredPlan && Array.from(select.options).find(o => o.value === preferredPlan && !o.disabled);
             const firstEnabled = Array.from(select.options).find(o => !o.disabled);
-            if (firstEnabled && select.selectedOptions[0] && select.selectedOptions[0].disabled) {
-                select.value = firstEnabled.value;
-            }
+            if (wanted) select.value = wanted.value;
+            else if (firstEnabled && select.selectedOptions[0] && select.selectedOptions[0].disabled) select.value = firstEnabled.value;
+
+            document.getElementById('proceedToCheckoutBtn').textContent = mode === 'lifetime' ? t.payOnce : t.subscribe;
+            document.getElementById('upgradeDescText').textContent = mode === 'lifetime' ? t.lifetimeDesc : t.upgradeDesc;
         }
 
         // --- TRANSLATION DATA ---
@@ -82,7 +128,9 @@
                 toolsDesc: "Explore our curated list of tools to help you manage your domains, check DNS records, and improve your online infrastructure.",
                 recommendedProviders: "Recommended Providers", getDeal: "Get Deal", visitTool: "Visit Tool", recommendations: "Recommendations",
                 searchRecommendations: "Search hosting, email...", quickDnsCheck: "Quick DNS Check", enterDomainName: "Enter domain name...", checkDns: "Check DNS", others: "Others", other: "Other",
-                upgradeTitle: "Upgrade Required", upgradeDesc: "Upgrade your account to add more domains and unlock premium features.", contactAdmin: "Contact Admin to Upgrade", maybeLater: "Maybe Later",
+                upgradeTitle: "Upgrade Required", upgradeDesc: "Yearly subscription through PayPal. It renews automatically; cancel any time and keep your plan until the end of the year you paid for.",
+                lifetimeDesc: "One payment through PayPal, no renewals: the plan is yours for good.", subscribe: "Subscribe with PayPal", payOnce: "Pay once with PayPal",
+                billing: "Billing", yearly: "Yearly", lifetime: "Lifetime (one payment)", manageSubscription: "Manage or cancel your subscription in PayPal", contactAdmin: "Contact Admin to Upgrade", maybeLater: "Maybe Later",
                 reports: "Reports", applyFilter: "Apply Filter", emailReport: "Email Report", downloadCsv: "Download CSV", startDate: "Start Date", endDate: "End Date",
                 currentPlan: "Your Current Plan:", selectNewPlan: "Select New Plan",
                 reminderSettings: "Renewal Reminders", reminderSettingsHelp: "We remind you before a domain expires, so nothing lapses by accident.",
@@ -97,7 +145,7 @@
                 security: "Security", currentPassword: "Current password", newPassword: "New password", passwordRule: "At least 10 characters.",
                 confirmPassword: "Confirm new password", changePassword: "Change Password",
                 yourData: "Your Data", yourDataHelp: "Download everything in your vault. Stored registrar passwords are never included.",
-                exportCsv: "Export CSV", exportJson: "Export JSON", purchases: "Purchases", noPurchases: "No purchases yet."
+                exportCsv: "Export CSV", exportJson: "Export JSON", purchases: "Billing", noPurchases: "No subscriptions or purchases yet."
             },
             es: {
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Gestor Seguro de Dominios",
@@ -124,7 +172,9 @@
                 toolsDesc: "Explora nuestra lista seleccionada de herramientas para ayudarte a gestionar tus dominios y verificar registros DNS.",
                 recommendedProviders: "Proveedores Recomendados", getDeal: "Obtener Oferta", visitTool: "Visitar Herramienta", recommendations: "Recomendaciones",
                 searchRecommendations: "Buscar hosting, correo...", quickDnsCheck: "Comprobación Rápida DNS", enterDomainName: "Ingrese nombre de dominio...", checkDns: "Comprobar DNS", others: "Otros", other: "Otro",
-                upgradeTitle: "Actualización Requerida", upgradeDesc: "Actualice su cuenta para agregar más dominios y desbloquear funciones premium.", contactAdmin: "Contactar Admin para Actualizar", maybeLater: "Quizás Más Tarde",
+                upgradeTitle: "Actualización Requerida", upgradeDesc: "Suscripción anual con PayPal. Se renueva automáticamente; cancela cuando quieras y conserva tu plan hasta el final del año pagado.",
+                lifetimeDesc: "Un solo pago con PayPal, sin renovaciones: el plan es tuyo para siempre.", subscribe: "Suscribirse con PayPal", payOnce: "Pagar una vez con PayPal",
+                billing: "Facturación", yearly: "Anual", lifetime: "De por vida (un pago)", manageSubscription: "Administra o cancela tu suscripción en PayPal", contactAdmin: "Contactar Admin para Actualizar", maybeLater: "Quizás Más Tarde",
                 reports: "Reportes", applyFilter: "Aplicar Filtro", emailReport: "Enviar por Correo", downloadCsv: "Descargar CSV", startDate: "Fecha de Inicio", endDate: "Fecha de Fin",
                 currentPlan: "Tu Plan Actual:", selectNewPlan: "Seleccionar Nuevo Plan",
                 reminderSettings: "Recordatorios de Renovación", reminderSettingsHelp: "Te avisamos antes de que venza un dominio, para que nada caduque por descuido.",
@@ -139,7 +189,7 @@
                 security: "Seguridad", currentPassword: "Contraseña actual", newPassword: "Nueva contraseña", passwordRule: "Al menos 10 caracteres.",
                 confirmPassword: "Confirmar nueva contraseña", changePassword: "Cambiar Contraseña",
                 yourData: "Tus Datos", yourDataHelp: "Descarga todo lo que hay en tu bóveda. Las contraseñas de registradores guardadas nunca se incluyen.",
-                exportCsv: "Exportar CSV", exportJson: "Exportar JSON", purchases: "Compras", noPurchases: "Aún no hay compras."
+                exportCsv: "Exportar CSV", exportJson: "Exportar JSON", purchases: "Facturación", noPurchases: "Aún no hay suscripciones ni compras."
             }
         };
 
@@ -180,6 +230,8 @@
         let currentToolFilter = 'all';
         let currentReportData = [];
         let purchases = [];
+        let subscriptions = [];
+        let pendingPlanChoice = null;   // ?plan=… from the homepage's pricing table
         let authMode = 'login';          // login | register | forgot | recover
         let recoveryToken = null;        // from a password-reset link; kept out of the URL
         let revealedPassword = null;     // credentials modal only, forgotten when it closes
@@ -268,8 +320,11 @@
                     showAuthMessage(`${recovery.error} Use "Forgot your password?" to get a new link.`, 'danger');
                 }
             } else {
-                // The landing page's sign-up buttons link to /app/?register.
-                if (new URLSearchParams(location.search).has('register')) setAuthMode('register');
+                // The landing page's sign-up buttons link to /app/?register,
+                // its pricing table to /app/?register&plan=Business.
+                const params = new URLSearchParams(location.search);
+                if (params.has('register')) setAuthMode('register');
+                pendingPlanChoice = canonicalPlan(params.get('plan'));
                 // Restore a previous session, if there is one. The old build
                 // logged you out on every refresh.
                 window.DomainVaultAPI.restore().then(function (user) {
@@ -300,31 +355,23 @@
             });
 
             // Setup Plan Badge Click Listener
-            document.getElementById('upgradePlanBtn').addEventListener('click', () => {
-                document.getElementById('upgradeCurrentPlan').textContent = currentUser?.plan || 'Personal';
-                document.getElementById('upgradeModal').style.display = 'flex';
-                loadPackPrices();
-            });
+            document.getElementById('upgradePlanBtn').addEventListener('click', () => openUpgrade());
+            document.querySelectorAll('input[name="upgradeBilling"]').forEach(r =>
+                r.addEventListener('change', () => loadPackPrices(document.getElementById('upgradePlanSelect').value)));
 
             // Modular Checkout Button Logic
             document.getElementById('proceedToCheckoutBtn').addEventListener('click', () => {
                 const option = document.getElementById('upgradePlanSelect').selectedOptions[0];
                 if (!option || option.disabled) return showToast("There is no larger pack available for this account right now.", "warning");
                 const selectedPlan = option.value;
-                const checkoutUrl = paypalCheckoutUrl(selectedPlan);
+                const checkoutUrl = paypalCheckoutUrl(selectedPlan, billingMode());
                 if (!checkoutUrl) return showToast("This pack is not available for purchase yet.", "danger");
                 window.location.href = checkoutUrl;
             });
 
             // Modals & Navigation
             document.getElementById('addDomainBtn').addEventListener('click', () => {
-                const limit = PLAN_LIMITS[currentUser?.plan || 'Personal'] || 5;
-                if (domains.length >= limit) {
-                    document.getElementById('upgradeCurrentPlan').textContent = currentUser?.plan || 'Personal';
-                    document.getElementById('upgradeModal').style.display = 'flex';
-                    loadPackPrices();
-                    return;
-                }
+                if (domains.length >= planLimit(currentUser?.plan || 'Personal')) return openUpgrade();
                 openModal('domainModal', 'addNewDomain', 'addDomain', {});
             });
             document.getElementById('addDomainBtnSecondary').addEventListener('click', () => document.getElementById('addDomainBtn').click());
@@ -708,7 +755,7 @@
             document.getElementById('authForm').reset();
             setAuthMode('login');
             if (message) showAuthMessage(message, 'danger');
-            domains = []; providers = []; notifications = []; purchases = [];
+            domains = []; providers = []; notifications = []; purchases = []; subscriptions = [];
             vaultLoaded = false;
             // The desktop shell keeps reminding about the last list it was
             // given; a signed-out vault has none to show.
@@ -720,7 +767,7 @@
 
         function loadDashboardData() {
             document.getElementById('userPlanBadgeText').textContent = currentUser.plan.toUpperCase();
-            const limit = PLAN_LIMITS[currentUser.plan] || 5;
+            const limit = planLimit(currentUser.plan);
             document.getElementById('stat-domain-limit').textContent = `/ ${limit === Infinity ? '∞' : limit}`;
 
             document.getElementById('settingsAccountEmail').value = currentUser.email;
@@ -739,6 +786,7 @@
                 domains = data.domains || [];
                 providers = data.providers || [];
                 purchases = data.purchases || [];
+                subscriptions = data.subscriptions || [];
                 vaultLoaded = true;
                 if (data.settings) settings = Object.assign({}, settings, data.settings);
                 else settings.username = currentUser.email.split('@')[0];
@@ -749,6 +797,10 @@
                 setActivePage('dashboard');
                 renderAll();
                 reportRenewalsToDesktop();
+                if (pendingPlanChoice) {
+                    openUpgrade(pendingPlanChoice);
+                    pendingPlanChoice = null;
+                }
             }).catch(err => {
                 showToast("Could not reach the server to load your vault. Reload the page to try again.", "danger");
             });
@@ -761,6 +813,7 @@
             domains = data.domains || [];
             providers = data.providers || [];
             purchases = data.purchases || [];
+            subscriptions = data.subscriptions || [];
             vaultLoaded = true;
             applyAccountState(data);
             renderAll();
@@ -857,7 +910,7 @@
             window.DomainVaultAPI.updateUser({ plan: currentUser.plan, isAdmin: currentUser.isAdmin });
 
             document.getElementById('userPlanBadgeText').textContent = currentUser.plan.toUpperCase();
-            const limit = PLAN_LIMITS[currentUser.plan] || 5;
+            const limit = planLimit(currentUser.plan);
             const limitEl = document.getElementById('stat-domain-limit');
             if (limitEl) limitEl.textContent = `/ ${limit === Infinity ? '∞' : limit}`;
             document.querySelectorAll('.admin-link').forEach(a => { a.hidden = !currentUser.isAdmin; });
@@ -1198,7 +1251,8 @@
         }
 
         function updateStats() {
-            document.getElementById('stat-total-domains').innerHTML = `${domains.length} <span id="stat-domain-limit" style="font-size: 14px; color:var(--text-muted);">/ ${PLAN_LIMITS[currentUser?.plan || 'Personal'] === Infinity ? '∞' : PLAN_LIMITS[currentUser?.plan || 'Personal']}</span>`;
+            const statLimit = planLimit(currentUser?.plan || 'Personal');
+            document.getElementById('stat-total-domains').innerHTML = `${domains.length} <span id="stat-domain-limit" style="font-size: 14px; color:var(--text-muted);">/ ${statLimit === Infinity ? '∞' : statLimit}</span>`;
             
             const uniqueProviders = [...new Set(domains.map(d => d.provider))].length;
             document.getElementById('stat-domain-providers').textContent = uniqueProviders;
@@ -1831,18 +1885,38 @@
         function renderPurchases() {
             const list = document.getElementById('purchasesList');
             if (!list) return;
-            if (purchases.length === 0) {
-                list.innerHTML = `<p class="field-hint" style="font-size:0.9em;">${translations[settings.language].noPurchases}</p>`;
+            const t = translations[settings.language] || translations.en;
+            if (purchases.length === 0 && subscriptions.length === 0) {
+                list.innerHTML = `<p class="field-hint" style="font-size:0.9em;">${t.noPurchases}</p>`;
                 return;
             }
-            list.innerHTML = purchases.map(p => {
+            const day = (iso) => String(iso || '').slice(0, 10);
+            const subRows = subscriptions.map(sub => {
+                const until = day(sub.paidUntil);
+                const state = sub.status === 'active'
+                    ? (until ? `renews automatically · paid until ${until}` : 'active')
+                    : sub.status === 'cancelled'
+                        ? (until ? `cancelled · active until ${until}` : 'cancelled')
+                        : 'ended';
+                const price = sub.amount === null || sub.amount === undefined ? '' : ` · ${Number(sub.amount).toFixed(2)} ${sub.currency || ''} / year`;
+                return `<div class="purchase-row">
+                    <span><strong>${escapeHTML(sub.plan || '')}</strong>${escapeHTML(price)}</span>
+                    <span>${escapeHTML(state)}</span>
+                </div>`;
+            }).join('');
+            const manage = subscriptions.some(sub => sub.status === 'active')
+                ? `<p class="field-hint" style="margin: 6px 0 14px;"><a href="${PAYPAL_MANAGE_URL}" target="_blank" rel="noopener" style="color: var(--primary);">${t.manageSubscription}</a></p>`
+                : '';
+            const payRows = purchases.map(p => {
                 const amount = p.amount === null || p.amount === undefined ? '' : `${Number(p.amount).toFixed(2)} ${p.currency || ''}`;
                 const status = String(p.status || '');
+                const kind = p.kind === 'subscription' ? 'yearly payment' : 'lifetime';
                 return `<div class="purchase-row">
-                    <span><strong>${escapeHTML(p.plan || '')}</strong> · ${escapeHTML(String(p.created_at || '').slice(0, 10))}</span>
+                    <span><strong>${escapeHTML(p.plan || '')}</strong> · ${escapeHTML(kind)} · ${escapeHTML(day(p.created_at))}</span>
                     <span>${escapeHTML(amount)} · ${escapeHTML(status.charAt(0).toUpperCase() + status.slice(1))}</span>
                 </div>`;
             }).join('');
+            list.innerHTML = subRows + manage + payRows;
         }
 
         // --- DISMISSED NOTIFICATIONS ---

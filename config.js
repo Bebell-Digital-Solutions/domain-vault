@@ -21,25 +21,33 @@ window.DOMAIN_VAULT_CONFIG = (function () {
         anonKey:      'sb_publishable_uZxk5yuJlIlMxX7whyWWWA_AvTvLZN7'   // publishable key (public by design)
       };
 
-  /* PayPal "Buy Now" buttons, one per pack, created in the PayPal account
-     that receives payments. For each button set:
-       - Item ID (item_number): startup / business / agency
-       - Price and currency: exactly what is set in the admin panel
+  /* PayPal buttons, created in the PayPal account that receives payments
+     (hello.bebelldesignstudio@gmail.com). One per plan:
+
+       buttons          yearly SUBSCRIPTION buttons ("Subscribe")
+       lifetimeButtons  one-time "lifetime deal" buttons ("Buy Now"); leave
+                        empty until they exist — the app then offers yearly only
+
+     For every button:
+       - Item ID (item_number): personal / start-up / business / agency
+       - Price and currency: exactly what is set in the admin panel (the
+         yearly price for subscriptions, the lifetime price for Buy Now)
        - Return URL: https://app.getdomainvault.com/?payment=success
-       - Notification URL (IPN):
-           https://gqxzawcxuhzcodvuiyzf.supabase.co/functions/v1/billing-webhook
-     Then paste each button's hosted_button_id below. A pack whose id is
-     still REPLACE_... cannot be bought from the site. */
+     Payment notifications (IPN) go to
+       https://gqxzawcxuhzcodvuiyzf.supabase.co/functions/v1/billing-webhook
+     — set once for the whole PayPal account. A plan whose id is missing or
+     still REPLACE_... cannot be bought from the app. */
   backend.paypal = {
     checkoutBase: isLocal
       ? 'https://www.sandbox.paypal.com/cgi-bin/webscr'
       : 'https://www.paypal.com/cgi-bin/webscr',
     buttons: {
-      'Personal': 'REPLACE_STARTUP_BUTTON_ID',
-      'Start-up': 'REPLACE_STARTUP_BUTTON_ID',
-      'Business': 'REPLACE_BUSINESS_BUTTON_ID',
-      'Agency':   'REPLACE_AGENCY_BUTTON_ID'
-    }
+      'Personal': 'DL5PLQTBX2HLE',   // USD 29 / year
+      'Start-up': 'FMTJ5T5CG7JMA',   // USD 48 / year
+      'Business': 'NKCHN2RXPW7U2',   // USD 79 / year
+      'Agency':   'DW9CKCY5T86VY'    // USD 98 / year
+    },
+    lifetimeButtons: {}
   };
 
   /* Desktop builds, from the GitHub release. `alt` adds a small secondary

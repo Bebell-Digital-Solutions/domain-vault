@@ -923,15 +923,24 @@
                 <div class="form-group" style="text-align: left;">
                     <label class="form-label" data-translate-key="selectNewPlan">Select New Plan</label>
                     <select id="upgradePlanSelect" class="form-control">
+                        <option value="Personal">Personal (Up to 5 domains)</option>
                         <option value="Start-up">Start-up (Up to 20 domains)</option>
                         <option value="Business">Business (Up to 50 domains)</option>
                         <option value="Agency">Agency (Unlimited domains)</option>
                     </select>
                 </div>
 
-                <p style="color: var(--text-muted); margin-bottom: 25px; font-size: 0.9em;" data-translate-key="upgradeDesc">Upgrade your account to add more domains and unlock premium features.</p>
+                <div class="form-group" id="upgradeBillingGroup" style="text-align: left; display: none;">
+                    <label class="form-label" data-translate-key="billing">Billing</label>
+                    <div style="display:flex; gap:18px; flex-wrap:wrap;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="upgradeBilling" value="yearly" checked> <span data-translate-key="yearly">Yearly</span></label>
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="radio" name="upgradeBilling" value="lifetime"> <span data-translate-key="lifetime">Lifetime (one payment)</span></label>
+                    </div>
+                </div>
+
+                <p id="upgradeDescText" style="color: var(--text-muted); margin-bottom: 25px; font-size: 0.9em;">Yearly subscription through PayPal. It renews automatically; cancel any time and keep your plan until the end of the year you paid for.</p>
                 
-                <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" id="proceedToCheckoutBtn">Proceed to Checkout</button>
+                <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;" id="proceedToCheckoutBtn">Subscribe with PayPal</button>
                 <button class="btn btn-secondary modal-close" style="width: 100%;" data-translate-key="maybeLater">Maybe Later</button>
             </div>
         </div>
