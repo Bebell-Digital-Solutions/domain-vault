@@ -6,14 +6,14 @@
     <meta name="robots" content="noindex, nofollow">
     <title>Domain Vault | Admin Console</title>
     <link rel="icon" href="https://bucket.mlcdn.com/a/3336/3336910/images/115f0fdbe1cc012228f0c234e8b4f909d2e7ab69.png">
-    
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700&family=Fira+Code&display=swap" rel="stylesheet">
-    
+
     <!-- Icons & Styling -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Tailwind Configuration -->
     <script>
         tailwind.config = {
@@ -42,7 +42,7 @@
             }
         }
     </script>
-    
+
     <style type="text/tailwindcss">
         @layer utilities {
             .scrollbar-hide::-webkit-scrollbar {
@@ -53,13 +53,13 @@
                 scrollbar-width: none;
             }
         }
-        
+
         /* Custom Table Styling */
         th { @apply text-slate-400 font-medium text-xs bg-[#121219] sticky top-0 z-10 whitespace-nowrap px-4 py-3 text-left; }
         td { @apply px-4 py-3 border-b border-surface-border whitespace-nowrap align-middle text-sm text-slate-200; }
         tr:last-child td { @apply border-b-0; }
         tbody tr { @apply hover:bg-surface-hover transition-colors; }
-        
+
         /* Input & Button base styles */
         .input-base { @apply bg-surface-bg text-slate-200 border border-surface-border rounded-[7px] px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all; }
         .btn-base { @apply inline-flex items-center justify-center gap-2 rounded-[7px] px-4 h-10 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed; }
@@ -68,6 +68,10 @@
     </style>
 
     <style>
+        /* The views and panels are switched with the hidden attribute (admin.js);
+           it must win over display utilities such as flex. */
+        [hidden] { display: none !important; }
+
         /* ===== MATRIX CANVAS ===== */
         #canvas {
             position: fixed;
@@ -79,25 +83,31 @@
             display: block;
             pointer-events: none;
         }
+
+        /* Sign-in status line and toast states, toggled by admin.js */
+        .msg { margin-top: 0.75rem; min-height: 1.25rem; font-size: 0.8125rem; color: #94a3b8; }
+        .msg.err { color: #f87171; }
+        #toast.show { transform: none; opacity: 1; }
+        #toast.err > div { border-left-color: #ef4444; }
     </style>
 </head>
 <body class="bg-surface-bg text-slate-200 font-sans antialiased min-h-screen flex flex-col">
-    
+
     <header class="sticky top-0 z-50 flex items-center justify-between gap-4 px-4 py-3 md:px-6 border-b border-surface-border bg-[#111118]/90 backdrop-blur-md">
         <!-- Left: Brand -->
         <div class="flex items-center gap-6">
             <a href="#" class="flex items-center gap-3 text-slate-100 font-semibold group uppercase tracking-wider font-tech hover:opacity-80 transition-opacity">
                 <div class="relative w-8 h-8 flex-shrink-0">
-                    <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" 
-                         alt="Domain Vault" 
+                    <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png"
+                         alt="Domain Vault"
                          class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 group-hover:opacity-0" />
-                    <img src="https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612" 
-                         alt="Domain Vault Animated" 
+                    <img src="https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612"
+                         alt="Domain Vault Animated"
                          class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100" />
                 </div>
                 <span class="hidden sm:inline-block">Domain Vault | Admin</span>
             </a>
-            
+
             <div class="hidden sm:flex items-center gap-2 text-sm font-tech tracking-widest text-slate-300">
                 <span class="font-sans text-[10px] tracking-widest text-brand bg-brand-soft px-2 py-0.5 rounded-full ml-1">SYSTEM</span>
             </div>
@@ -105,76 +115,77 @@
 
         <!-- Right: User Info -->
         <div class="flex items-center gap-4 text-sm text-slate-400 justify-end flex-wrap">
-            <span id="whoEmail" class="hidden md:inline-block"></span>
-            <a href="/app" class="hover:text-brand transition-colors text-xs sm:text-sm">App View</a>
-            <button id="signOutBtn" class="btn-base btn-primary whitespace-nowrap !h-8 !px-3 !text-xs hidden" onclick="app.logout()">
+            <span id="whoEmail" class="hidden md:inline-block badge badge-primary" hidden></span>
+            <a href="./" class="hover:text-brand transition-colors text-xs sm:text-sm">Back to app</a>
+            <button id="signOutBtn" class="btn-base btn-primary whitespace-nowrap !h-8 !px-3 !text-xs" hidden>
                 <i data-lucide="log-out" class="w-3 h-3"></i> Sign out
             </button>
         </div>
     </header>
 
-    <main class="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center relative" id="loginView">
+    <main class="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center relative" id="loginView" hidden>
         <canvas id="canvas"></canvas>
-        
+
         <!-- Auth Card -->
         <section class="w-full max-w-md bg-surface-card relative z-10 border border-surface-border rounded-xl p-6 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-            
-            <!-- Top glowing line (FIXED: via-brand, rounded-t-xl, valid z-index) -->
-            <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-brand to-transparent rounded-t-xl z-20 opacity-90 shadow-[0_0_10px_rgba(255,80,17,0.4)]"></div>   
-    
+
+            <!-- Top glowing line -->
+            <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-brand to-transparent rounded-t-xl z-20 opacity-90 shadow-[0_0_10px_rgba(255,80,17,0.4)]"></div>
+
             <div class="text-center mb-6 mt-2">
                 <div class="w-12 h-12 bg-brand-soft rounded-full flex items-center justify-center mx-auto mb-4">
                     <i data-lucide="lock" class="w-6 h-6 text-brand"></i>
                 </div>
                 <h2 class="text-xl font-semibold text-white">Admin Authentication</h2>
-                <p class="text-sm text-slate-400 mt-1">Sign in with your Domain Vault admin account.</p>
+                <p class="text-sm text-slate-400 mt-1">Sign in with your Domain Vault account. It must have admin rights.</p>
             </div>
-            
-            <form id="loginForm" onsubmit="app.login(event)">
+
+            <form id="loginForm">
                 <div class="space-y-4">
                     <div class="flex flex-col gap-1.5">
                         <label for="loginEmail" class="text-xs text-slate-400 font-medium">Email Address</label>
-                        <input id="loginEmail" type="email" autocomplete="username" class="input-base" placeholder="admin@domainvault.com" required value="admin@domainvault.com">
+                        <input id="loginEmail" type="email" autocomplete="username" class="input-base" placeholder="admin@domainvault.com" required>
                     </div>
                     <div class="flex flex-col gap-1.5">
                         <label for="loginPassword" class="text-xs text-slate-400 font-medium">Password</label>
-                        <input id="loginPassword" type="password" autocomplete="current-password" class="input-base" placeholder="••••••••" required value="password123">
+                        <input id="loginPassword" type="password" autocomplete="current-password" class="input-base" placeholder="••••••••" required>
                     </div>
                     <button class="btn-base btn-primary w-full mt-2" type="submit">
                         Secure Sign In <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
+                <p class="msg" id="loginMsg" aria-live="polite"></p>
             </form>
         </section>
     </main>
 
-    <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 hidden relative z-10" id="appView">
-        
+    <main class="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col relative z-10" id="appView" hidden>
+
         <!-- Navigation Tabs -->
         <nav class="flex gap-2 border-b border-surface-border mb-6 overflow-x-auto scrollbar-hide pb-px" role="tablist">
-            <button class="tab-btn active" data-tab="overview" onclick="app.switchTab('overview')">
+            <button class="tab tab-btn active" data-tab="overview">
                 <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Overview
             </button>
-            <button class="tab-btn" data-tab="users" onclick="app.switchTab('users')">
-                <i data-lucide="users" class="w-4 h-4"></i> Users 
-                <span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 hidden" id="pendingCount">3</span>
+            <button class="tab tab-btn" data-tab="users">
+                <i data-lucide="users" class="w-4 h-4"></i> Users
+                <span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1" id="pendingCount" hidden></span>
             </button>
-            <button class="tab-btn" data-tab="sales" onclick="app.switchTab('sales')">
+            <button class="tab tab-btn" data-tab="sales">
                 <i data-lucide="receipt" class="w-4 h-4"></i> Sales
+                <span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1" id="attentionCount" hidden></span>
             </button>
-            <button class="tab-btn" data-tab="prices" onclick="app.switchTab('prices')">
+            <button class="tab tab-btn" data-tab="prices">
                 <i data-lucide="tag" class="w-4 h-4"></i> Prices
             </button>
-            <button class="tab-btn" data-tab="audit" onclick="app.switchTab('audit')">
+            <button class="tab tab-btn" data-tab="audit">
                 <i data-lucide="history" class="w-4 h-4"></i> Audit log
             </button>
         </nav>
 
-        <section id="panel-overview" class="panel-section active">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="overviewTiles">
-                <!-- Populated by JS -->
-            </div>
-            
+        <!-- Overview -->
+        <section id="panel-overview" data-panel="overview" class="panel-section">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="overviewTiles"></div>
+
             <div class="bg-surface-card border border-surface-border rounded-xl p-5 shadow-sm">
                 <div class="mb-4 flex items-center justify-between">
                     <div>
@@ -182,10 +193,10 @@
                             <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
                             Waiting for Activation
                         </h2>
-                        <p class="text-sm text-slate-400 mt-1">Review and activate new sign-ups to grant platform access.</p>
+                        <p class="text-sm text-slate-400 mt-1">New sign-ups waiting for approval. Activating one emails them that their account is live.</p>
                     </div>
                 </div>
-                
+
                 <div class="overflow-x-auto border border-surface-border rounded-lg">
                     <table class="w-full text-left border-collapse min-w-[800px]">
                         <thead>
@@ -197,137 +208,165 @@
                                 <th class="text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="pendingRows">
-                            <!-- Populated by JS -->
-                        </tbody>
+                        <tbody id="pendingRows"></tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <section id="panel-users" class="panel-section hidden">
+        <!-- Users -->
+        <section id="panel-users" data-panel="users" class="panel-section" hidden>
             <div class="flex flex-col md:flex-row gap-4 items-end mb-5">
                 <div class="flex flex-col gap-1.5 w-full md:w-48">
-                    <label class="text-xs text-slate-400 font-medium">Status Filter</label>
-                    <select id="userStatus" class="input-base" onchange="app.renderUsers()">
-                        <option value="all">All Users</option>
+                    <label for="userStatus" class="text-xs text-slate-400 font-medium">Status Filter</label>
+                    <select id="userStatus" class="input-base">
+                        <option value="">All Users</option>
                         <option value="pending">Pending</option>
                         <option value="active">Active</option>
                         <option value="suspended">Suspended</option>
                     </select>
                 </div>
                 <div class="flex flex-col gap-1.5 flex-1 w-full md:min-w-[200px]">
-                    <label class="text-xs text-slate-400 font-medium">Search</label>
+                    <label for="userSearch" class="text-xs text-slate-400 font-medium">Search</label>
                     <div class="relative">
                         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input id="userSearch" type="search" placeholder="Search by email..." class="input-base !pl-9" onkeyup="app.renderUsers()">
+                        <input id="userSearch" type="search" placeholder="Search by email..." class="input-base !pl-9">
                     </div>
                 </div>
-                <button class="btn-secondary btn-base w-full md:w-auto" onclick="app.showToast('Data refreshed successfully', 'success')">
+                <button id="userRefresh" class="btn-secondary btn-base w-full md:w-auto">
                     <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh
                 </button>
             </div>
-            
+
             <div class="overflow-x-auto border border-surface-border rounded-[7px] mb-4">
-                <table class="w-full border-collapse min-w-[900px]">
+                <table class="w-full border-collapse min-w-[1200px]">
                     <thead>
                         <tr>
                             <th>Email Address</th>
                             <th>Status</th>
                             <th>Plan</th>
+                            <th title="Admin override. Empty = use what they paid for.">Plan Override</th>
                             <th class="text-right">Domains</th>
+                            <th>Phone Number</th>
                             <th>Location</th>
                             <th>Joined Date</th>
+                            <th>Admin</th>
                             <th class="text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="userRows">
-                        <!-- Populated by JS -->
-                    </tbody>
+                    <tbody id="userRows"></tbody>
                 </table>
             </div>
-            
+
             <div class="flex flex-col sm:flex-row items-center justify-between text-sm text-slate-400 gap-4">
-                <span id="userPageInfo">Showing 1-10 of 42 users</span>
+                <span id="userPageInfo"></span>
                 <div class="flex gap-2">
-                    <button class="btn-secondary rounded-[7px] py-1 px-3">Prev</button>
-                    <button class="btn-secondary rounded-[7px] py-1 px-3">Next</button>
+                    <button id="userPrev" class="btn-base btn-secondary !h-8 !px-3 text-xs">Prev</button>
+                    <button id="userNext" class="btn-base btn-secondary !h-8 !px-3 text-xs">Next</button>
                 </div>
             </div>
         </section>
 
-        <section id="panel-sales" class="panel-section hidden">
+        <!-- Sales -->
+        <section id="panel-sales" data-panel="sales" class="panel-section" hidden>
             <div class="flex flex-col flex-wrap lg:flex-row gap-4 items-end mb-6">
                 <div class="flex flex-col gap-1.5 w-full sm:w-auto">
-                    <label class="text-xs text-slate-400 font-medium">From Date</label>
+                    <label for="salesFrom" class="text-xs text-slate-400 font-medium">From Date</label>
                     <input id="salesFrom" type="date" class="input-base">
                 </div>
                 <div class="flex flex-col gap-1.5 w-full sm:w-auto">
-                    <label class="text-xs text-slate-400 font-medium">To Date</label>
+                    <label for="salesTo" class="text-xs text-slate-400 font-medium">To Date</label>
                     <input id="salesTo" type="date" class="input-base">
                 </div>
                 <div class="flex flex-col gap-1.5 w-full sm:w-auto min-w-[150px]">
-                    <label class="text-xs text-slate-400 font-medium">Transaction Status</label>
+                    <label for="salesStatus" class="text-xs text-slate-400 font-medium">Transaction Status</label>
                     <select id="salesStatus" class="input-base">
                         <option value="">All Statuses</option>
                         <option value="completed">Completed</option>
                         <option value="pending">Pending</option>
                         <option value="refunded">Refunded</option>
                         <option value="reversed">Chargeback</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="unmatched">Unmatched</option>
+                        <option value="failed">Failed</option>
                     </select>
                 </div>
-                <button class="btn-primary btn-base w-full sm:w-auto" onclick="app.showToast('Filters applied', 'success')">
+                <button id="salesRefresh" class="btn-primary btn-base w-full sm:w-auto">
                     <i data-lucide="filter" class="w-4 h-4"></i> Apply
                 </button>
                 <div class="flex-1 hidden lg:block"></div>
-                <button class="btn-secondary btn-base w-full sm:w-auto" onclick="app.showToast('CSV Export Started', 'success')">
+                <button id="salesCsv" class="btn-secondary btn-base w-full sm:w-auto">
                     <i data-lucide="download" class="w-4 h-4"></i> Export CSV
                 </button>
             </div>
-            
+
+            <div id="salesAttention" class="bg-brand-soft border border-brand/30 rounded-lg p-4 mb-6 text-sm text-slate-300 flex gap-3 items-start" role="status" hidden></div>
+            <div id="salesTotals" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 empty:hidden"></div>
+
             <div class="overflow-x-auto border border-surface-border rounded-[7px]">
-                <table class="w-full border-collapse min-w-[900px]">
+                <table class="w-full border-collapse min-w-[1200px]">
                     <thead>
                         <tr>
                             <th>Date</th>
                             <th>Status</th>
                             <th>Package</th>
+                            <th>Type</th>
                             <th class="text-right">Amount</th>
                             <th>Customer Account</th>
-                            <th>Payment Method</th>
+                            <th>Payer (PayPal)</th>
                             <th>Transaction ID</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
-                    <tbody id="salesRows">
-                        <!-- Populated by JS -->
-                    </tbody>
+                    <tbody id="salesRows"></tbody>
                 </table>
             </div>
         </section>
 
-        <section id="panel-prices" class="panel-section hidden">
-            <div class="bg-surface-card border border-surface-border rounded-xl p-5 max-w-3xl">
+        <!-- Prices -->
+        <section id="panel-prices" data-panel="prices" class="panel-section" hidden>
+            <div class="bg-surface-card border border-surface-border rounded-xl p-5 max-w-4xl">
                 <h2 class="text-lg font-semibold text-white mb-1">Package Pricing Configuration</h2>
-                <p class="text-sm text-slate-400 mb-5">Configure the exact prices expected from payment gateways.</p>
-                
+                <p class="text-sm text-slate-400 mb-5">Per plan: a yearly subscription price and a one-time "lifetime deal" price. A payment is only accepted if it matches the price and currency here exactly.</p>
+
                 <div class="bg-brand-soft border border-brand/30 rounded-lg p-4 mb-6 text-sm text-slate-300 flex gap-3 items-start">
                     <i data-lucide="alert-triangle" class="w-5 h-5 text-brand shrink-0 mt-0.5"></i>
-                    <p>Prices must match your PayPal/Stripe buttons <b class="text-white">exactly</b>. If a customer pays an unmatched amount, the system will flag the transaction as "rejected" and domains will not be granted.</p>
+                    <p>Each price must match its PayPal button <b class="text-white">exactly</b>. If a customer pays an unmatched amount, the payment shows up under Sales as "rejected" and the plan is <b class="text-white">not</b> granted. Leave a price empty to take that option off sale.</p>
                 </div>
-                
-                <div class="space-y-4" id="priceRows">
-                    <!-- Populated by JS -->
+
+                <div class="space-y-4" id="priceRows"></div>
+            </div>
+
+            <div class="bg-surface-card border border-surface-border rounded-xl p-5 max-w-4xl mt-6">
+                <h2 class="text-lg font-semibold text-white mb-1">Plan settings</h2>
+                <p class="text-sm text-slate-400 mb-5">What accounts get when they have not paid, and whether new sign-ups wait for you.</p>
+
+                <div class="space-y-5">
+                    <div class="flex flex-col gap-1.5 sm:max-w-md">
+                        <label for="unpaidPlan" class="text-xs text-slate-400 font-medium">Accounts without a paid plan get:</label>
+                        <select id="unpaidPlan" class="input-base">
+                            <option value="Personal">Personal — 5 domains, free</option>
+                            <option value="Free">Free — no domains until they subscribe</option>
+                        </select>
+                    </div>
+                    <label for="requireApproval" class="flex items-start gap-3 text-sm text-slate-200 cursor-pointer">
+                        <input id="requireApproval" type="checkbox" class="mt-0.5 w-4 h-4 shrink-0 accent-brand">
+                        <span>New sign-ups need my approval
+                            <span class="block text-xs text-slate-400 mt-0.5">They stay "pending" until you activate them on the Overview tab.</span>
+                        </span>
+                    </label>
                 </div>
-                
+
                 <div class="mt-6 pt-5 border-t border-surface-border flex justify-end">
-                    <button class="btn-primary btn-base w-full sm:w-auto" onclick="app.showToast('Pricing saved successfully', 'success')">
-                        <i data-lucide="save" class="w-4 h-4"></i> Save Configuration
+                    <button id="saveBillingConfig" class="btn-primary btn-base w-full sm:w-auto">
+                        <i data-lucide="save" class="w-4 h-4"></i> Save plan settings
                     </button>
                 </div>
             </div>
         </section>
 
-        <section id="panel-audit" class="panel-section hidden">
+        <!-- Audit -->
+        <section id="panel-audit" data-panel="audit" class="panel-section" hidden>
             <div class="overflow-x-auto border border-surface-border rounded-lg">
                 <table class="w-full border-collapse min-w-[800px]">
                     <thead>
@@ -339,20 +378,18 @@
                             <th>Details</th>
                         </tr>
                     </thead>
-                    <tbody id="auditRows">
-                        <!-- Populated by JS -->
-                    </tbody>
+                    <tbody id="auditRows"></tbody>
                 </table>
             </div>
         </section>
     </main>
 
-    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-[150%] opacity-0 transition-all duration-300 z-[100] max-w-sm w-[calc(100%-3rem)] sm:w-full pointer-events-none">
+    <div id="toast" role="status" aria-live="polite" class="fixed bottom-6 right-6 transform translate-y-[150%] opacity-0 transition-all duration-300 z-[100] max-w-sm w-[calc(100%-3rem)] sm:w-full pointer-events-none">
         <div class="bg-surface-hover border-l-4 border-emerald-500 rounded-lg shadow-2xl p-4 flex items-start gap-3">
-            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-500 shrink-0" id="toastIcon"></i>
+            <span id="toastIcon" class="shrink-0"></span>
             <div>
-                <h4 class="text-sm font-semibold text-white" id="toastTitle">Success</h4>
-                <p class="text-xs text-slate-400 mt-0.5" id="toastMsg">Operation completed.</p>
+                <h4 class="text-sm font-semibold text-white" id="toastTitle"></h4>
+                <p class="text-xs text-slate-400 mt-0.5" id="toastMsg"></p>
             </div>
         </div>
     </div>
@@ -361,7 +398,7 @@
         @layer components {
             .tab-btn { @apply flex items-center gap-2 px-4 py-3 text-sm font-medium text-slate-400 border-b-2 border-transparent hover:text-slate-200 transition-colors whitespace-nowrap; }
             .tab-btn.active { @apply text-white border-brand; }
-            
+
             .badge { @apply inline-flex items-center px-2 py-0.5 rounded-[7px] text-[10px] font-semibold tracking-wide uppercase; }
             .badge-success { @apply bg-emerald-500/10 text-emerald-500; }
             .badge-warning { @apply bg-yellow-500/10 text-yellow-500; }
@@ -372,312 +409,10 @@
     </style>
 
     <script>
-        // Mock Application State & Data
-        const mockData = {
-            overview: [
-                { label: 'Total Revenue', value: '$12,450', alert: false },
-                { label: 'Active Users', value: '1,284', alert: false },
-                { label: 'Pending Activation', value: '3', alert: true },
-                { label: 'Failed Payments', value: '1', alert: true }
-            ],
-            pendingUsers: [
-                { email: 'john.doe@example.com', phone: '+1 (555) 123-4567', location: 'New York, US', date: '2 hours ago' },
-                { email: 'sarah.m@startup.io', phone: '+44 7700 900077', location: 'London, UK', date: '5 hours ago' },
-                { email: 'dev_team@crypto.net', phone: '+1 (415) 555-0198', location: 'San Francisco, US', date: '1 day ago' }
-            ],
-            users: [
-                { email: 'admin@domainvault.com', status: 'active', plan: 'Enterprise', domains: 145, loc: 'Remote', date: '2023-01-15' },
-                { email: 'john.doe@example.com', status: 'pending', plan: 'Starter', domains: 0, loc: 'New York, US', date: '2023-10-24' },
-                { email: 'marketing@bigcorp.com', status: 'active', plan: 'Pro', domains: 12, loc: 'Chicago, US', date: '2023-08-11' },
-                { email: 'badactor@spam.net', status: 'suspended', plan: 'Free', domains: 0, loc: 'Unknown', date: '2023-10-20' },
-                { email: 'sarah.m@startup.io', status: 'pending', plan: 'Pro', domains: 0, loc: 'London, UK', date: '2023-10-24' },
-            ],
-            sales: [
-                { date: '2023-10-24 14:30', status: 'completed', pack: 'Pro Bundle', amount: '$299.00', acc: 'marketing@bigcorp.com', method: 'PayPal (*492)', tx: 'TX-9844221A' },
-                { date: '2023-10-24 11:15', status: 'pending', pack: 'Starter Kit', amount: '$49.00', acc: 'john.doe@example.com', method: 'Stripe', tx: 'ch_3N1x...' },
-                { date: '2023-10-23 09:45', status: 'refunded', pack: 'Pro Bundle', amount: '$299.00', acc: 'changedmind@email.com', method: 'PayPal', tx: 'TX-1124559B' },
-                { date: '2023-10-22 16:20', status: 'completed', pack: 'Enterprise', amount: '$999.00', acc: 'admin@domainvault.com', method: 'Wire Transfer', tx: 'WT-001' },
-            ],
-            prices: [
-                { id: 'starter', name: 'Starter Kit', price: '49.00', currency: 'USD' },
-                { id: 'pro', name: 'Pro Bundle', price: '299.00', currency: 'USD' },
-                { id: 'enterprise', name: 'Enterprise Limits', price: '999.00', currency: 'USD' }
-            ],
-            audit: [
-                { date: '2023-10-24 15:40', admin: 'admin@domainvault.com', action: 'Update Pricing', target: 'Pro Bundle', details: 'Changed price from $249 to $299' },
-                { date: '2023-10-23 10:15', admin: 'admin@domainvault.com', action: 'Process Refund', target: 'changedmind@email.com', details: 'User requested refund within 14 days' },
-                { date: '2023-10-20 08:30', admin: 'admin@domainvault.com', action: 'Suspend User', target: 'badactor@spam.net', details: 'Detected ToS violation (Spam)' },
-            ]
-        };
-
-        const app = {
-            init() {
-                lucide.createIcons();
-            },
-
-            login(e) {
-                e.preventDefault();
-                const email = document.getElementById('loginEmail').value;
-                const btn = e.target.querySelector('button');
-                
-                // Simulate network request
-                btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Authenticating...`;
-                lucide.createIcons();
-                btn.disabled = true;
-
-                setTimeout(() => {
-                    this.completeLogin(email);
-                    this.showToast('Successfully authenticated as Admin', 'success');
-                    
-                    // Reset button for future logouts
-                    btn.innerHTML = `Secure Sign In <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
-                    btn.disabled = false;
-                }, 800);
-            },
-
-            completeLogin(email) {
-                document.getElementById('loginView').classList.add('hidden');
-                document.getElementById('appView').classList.remove('hidden');
-                document.getElementById('appView').classList.add('flex', 'flex-col');
-                document.getElementById('signOutBtn').classList.remove('hidden');
-                
-                const emailEl = document.getElementById('whoEmail');
-                emailEl.textContent = email;
-                emailEl.classList.add('badge', 'badge-primary');
-                
-                this.renderAll();
-            },
-
-            logout() {
-                document.getElementById('appView').classList.add('hidden');
-                document.getElementById('appView').classList.remove('flex', 'flex-col');
-                document.getElementById('loginView').classList.remove('hidden');
-                document.getElementById('signOutBtn').classList.add('hidden');
-                document.getElementById('whoEmail').textContent = '';
-                document.getElementById('whoEmail').className = 'hidden md:inline-block';
-                this.showToast('Signed out successfully', 'info');
-            },
-
-            switchTab(tabId) {
-                // Update buttons
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.tab === tabId);
-                });
-                
-                // Update panels
-                document.querySelectorAll('.panel-section').forEach(panel => {
-                    panel.classList.add('hidden');
-                });
-                document.getElementById(`panel-${tabId}`).classList.remove('hidden');
-            },
-
-            renderAll() {
-                this.renderOverview();
-                this.renderUsers();
-                this.renderSales();
-                this.renderPrices();
-                this.renderAudit();
-            },
-
-            renderOverview() {
-                // Tiles
-                const tilesHtml = mockData.overview.map(tile => `
-                    <div class="bg-surface-card border ${tile.alert ? 'border-red-500/30' : 'border-surface-border'} rounded-[7px] p-4 flex flex-col justify-center">
-                        <span class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">${tile.label}</span>
-                        <span class="text-2xl font-bold font-mono ${tile.alert ? 'text-red-500' : 'text-white'}">${tile.value}</span>
-                    </div>
-                `).join('');
-                document.getElementById('overviewTiles').innerHTML = tilesHtml;
-
-                // Pending Table
-                const pendingHtml = mockData.pendingUsers.map(user => `
-                    <tr>
-                        <td class="font-medium text-white">${user.email}</td>
-                        <td class="font-mono text-xs text-slate-400">${user.phone}</td>
-                        <td>${user.location}</td>
-                        <td>${user.date}</td>
-                        <td class="text-right">
-                            <button class="btn-base btn-primary !h-8 text-xs" onclick="app.activateUser('${user.email}')">
-                                Activate User
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-                document.getElementById('pendingRows').innerHTML = pendingHtml || `<tr><td colspan="5" class="text-center py-4 text-slate-500">No pending activations</td></tr>`;
-
-                // Update notification counts
-                const pendingCountBadge = document.getElementById('pendingCount');
-                if (mockData.pendingUsers.length > 0) {
-                    pendingCountBadge.textContent = mockData.pendingUsers.length;
-                    pendingCountBadge.classList.remove('hidden');
-                } else {
-                    pendingCountBadge.classList.add('hidden');
-                }
-            },
-
-            renderUsers() {
-                const statusFilter = document.getElementById('userStatus').value;
-                const searchStr = document.getElementById('userSearch').value.toLowerCase();
-                
-                let filtered = mockData.users.filter(u => {
-                    const matchStatus = statusFilter === 'all' || u.status === statusFilter;
-                    const matchSearch = u.email.toLowerCase().includes(searchStr);
-                    return matchStatus && matchSearch;
-                });
-
-                const html = filtered.map(u => `
-                    <tr>
-                        <td class="font-medium text-white">${u.email}</td>
-                        <td><span class="badge ${this.getStatusBadgeClass(u.status)}">${u.status}</span></td>
-                        <td>${u.plan}</td>
-                        <td class="text-right font-mono text-slate-300">${u.domains}</td>
-                        <td>${u.loc}</td>
-                        <td>${u.date}</td>
-                        <td class="text-right">
-                            <div class="flex items-center justify-end gap-2">
-                                <button class="p-1.5 text-slate-400 hover:text-white bg-surface-bg rounded transition-colors" title="Edit">
-                                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-                                </button>
-                                ${u.status === 'suspended' ? `
-                                    <button class="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded transition-colors" title="Restore">
-                                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                ` : `
-                                    <button class="p-1.5 text-red-500 hover:bg-red-500/10 rounded transition-colors" title="Suspend">
-                                        <i data-lucide="slash" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                `}
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-                
-                document.getElementById('userRows').innerHTML = html || `<tr><td colspan="7" class="text-center py-8 text-slate-500">No users found matching criteria.</td></tr>`;
-                lucide.createIcons();
-            },
-
-            renderSales() {
-                const html = mockData.sales.map(s => `
-                    <tr>
-                        <td class="text-xs text-slate-400 whitespace-nowrap">${s.date}</td>
-                        <td><span class="badge ${this.getStatusBadgeClass(s.status)}">${s.status}</span></td>
-                        <td class="font-medium text-slate-300">${s.pack}</td>
-                        <td class="text-right font-mono text-white font-medium">${s.amount}</td>
-                        <td>${s.acc}</td>
-                        <td class="text-slate-400 text-xs">${s.method}</td>
-                        <td class="font-mono text-[10px] text-slate-500">${s.tx}</td>
-                    </tr>
-                `).join('');
-                document.getElementById('salesRows').innerHTML = html;
-            },
-
-            renderPrices() {
-                const html = mockData.prices.map(p => `
-                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-4 bg-surface-bg border border-surface-border p-3 rounded-lg">
-                        <div class="flex-1 w-full sm:w-auto">
-                            <p class="font-medium text-white">${p.name}</p>
-                            <p class="text-xs text-slate-400 font-mono text-[10px]">ID: ${p.id}</p>
-                        </div>
-                        <div class="w-full sm:w-32">
-                            <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">$</span>
-                                <input type="number" class="input-base !pl-7 font-mono" value="${p.price}" step="0.01">
-                            </div>
-                        </div>
-                        <div class="w-full sm:w-20">
-                            <input type="text" class="input-base text-center uppercase" value="${p.currency}" readonly>
-                        </div>
-                    </div>
-                `).join('');
-                document.getElementById('priceRows').innerHTML = html;
-            },
-
-            renderAudit() {
-                const html = mockData.audit.map(a => `
-                    <tr>
-                        <td class="text-xs text-slate-400 whitespace-nowrap">${a.date}</td>
-                        <td class="font-medium text-brand text-xs">${a.admin}</td>
-                        <td><span class="badge badge-info">${a.action}</span></td>
-                        <td class="font-mono text-slate-300 text-xs">${a.target}</td>
-                        <td class="text-slate-400 whitespace-normal min-w-[200px] text-xs">${a.details}</td>
-                    </tr>
-                `).join('');
-                document.getElementById('auditRows').innerHTML = html;
-            },
-
-            activateUser(email) {
-                mockData.pendingUsers = mockData.pendingUsers.filter(u => u.email !== email);
-                const user = mockData.users.find(u => u.email === email);
-                if (user) user.status = 'active';
-                
-                this.renderAll();
-                this.showToast(`User ${email} has been activated.`, 'success');
-            },
-
-            getStatusBadgeClass(status) {
-                switch(status.toLowerCase()) {
-                    case 'active':
-                    case 'completed': return 'badge-success';
-                    case 'pending': return 'badge-warning';
-                    case 'suspended':
-                    case 'rejected':
-                    case 'reversed':
-                    case 'failed': return 'badge-danger';
-                    case 'refunded': return 'badge-info';
-                    default: return 'bg-slate-500/10 text-slate-500';
-                }
-            },
-
-            showToast(message, type = 'success') {
-                const toast = document.getElementById('toast');
-                const title = document.getElementById('toastTitle');
-                const msg = document.getElementById('toastMsg');
-                const icon = document.getElementById('toastIcon');
-
-                title.textContent = type === 'success' ? 'Success' : (type === 'error' ? 'Error' : 'Information');
-                msg.textContent = message;
-
-                toast.className = 'fixed bottom-6 right-6 transform transition-all duration-300 z-[100] max-w-sm w-[calc(100%-3rem)] sm:w-full';
-                const inner = toast.querySelector('div');
-                
-                if(type === 'success') {
-                    inner.className = 'bg-surface-hover border-l-4 border-emerald-500 rounded-lg shadow-2xl p-4 flex items-start gap-3';
-                    icon.setAttribute('data-lucide', 'check-circle');
-                    icon.className = 'w-5 h-5 text-emerald-500 shrink-0';
-                } else if(type === 'error') {
-                    inner.className = 'bg-surface-hover border-l-4 border-red-500 rounded-lg shadow-2xl p-4 flex items-start gap-3';
-                    icon.setAttribute('data-lucide', 'alert-circle');
-                    icon.className = 'w-5 h-5 text-red-500 shrink-0';
-                } else {
-                    inner.className = 'bg-surface-hover border-l-4 border-blue-500 rounded-lg shadow-2xl p-4 flex items-start gap-3';
-                    icon.setAttribute('data-lucide', 'info');
-                    icon.className = 'w-5 h-5 text-blue-500 shrink-0';
-                }
-                
-                lucide.createIcons();
-                
-                requestAnimationFrame(() => {
-                    toast.classList.remove('translate-y-[150%]', 'opacity-0');
-                    toast.classList.add('translate-y-0', 'opacity-100');
-                });
-
-                if (this.toastTimeout) clearTimeout(this.toastTimeout);
-                this.toastTimeout = setTimeout(() => {
-                    toast.classList.remove('translate-y-0', 'opacity-100');
-                    toast.classList.add('translate-y-[150%]', 'opacity-0');
-                }, 3000);
-            }
-        };
-
-        // Initialize application
-        document.addEventListener('DOMContentLoaded', () => app.init());
-    </script>
-
-    <script>
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
 
-        let fontSize = 14; 
+        let fontSize = 14;
         let columns = 0;
         let drops = [];
 
@@ -694,6 +429,9 @@
         resizeCanvas();
 
         function draw() {
+            // The rain sits behind the sign-in card; skip the work while it is not on screen.
+            if (!canvas.getClientRects().length) return;
+
             ctx.fillStyle = "rgba(13, 13, 18, 0.05)"; // Use a color closer to your dark surface-bg for a smoother fade
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#ff5011";
@@ -713,5 +451,9 @@
 
         setInterval(draw, 33);
     </script>
+
+    <script src="../config.js"></script>
+    <script src="../api.js"></script>
+    <script src="admin.js"></script>
 </body>
 </html>
