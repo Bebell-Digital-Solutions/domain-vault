@@ -35,6 +35,7 @@ window.DOMAIN_VAULT_CONFIG = (function () {
       ? 'https://www.sandbox.paypal.com/cgi-bin/webscr'
       : 'https://www.paypal.com/cgi-bin/webscr',
     buttons: {
+      'Personal': 'REPLACE_STARTUP_BUTTON_ID',
       'Start-up': 'REPLACE_STARTUP_BUTTON_ID',
       'Business': 'REPLACE_BUSINESS_BUTTON_ID',
       'Agency':   'REPLACE_AGENCY_BUTTON_ID'
