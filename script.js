@@ -325,6 +325,12 @@
                 const params = new URLSearchParams(location.search);
                 if (params.has('register')) setAuthMode('register');
                 pendingPlanChoice = canonicalPlan(params.get('plan'));
+                // Used once: a reload must not reopen the checkout.
+                if (params.has('register') || params.has('plan')) {
+                    params.delete('register');
+                    params.delete('plan');
+                    history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash);
+                }
                 // Restore a previous session, if there is one. The old build
                 // logged you out on every refresh.
                 window.DomainVaultAPI.restore().then(function (user) {
