@@ -61,8 +61,8 @@
         tbody tr { @apply hover:bg-surface-hover transition-colors; }
         
         /* Input & Button base styles */
-        .input-base { @apply bg-surface-bg text-slate-200 border border-surface-border rounded-[7px] px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all; }
-        .btn-base { @apply inline-flex items-center justify-center gap-2 rounded-[7px] px-4 py-2 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed; }
+        .input-base { @apply bg-surface-bg text-slate-200 border border-surface-border rounded-[7px] px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all; }
+        .btn-base { @apply inline-flex items-center justify-center gap-2 rounded-[7px] px-4 h-10 text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed; }
         .btn-primary { @apply bg-brand text-white hover:bg-brand-hover shadow-lg shadow-brand/20; }
         .btn-secondary { @apply bg-surface-hover text-slate-200 border border-surface-border hover:border-slate-400; }
     </style>
@@ -106,8 +106,8 @@
         <!-- Right: User Info -->
         <div class="flex items-center gap-4 text-sm text-slate-400 justify-end flex-wrap">
             <span id="whoEmail" class="hidden md:inline-block"></span>
-            <a href="#" class="hover:text-brand transition-colors text-xs sm:text-sm">App View</a>
-            <button id="signOutBtn" class="btn-secondary py-1.5 px-3 text-xs hidden rounded-[7px]" onclick="app.logout()">
+            <a href="/app" class="hover:text-brand transition-colors text-xs sm:text-sm">App View</a>
+            <button id="signOutBtn" class="btn-base btn-primary whitespace-nowrap !h-8 !px-3 !text-xs hidden" onclick="app.logout()">
                 <i data-lucide="log-out" class="w-3 h-3"></i> Sign out
             </button>
         </div>
@@ -223,7 +223,7 @@
                         <input id="userSearch" type="search" placeholder="Search by email..." class="input-base pl-9" onkeyup="app.renderUsers()">
                     </div>
                 </div>
-                <button class="btn-secondary btn-base w-full md:w-auto h-[42px]" onclick="app.showToast('Data refreshed successfully', 'success')">
+                <button class="btn-secondary btn-base w-full md:w-auto" onclick="app.showToast('Data refreshed successfully', 'success')">
                     <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh
                 </button>
             </div>
@@ -276,11 +276,11 @@
                         <option value="reversed">Chargeback</option>
                     </select>
                 </div>
-                <button class="btn-primary btn-base w-full sm:w-auto h-[42px]" onclick="app.showToast('Filters applied', 'success')">
+                <button class="btn-primary btn-base w-full sm:w-auto" onclick="app.showToast('Filters applied', 'success')">
                     <i data-lucide="filter" class="w-4 h-4"></i> Apply
                 </button>
                 <div class="flex-1 hidden lg:block"></div>
-                <button class="btn-secondary btn-base w-full sm:w-auto h-[42px]" onclick="app.showToast('CSV Export Started', 'success')">
+                <button class="btn-secondary btn-base w-full sm:w-auto" onclick="app.showToast('CSV Export Started', 'success')">
                     <i data-lucide="download" class="w-4 h-4"></i> Export CSV
                 </button>
             </div>
