@@ -95,6 +95,16 @@ async function reload(page) {
     (await page.textContent('#proceedToCheckoutBtn')).includes('Subscribe'));
   await page.evaluate(() => document.getElementById('upgradeModal').style.display = 'none');
 
+  // The lifetime-deal page links with &billing=lifetime; until lifetime deals
+  // exist the visitor is told so and offered the yearly plans.
+  await page.goto(SITE + '/app/index.html?plan=start-up&billing=lifetime');
+  await page.waitForSelector('#upgradeModal', { state: 'visible', timeout: 20000 });
+  await page.waitForFunction(() => /49\.00 USD/.test(document.getElementById('upgradePlanSelect').textContent));
+  ok('lifetime link without lifetime deals explains and offers yearly',
+    /aren't available yet/.test(await page.textContent('#upgradeDescText')) &&
+    !page.url().includes('billing='));
+  await page.evaluate(() => document.getElementById('upgradeModal').style.display = 'none');
+
   // PayPal return: plan changes server-side, page picks it up without re-login.
   await page.evaluate(() => document.getElementById('upgradeModal').style.display = 'none');
   await page.goto(SITE + '/app/index.html?payment=success');

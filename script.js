@@ -73,6 +73,10 @@
                 buttonId(p, 'lifetime') && packPrices[p] && packPrices[p].lifetimeAmount !== null && packPrices[p].lifetimeAmount !== undefined);
             document.getElementById('upgradeBillingGroup').style.display = lifetimeOffered ? '' : 'none';
             if (!lifetimeOffered) document.querySelector('input[name="upgradeBilling"][value="yearly"]').checked = true;
+            // Arriving from the lifetime-deal page: preselect it when it exists.
+            const askedLifetime = pendingBilling === 'lifetime';
+            pendingBilling = null;
+            if (askedLifetime && lifetimeOffered) document.querySelector('input[name="upgradeBilling"][value="lifetime"]').checked = true;
             const mode = billingMode();
             const t = translations[settings.language] || translations.en;
 
@@ -98,7 +102,9 @@
             else if (firstEnabled && select.selectedOptions[0] && select.selectedOptions[0].disabled) select.value = firstEnabled.value;
 
             document.getElementById('proceedToCheckoutBtn').textContent = mode === 'lifetime' ? t.payOnce : t.subscribe;
-            document.getElementById('upgradeDescText').textContent = mode === 'lifetime' ? t.lifetimeDesc : t.upgradeDesc;
+            document.getElementById('upgradeDescText').textContent =
+                askedLifetime && !lifetimeOffered ? t.lifetimeUnavailable
+                    : mode === 'lifetime' ? t.lifetimeDesc : t.upgradeDesc;
         }
 
         // --- TRANSLATION DATA ---
@@ -130,6 +136,7 @@
                 searchRecommendations: "Search hosting, email...", quickDnsCheck: "Quick DNS Check", enterDomainName: "Enter domain name...", checkDns: "Check DNS", others: "Others", other: "Other",
                 upgradeTitle: "Upgrade Required", upgradeDesc: "Yearly subscription through PayPal. It renews automatically; cancel any time and keep your plan until the end of the year you paid for.",
                 lifetimeDesc: "One payment through PayPal, no renewals: the plan is yours for good.", subscribe: "Subscribe with PayPal", payOnce: "Pay once with PayPal",
+                lifetimeUnavailable: "Lifetime deals aren't available yet. You can start with a yearly plan below.",
                 billing: "Billing", yearly: "Yearly", lifetime: "Lifetime (one payment)", manageSubscription: "Manage or cancel your subscription in PayPal", contactAdmin: "Contact Admin to Upgrade", maybeLater: "Maybe Later",
                 reports: "Reports", applyFilter: "Apply Filter", emailReport: "Email Report", downloadCsv: "Download CSV", startDate: "Start Date", endDate: "End Date",
                 currentPlan: "Your Current Plan:", selectNewPlan: "Select New Plan",
@@ -174,6 +181,7 @@
                 searchRecommendations: "Buscar hosting, correo...", quickDnsCheck: "Comprobación Rápida DNS", enterDomainName: "Ingrese nombre de dominio...", checkDns: "Comprobar DNS", others: "Otros", other: "Otro",
                 upgradeTitle: "Actualización Requerida", upgradeDesc: "Suscripción anual con PayPal. Se renueva automáticamente; cancela cuando quieras y conserva tu plan hasta el final del año pagado.",
                 lifetimeDesc: "Un solo pago con PayPal, sin renovaciones: el plan es tuyo para siempre.", subscribe: "Suscribirse con PayPal", payOnce: "Pagar una vez con PayPal",
+                lifetimeUnavailable: "Las ofertas de por vida aún no están disponibles. Puedes empezar con un plan anual.",
                 billing: "Facturación", yearly: "Anual", lifetime: "De por vida (un pago)", manageSubscription: "Administra o cancela tu suscripción en PayPal", contactAdmin: "Contactar Admin para Actualizar", maybeLater: "Quizás Más Tarde",
                 reports: "Reportes", applyFilter: "Aplicar Filtro", emailReport: "Enviar por Correo", downloadCsv: "Descargar CSV", startDate: "Fecha de Inicio", endDate: "Fecha de Fin",
                 currentPlan: "Tu Plan Actual:", selectNewPlan: "Seleccionar Nuevo Plan",
@@ -232,6 +240,7 @@
         let purchases = [];
         let subscriptions = [];
         let pendingPlanChoice = null;   // ?plan=… from the homepage's pricing table
+        let pendingBilling = null;      // ?billing=lifetime from the lifetime-deal page
         let authMode = 'login';          // login | register | forgot | recover
         let recoveryToken = null;        // from a password-reset link; kept out of the URL
         let revealedPassword = null;     // credentials modal only, forgotten when it closes
@@ -325,10 +334,12 @@
                 const params = new URLSearchParams(location.search);
                 if (params.has('register')) setAuthMode('register');
                 pendingPlanChoice = canonicalPlan(params.get('plan'));
+                pendingBilling = params.get('billing') === 'lifetime' ? 'lifetime' : null;
                 // Used once: a reload must not reopen the checkout.
-                if (params.has('register') || params.has('plan')) {
+                if (params.has('register') || params.has('plan') || params.has('billing')) {
                     params.delete('register');
                     params.delete('plan');
+                    params.delete('billing');
                     history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash);
                 }
                 // Restore a previous session, if there is one. The old build

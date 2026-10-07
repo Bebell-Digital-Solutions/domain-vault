@@ -25,18 +25,27 @@ out="dist/$target"
 case "$target" in
   site)
     rm -rf "$out" && mkdir -p "$out"
-    cp index.html 404.html downloads.html config.js "$out"/
-    cp -r es p "$out"/
+    # Every public page is published, so new pages (pricing, confirmation
+    # pages…) go live without touching this script. What stays out: the app
+    # (its own site), server and desktop code, drafts, and backups.
+    tar -cf - \
+      --exclude='./app' --exclude='./backend' --exclude='./desktop' --exclude='./archive' \
+      --exclude='./deploy' --exclude='./dist' --exclude='./node_modules' --exclude='./.*' \
+      --exclude='*.md' --exclude='*.txt' --exclude='./CNAME' \
+      --exclude='./script.js' --exclude='./api.js' \
+      . | tar -xf - -C "$out"
     # Links into the app go straight to its own domain (keeping ?register),
     # and so does the landing page's forwarder for PayPal returns and
     # password-reset links.
     find "$out" -name '*.html' -exec sed -i \
       -e "s#href=\"/app/#href=\"$APP_ORIGIN/#g" \
+      -e "s#href=\"/app\"#href=\"$APP_ORIGIN/\"#g" \
       -e "s#location.replace('/app/'#location.replace('$APP_ORIGIN/'#g" {} +
     # Old bookmarks and links in emails already sent still arrive at /app/.
     cat > "$out/_redirects" <<EOF
-/app/*  $APP_ORIGIN/:splat  301
-/app    $APP_ORIGIN/        301
+/app/*    $APP_ORIGIN/:splat  301
+/app      $APP_ORIGIN/        301
+/pricing  /#pricing           301
 EOF
     ;;
   app)
