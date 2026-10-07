@@ -452,6 +452,24 @@
         setInterval(draw, 33);
     </script>
 
+    <script>var anw = window.anw || {
+      mainButton: true,
+      widgetID: '98adc241-69bf-34aa-a36e-0ef0f4c866ab',
+      apiKey: 'oVzPEIjeozKFI4vB-Vd9iA',
+      showNewMessagePopup: true,
+      moduleConfigUrl: 'https://app.helpdesk.icu/app'
+    };
+    (function(d, s, id){
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) {
+          return;
+      }
+      js = d.createElement(s); js.id = id;
+      js.src = 'https://api.helpdesk.icu/widget/98adc241-69bf-34aa-a36e-0ef0f4c866ab/admin-livechat-js?r=' + encodeURIComponent(window.location);
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'contactus-jssdk'));
+  </script>
+
     <script src="../config.js"></script>
     <script src="../api.js"></script>
     <script src="admin.js"></script>
