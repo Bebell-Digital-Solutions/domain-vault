@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="title">404 - Page Not Found</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+
+    <link rel="icon" href="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Domain-vault-logo.webp">
+
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                    code: ['Fira Code', 'monospace'],
+                    tech: ['Orbitron', 'monospace'],
+                },
+                colors: {
+                    black: '#000000',
+                    brand: {
+                        primary: '#ff5011',
+                        secondary: '#333333',
+                        bgDark: '#000000',
+                        bgDarker: '#050505',
+                        card: '#121212',
+                        hover: '#1a1a1a',
+                        textMain: '#f5f5f5',
+                        muted: '#a0a0a0',
+                        border: 'rgba(255, 255, 255, 0.1)',
+                        success: '#51cf66',
+                        warning: '#ffd43b',
+                        danger: '#ef4444',
+                    }
+                },
+                boxShadow: {
+                    'glow': '0 0 30px rgba(255, 80, 17, 0.15)',
+                },
+                letterSpacing: {
+                    tight: '-0.02em',
+                },
+                animation: {
+                    'marquee': 'marquee 30s linear infinite',
+                    'float': 'float 6s ease-in-out infinite',
+                },
+                keyframes: {
+                    marquee: {
+                        '0%': { transform: 'translateX(0%)' },
+                        '100%': { transform: 'translateX(-100%)' },
+                    },
+                    float: {
+                        '0%': { transform: 'translateY(0px)' },
+                        '50%': { transform: 'translateY(-10px)' },
+                        '100%': { transform: 'translateY(0px)' },
+                    }
+                }
+            }
+        }
+    }
+    </script>
+
+    <style>
+        /* ===== ORANGE COLOR PALETTE ===== */
+        :root {
+            --skin-color: #ff5011;
+            --mirage-color: hsl(210, 10%, 23%);
+            --title-color: hsl(210, 8%, 95%);
+            --text-color: hsl(210, 8%, 85%);
+            --body-color: hsl(210, 19%, 5%);
+            --box-color: hsl(210, 14%, 10%);
+            --scroll-box-color: hsl(210, 12%, 38%);
+            --scroll-thumb-color: #ff5011;
+            --hue-color: 210;
+        }
+
+        /* ===== RESET & BASE ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--body-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ===== MATRIX CANVAS ===== */
+        #canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 0;
+            display: block;
+            pointer-events: none;
+        }
+
+        /* ===== CENTERED CARD ===== */
+        .card {
+            position: relative;
+            z-index: 0;
+            background: rgba(10, 14, 19, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: .2px solid var(--scroll-box-color);
+            border-radius: 2rem;
+            padding: 3rem 4rem;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 50px -8px rgba(0, 0, 0, 0.8);
+            transition: transform 0.3s ease, box-shadow 0.4s ease;
+        }
+
+        .card:hover {
+            transform: scale(1.04);
+            box-shadow: 0 0 30px rgba(255, 80, 17, 0.25),
+                        0 25px 50px -8px rgba(0, 0, 0, 0.9);
+            border-color: var(--skin-color);
+        }
+
+        .card h1 {
+            font-size: 7rem;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--skin-color);
+            margin-bottom: 0.25rem;
+            letter-spacing: -4px;
+            animation: glowPulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes glowPulse {
+            0% {
+                text-shadow: 0 0 20px rgba(255, 80, 17, 0.4),
+                             0 0 40px rgba(255, 80, 17, 0.15);
+            }
+            50% {
+                text-shadow: 0 0 40px rgba(255, 80, 17, 0.8),
+                             0 0 80px rgba(255, 80, 17, 0.4),
+                             0 0 120px rgba(255, 80, 17, 0.15);
+            }
+            100% {
+                text-shadow: 0 0 20px rgba(255, 80, 17, 0.4),
+                             0 0 40px rgba(255, 80, 17, 0.15);
+            }
+        }
+
+        .card .subtitle {
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: var(--title-color);
+            margin-bottom: 2rem;
+            letter-spacing: -0.5px;
+        }
+
+        .card .subtitle span {
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--skin-color);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 0.9rem 2.8rem;
+            border-radius: 50px;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 80, 17, 0.3);
+            letter-spacing: 0.3px;
+        }
+
+        .btn:hover {
+            background-color: var(--scroll-thumb-color);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(255, 80, 17, 0.4);
+        }
+
+        /* ===== LANGUAGE TOGGLE ===== */
+        .lang-toggle {
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            z-index: 20;
+            display: flex;
+            gap: 0.25rem;
+            background: rgba(10, 14, 19, 0.85);
+            border: 1px solid var(--scroll-box-color);
+            border-radius: 50px;
+            padding: 0.25rem;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .lang-toggle button {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            padding: 0.4rem 0.9rem;
+            border: none;
+            border-radius: 50px;
+            background: transparent;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .lang-toggle button:hover { color: var(--skin-color); }
+
+        .lang-toggle button.active {
+            background: var(--skin-color);
+            color: #fff;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 600px) {
+            .card { padding: 2rem 1.5rem; }
+            .card h1 { font-size: 5.5rem; }
+            .card .subtitle { font-size: 1.1rem; }
+            .btn { font-size: 1rem; padding: 0.8rem 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- Language toggle -->
+    <div class="lang-toggle" role="group" aria-label="Language">
+        <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="es">ES</button>
+    </div>
+
+    <div class="card">
+        <!-- Top glowing line -->
+        <div class="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-100"></div>
+
+        <h1 class="font-tech">404</h1>
+        <p class="subtitle font-tech" data-i18n="subtitle_html">
+            The page you're looking for <span>doesn't exist</span>
+        </p>
+        <a href="/" class="btn" data-i18n="cta" data-home-en="/" data-home-es="/es/">Back to Home</a>
+    </div>
+
+<script>
+/* ============================================================
+   1. LANGUAGE DETECTION & I18N
+   ============================================================ */
+
+const i18n = {
+    en: {
+        title: "404 - Page Not Found",
+        subtitle_html: 'The page you\'re looking for<br> <span>doesn\'t exist. </span>',
+        cta: "Back to Home",
+        htmlLang: "en"
+    },
+    es: {
+        title: "404 - Página no encontrada",
+        subtitle_html: 'La página que buscas <span>no existe.</span>',
+        cta: "Volver al Inicio",
+        htmlLang: "es"
+    }
+};
+
+/**
+ * Decide which language to show.
+ * Priority:
+ *   1. Explicit ?lang=es / ?lang=en in URL (so users can share a link)
+ *   2. /es/ path prefix  → Spanish
+ *   3. Browser language  → Spanish if starts with "es", else English
+ *   4. Fallback          → English
+ */
+function detectLang() {
+    const params = new URLSearchParams(window.location.search);
+    const urlLang = params.get('lang');
+    if (urlLang === 'es' || urlLang === 'en') return urlLang;
+
+    if (window.location.pathname.startsWith('/es/') ||
+        window.location.pathname === '/es') {
+        return 'es';
+    }
+
+    const browserLangs = navigator.languages && navigator.languages.length
+        ? navigator.languages
+        : [navigator.language || navigator.userLanguage || 'en'];
+
+    for (const lang of browserLangs) {
+        if (typeof lang === 'string' && lang.toLowerCase().startsWith('es')) {
+            return 'es';
+        }
+    }
+    return 'en';
+}
+
+function applyLang(lang) {
+    const dict = i18n[lang] || i18n.en;
+
+    document.documentElement.lang = dict.htmlLang;
+    document.title = dict.title;
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key] !== undefined) {
+            // Use innerHTML so the <span> in subtitle survives
+            el.innerHTML = dict[key];
+        }
+    });
+
+    // Update home links
+    const cta = document.querySelector('[data-i18n="cta"]');
+    if (cta) {
+        cta.href = (lang === 'es')
+            ? (cta.dataset.homeEs || '/es/')
+            : (cta.dataset.homeEn || '/');
+    }
+
+    // Highlight active toggle button
+    document.querySelectorAll('.lang-toggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+}
+
+// Initial run
+let currentLang = detectLang();
+applyLang(currentLang);
+
+// Toggle buttons
+document.querySelectorAll('.lang-toggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        currentLang = btn.dataset.lang;
+        applyLang(currentLang);
+    });
+});
+
+/* ============================================================
+   2. MATRIX CANVAS (unchanged behavior, with DPI fix)
+   ============================================================ */
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const fontSize = 14; // fixed size in CSS px (previous 2 was too small to see)
+let columns = 0;
+let drops = [];
+
+function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = window.innerWidth  * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width  = window.innerWidth  + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    columns = Math.floor(window.innerWidth / fontSize);
+    drops = new Array(columns).fill(1);
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function draw() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    ctx.fillStyle = "#ff5011";
+    ctx.font = fontSize + "px monospace";
+
+    for (let i = 0; i < drops.length; i++) {
+        const text = String.fromCharCode(Math.floor(Math.random() * 94 + 33));
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > window.innerHeight && Math.random() > 0.975) {
+            drops[i] = 0;
+        }
+        drops[i]++;
+    }
+}
+
+setInterval(draw, 33);
+</script>
+
+</body>
+</html>
