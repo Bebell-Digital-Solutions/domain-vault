@@ -129,6 +129,7 @@
     selectTab("overview");
     renderOverview(overview);
     loadPending();
+    loadSupportWidget();
   }
 
   $("loginForm").addEventListener("submit", async (e) => {
@@ -165,6 +166,8 @@
     users: () => loadUsers(),
     sales: () => loadSales(),
     prices: () => loadPrices(),
+    tools: () => loadCatalog(),
+    support: () => loadSupport(),
     audit: () => loadAudit(),
   };
 
@@ -352,6 +355,17 @@
         case "save-price":
           await savePrice(btn.dataset.plan);
           break;
+        case "edit-tool":
+          editCatalogItem(id);
+          break;
+        case "delete-tool": {
+          const item = state.catalog.find((i) => i.id === id);
+          if (item && confirm(`Delete "${item.name}"? Users will no longer see it.`)) {
+            const res = await call("adminDeleteCatalogItem", { id });
+            if (res) { renderCatalog(res.items || []); resetCatalogForm(); toast("Tool deleted."); }
+          }
+          break;
+        }
       }
     } finally {
       btn.disabled = false;
@@ -551,6 +565,127 @@
       </tr>`).join("")
       : emptyRow(5, "No admin actions yet.");
   }
+
+  /* --------------------------------------------------------------- tools */
+
+  state.catalog = [];
+
+  async function loadCatalog() {
+    const res = await call("adminListCatalog");
+    if (res) renderCatalog(res.items || []);
+  }
+
+  function renderCatalog(items) {
+    state.catalog = items;
+    $("catalogRows").innerHTML = items.length ? items.map((i) => `<tr>
+        <td><div class="flex items-center gap-2"><i data-lucide="${/^[a-z0-9-]+$/.test(i.icon || "") ? i.icon : "globe"}" class="w-4 h-4 text-brand shrink-0"></i>
+          <div><div class="font-medium text-white">${h(i.name)}</div>
+          <a href="${/^https?:\/\//.test(i.url || "") ? h(i.url) : "#"}" target="_blank" rel="noopener" class="text-xs text-slate-400 hover:text-brand break-all">${h(i.url)}</a></div></div></td>
+        <td class="text-xs">${i.kind === "provider" ? "Recommended provider" : "Tool"}</td>
+        <td class="text-xs text-slate-300">${h((i.tags || []).join(", "))}</td>
+        <td class="text-xs">${h(Number(i.rating).toFixed(1))}</td>
+        <td class="text-xs">${h(i.sort)}</td>
+        <td>${i.active ? '<span class="badge badge-success">Visible</span>' : '<span class="badge badge-info">Hidden</span>'}</td>
+        <td><div class="flex gap-2">
+          <button class="${SMALL_BTN} btn-secondary" data-act="edit-tool" data-id="${h(i.id)}">Edit</button>
+          <button class="${BAD_BTN}" data-act="delete-tool" data-id="${h(i.id)}">Delete</button>
+        </div></td>
+      </tr>`).join("")
+      : emptyRow(7, "No tools yet. Add the first one with the form.");
+    icons();
+  }
+
+  function resetCatalogForm() {
+    $("catalogForm").reset();
+    $("catalogId").value = "";
+    $("catalogActive").checked = true;
+    $("catalogFormTitle").textContent = "Add a tool";
+  }
+
+  function editCatalogItem(id) {
+    const i = state.catalog.find((x) => x.id === id);
+    if (!i) return;
+    $("catalogId").value = i.id;
+    $("catalogName").value = i.name;
+    $("catalogUrl").value = i.url;
+    $("catalogDesc").value = i.description || "";
+    $("catalogKind").value = i.kind;
+    $("catalogIcon").value = i.icon || "";
+    $("catalogRating").value = i.rating;
+    $("catalogTags").value = (i.tags || []).join(", ");
+    $("catalogSort").value = i.sort;
+    $("catalogActive").checked = i.active;
+    $("catalogFormTitle").textContent = `Edit "${i.name}"`;
+    $("catalogName").focus();
+  }
+
+  $("catalogReset").addEventListener("click", resetCatalogForm);
+  $("catalogForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const item = {
+      id: $("catalogId").value || undefined,
+      name: $("catalogName").value,
+      url: $("catalogUrl").value.trim(),
+      description: $("catalogDesc").value,
+      kind: $("catalogKind").value,
+      icon: $("catalogIcon").value.trim() || "globe",
+      rating: $("catalogRating").value,
+      tags: $("catalogTags").value,
+      sort: $("catalogSort").value,
+      active: $("catalogActive").checked,
+    };
+    $("catalogSave").disabled = true;
+    try {
+      const res = await call("adminSaveCatalogItem", { item });
+      if (res) {
+        renderCatalog(res.items || []);
+        toast(item.id ? `"${item.name}" updated.` : `"${item.name}" added.`);
+        resetCatalogForm();
+      }
+    } finally {
+      $("catalogSave").disabled = false;
+    }
+  });
+
+  /* ------------------------------------------------------------- support */
+
+  // The helpdesk's operator widget. Its key comes from the server, after the
+  // admin check, so it never sits in this public page.
+  let supportLoaded = false;
+
+  async function loadSupportWidget() {
+    if (supportLoaded) return true;
+    const res = await API.call("adminSupportWidget", {}).catch(() => null);
+    if (!res || !res.success || !res.configured || !/^[0-9a-f-]{36}$/i.test(res.widgetID || "")) return false;
+    window.anw = {
+      mainButton: true,
+      widgetID: res.widgetID,
+      apiKey: res.apiKey,
+      showNewMessagePopup: true,
+      moduleConfigUrl: res.moduleConfigUrl,
+    };
+    const js = document.createElement("script");
+    js.id = "contactus-jssdk";
+    js.src = `https://api.helpdesk.icu/widget/${res.widgetID}/admin-livechat-js?r=${encodeURIComponent(location.href)}`;
+    document.head.appendChild(js);
+    supportLoaded = true;
+    return true;
+  }
+
+  async function loadSupport() {
+    const ready = await loadSupportWidget();
+    $("supportStatus").textContent = ready
+      ? "Connected. New messages pop up here; the chat button sits at the bottom right of every tab."
+      : "Not connected yet: the chat's widget ID and operator key need to be added to the backend settings (HELPDESK_WIDGET_ID, HELPDESK_ADMIN_API_KEY).";
+    $("supportOpen").disabled = !ready;
+  }
+
+  $("supportOpen").addEventListener("click", () => {
+    // The widget exposes no documented "open" call; clicking its button is the reliable way.
+    const button = document.querySelector('[id*="contactus"] button, [class*="contactus"] button, [id*="anw"] button');
+    if (button) button.click();
+    else toast("Use the chat button at the bottom right.");
+  });
 
   /* ---------------------------------------------------------------- boot */
 

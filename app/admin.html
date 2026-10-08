@@ -177,6 +177,12 @@
             <button class="tab tab-btn" data-tab="prices">
                 <i data-lucide="tag" class="w-4 h-4"></i> Prices
             </button>
+            <button class="tab tab-btn" data-tab="tools">
+                <i data-lucide="wrench" class="w-4 h-4"></i> Tools
+            </button>
+            <button class="tab tab-btn" data-tab="support">
+                <i data-lucide="message-circle" class="w-4 h-4"></i> Support
+            </button>
             <button class="tab tab-btn" data-tab="audit">
                 <i data-lucide="history" class="w-4 h-4"></i> Audit log
             </button>
@@ -366,6 +372,91 @@
         </section>
 
         <!-- Audit -->
+        <section id="panel-tools" data-panel="tools" class="panel-section" hidden>
+            <p class="text-sm text-slate-400 mb-4 max-w-3xl">What users see on the app's <b class="text-white">Tools &amp; Resources</b> page. "Recommended providers" also appear in the add-domain and add-provider forms. Changes show up for users the next time they open the app.</p>
+            <div class="grid gap-6 xl:grid-cols-[1fr_380px] items-start">
+                <div class="overflow-x-auto border border-surface-border rounded-lg">
+                    <table class="w-full border-collapse min-w-[760px]">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Shown as</th>
+                                <th>Tags</th>
+                                <th>Rating</th>
+                                <th>Order</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="catalogRows"></tbody>
+                    </table>
+                </div>
+
+                <form id="catalogForm" class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-4" novalidate>
+                    <h2 class="text-lg font-semibold text-white" id="catalogFormTitle">Add a tool</h2>
+                    <input type="hidden" id="catalogId">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="catalogName" class="text-xs text-slate-400 font-medium">Name</label>
+                        <input id="catalogName" class="input-base" maxlength="80" required placeholder="e.g. Namecheap">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="catalogUrl" class="text-xs text-slate-400 font-medium">Link (your affiliate link works too)</label>
+                        <input id="catalogUrl" class="input-base" maxlength="500" required placeholder="https://…">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="catalogDesc" class="text-xs text-slate-400 font-medium">Short description</label>
+                        <input id="catalogDesc" class="input-base" maxlength="200" placeholder="e.g. Best for budget domains">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="catalogKind" class="text-xs text-slate-400 font-medium">Shown as</label>
+                        <select id="catalogKind" class="input-base">
+                            <option value="tool">Tool — Tools page only</option>
+                            <option value="provider">Recommended provider — Tools page and the add forms</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="catalogIcon" class="text-xs text-slate-400 font-medium">Icon (<a href="https://lucide.dev/icons/" target="_blank" rel="noopener" class="text-brand underline">Lucide name</a>)</label>
+                            <input id="catalogIcon" class="input-base" maxlength="40" placeholder="globe">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="catalogRating" class="text-xs text-slate-400 font-medium">Rating (0–5)</label>
+                            <input id="catalogRating" class="input-base" type="number" min="0" max="5" step="0.1" placeholder="5">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-[1fr_96px] gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="catalogTags" class="text-xs text-slate-400 font-medium">Tags (filters), comma-separated</label>
+                            <input id="catalogTags" class="input-base" placeholder="domains, dns">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="catalogSort" class="text-xs text-slate-400 font-medium">Order</label>
+                            <input id="catalogSort" class="input-base" type="number" step="1" placeholder="100">
+                        </div>
+                    </div>
+                    <label for="catalogActive" class="flex items-center gap-3 text-sm text-slate-200 cursor-pointer">
+                        <input id="catalogActive" type="checkbox" class="w-4 h-4 accent-brand" checked> Visible to users
+                    </label>
+                    <div class="pt-3 border-t border-surface-border flex gap-3 justify-end">
+                        <button type="button" id="catalogReset" class="btn-secondary btn-base">New</button>
+                        <button type="submit" id="catalogSave" class="btn-primary btn-base"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section id="panel-support" data-panel="support" class="panel-section" hidden>
+            <div class="bg-surface-card border border-surface-border rounded-xl p-5 max-w-3xl">
+                <h2 class="text-lg font-semibold text-white mb-1">Live chat with users</h2>
+                <p class="text-sm text-slate-400 mb-5" id="supportStatus">Checking the chat connection…</p>
+                <div class="flex flex-wrap gap-3">
+                    <button type="button" id="supportOpen" class="btn-primary btn-base" disabled><i data-lucide="message-circle" class="w-4 h-4"></i> Open the chat</button>
+                    <a id="supportConsole" href="https://app.helpdesk.icu/app" target="_blank" rel="noopener" class="btn-secondary btn-base"><i data-lucide="external-link" class="w-4 h-4"></i> Helpdesk console</a>
+                </div>
+                <p class="text-xs text-slate-500 mt-5">The chat's operator key is kept on the server and only sent to signed-in admins; it never appears in this page's source.</p>
+            </div>
+        </section>
+
         <section id="panel-audit" data-panel="audit" class="panel-section" hidden>
             <div class="overflow-x-auto border border-surface-border rounded-lg">
                 <table class="w-full border-collapse min-w-[800px]">
