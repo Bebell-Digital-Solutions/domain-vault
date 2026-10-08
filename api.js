@@ -155,7 +155,8 @@
 
     // Public actions need no token. Keep in sync with PUBLIC_ACTIONS in the
     // api function.
-    if (action === "registerUser" || action === "getPrices" || action === "requestPasswordReset") {
+    if (action === "registerUser" || action === "getPrices" || action === "getCatalog" ||
+        action === "requestPasswordReset") {
       return post(action, payload).then(unwrap);
     }
 

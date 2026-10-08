@@ -137,6 +137,10 @@
                 upgradeTitle: "Upgrade Required", upgradeDesc: "Yearly subscription through PayPal. It renews automatically; cancel any time and keep your plan until the end of the year you paid for.",
                 lifetimeDesc: "One payment through PayPal, no renewals: the plan is yours for good.", subscribe: "Subscribe with PayPal", payOnce: "Pay once with PayPal",
                 lifetimeUnavailable: "Lifetime deals aren't available yet. You can start with a yearly plan below.",
+                claimIntro: "Create your account (or log in if you already have one) to activate your purchase.",
+                downloadsTitle: "Desktop app", downloadsIntro: "Domain Vault on your computer, with renewal reminders even when the window is closed. Same account, same data.",
+                thisComputer: "This computer", downloadFor: "Download for", orDownload: "or download for", comingSoon: "Coming soon",
+                desktopNote: "You're using the desktop app.",
                 billing: "Billing", yearly: "Yearly", lifetime: "Lifetime (one payment)", manageSubscription: "Manage or cancel your subscription in PayPal", contactAdmin: "Contact Admin to Upgrade", maybeLater: "Maybe Later",
                 reports: "Reports", applyFilter: "Apply Filter", emailReport: "Email Report", downloadCsv: "Download CSV", startDate: "Start Date", endDate: "End Date",
                 currentPlan: "Your Current Plan:", selectNewPlan: "Select New Plan",
@@ -182,6 +186,10 @@
                 upgradeTitle: "Actualización Requerida", upgradeDesc: "Suscripción anual con PayPal. Se renueva automáticamente; cancela cuando quieras y conserva tu plan hasta el final del año pagado.",
                 lifetimeDesc: "Un solo pago con PayPal, sin renovaciones: el plan es tuyo para siempre.", subscribe: "Suscribirse con PayPal", payOnce: "Pagar una vez con PayPal",
                 lifetimeUnavailable: "Las ofertas de por vida aún no están disponibles. Puedes empezar con un plan anual.",
+                claimIntro: "Crea tu cuenta (o inicia sesión si ya tienes una) para activar tu compra.",
+                downloadsTitle: "Aplicación de escritorio", downloadsIntro: "Domain Vault en tu computadora, con recordatorios de renovación incluso con la ventana cerrada. La misma cuenta y los mismos datos.",
+                thisComputer: "Esta computadora", downloadFor: "Descargar para", orDownload: "o descargar para", comingSoon: "Próximamente",
+                desktopNote: "Estás usando la aplicación de escritorio.",
                 billing: "Facturación", yearly: "Anual", lifetime: "De por vida (un pago)", manageSubscription: "Administra o cancela tu suscripción en PayPal", contactAdmin: "Contactar Admin para Actualizar", maybeLater: "Quizás Más Tarde",
                 reports: "Reportes", applyFilter: "Aplicar Filtro", emailReport: "Enviar por Correo", downloadCsv: "Descargar CSV", startDate: "Fecha de Inicio", endDate: "Fecha de Fin",
                 currentPlan: "Tu Plan Actual:", selectNewPlan: "Seleccionar Nuevo Plan",
@@ -201,8 +209,10 @@
             }
         };
 
-        // --- DATA ARRAYS FOR TOOLS & RECOMMENDATIONS ---
-        const recommendedProvidersData = [
+        // --- TOOLS & RECOMMENDATIONS ---
+        // Managed in Admin → Tools and loaded from the API (getCatalog). These
+        // built-in lists are only the fallback when that cannot be reached.
+        let recommendedProvidersData = [
             { name: "Namecheap", desc: "Best for budget domains", rating: 5, url: "https://namecheap.com/", icon: "tag", tags: ["domains"] },
             { name: "Porkbun", desc: "Great UI & pricing", rating: 5, url: "https://porkbun.com/", icon: "piggy-bank", tags: ["domains"] },
             { name: "Hostinger", desc: "Domain + Hosting bundles", rating: 4.5, url: "https://hostinger.com/", icon: "server", tags: ["domains", "hosting"] },
@@ -210,21 +220,33 @@
             { name: "Cloudflare", desc: "Cheapest renewals, at-cost", rating: 4.8, url: "https://www.cloudflare.com/products/registrar/", icon: "globe", tags: ["domains", "cheap-renewal"] },
             { name: "GoDaddy", desc: "Biggest TLD catalog, costly renewals", rating: 3.9, url: "https://www.godaddy.com/domains", icon: "globe", tags: ["domains", "premium-renewal"] }
         ];
-        const expandedRecommendationsData = [
-            ...recommendedProvidersData,
+        let toolsData = [
             { name: "Google Workspace", desc: "Professional email & collaboration.", rating: 5, url: "https://workspace.google.com/", icon: "mail", tags: ["email"] },
             { name: "ProtonMail", desc: "Privacy-focused secure email.", rating: 4.5, url: "https://proton.me/mail", icon: "shield", tags: ["email"] },
             { name: "DigitalOcean", desc: "Developer-friendly cloud hosting.", rating: 4.5, url: "https://digitalocean.com/", icon: "cloud", tags: ["hosting"] },
-            { name: "Vercel", desc: "Simple scalable deployment for frontend apps.", rating: 5, url: "https://vercel.com/", icon: "triangle", tags: ["hosting"] }
-        ];
-        const toolsData = [
+            { name: "Vercel", desc: "Simple scalable deployment for frontend apps.", rating: 5, url: "https://vercel.com/", icon: "triangle", tags: ["hosting"] },
             { name: "MXToolbox", desc: "Comprehensive DNS & Email diagnostics", rating: 5, url: "https://mxtoolbox.com", icon: "mail-search", tags: ["dns", "email"] },
             { name: "DNSChecker", desc: "Global DNS propagation check", rating: 5, url: "https://dnschecker.org", icon: "globe-2", tags: ["dns"] },
             { name: "Whois.com", desc: "Domain lookup & registration info", rating: 4, url: "https://whois.com", icon: "search", tags: ["domains"] },
-            { name: "Cloudflare", desc: "Free DNS management & fast CDN", rating: 5, url: "https://cloudflare.com", icon: "cloud-lightning", tags: ["dns", "hosting"] },
+            { name: "Cloudflare DNS", desc: "Free DNS management & fast CDN", rating: 5, url: "https://cloudflare.com", icon: "cloud-lightning", tags: ["dns", "hosting"] },
             { name: "ICANN Lookup", desc: "Official domain registration data", rating: 4.5, url: "https://lookup.icann.org/", icon: "building-2", tags: ["domains"] },
             { name: "SSL Checker", desc: "Verify SSL certificate installation", rating: 4.5, url: "https://www.sslshopper.com/ssl-checker.html", icon: "shield-check", tags: ["ssl"] }
         ];
+
+        async function loadCatalog() {
+            try {
+                const res = await apiCall('getCatalog', {});
+                if (!res || !res.success || !Array.isArray(res.items) || res.items.length === 0) return;
+                const toCard = (i) => ({ name: i.name, desc: i.description, rating: Number(i.rating) || 0, url: i.url, icon: i.icon, tags: i.tags || [] });
+                recommendedProvidersData = res.items.filter(i => i.kind === 'provider').map(toCard);
+                toolsData = res.items.filter(i => i.kind !== 'provider').map(toCard);
+                renderToolFilters();
+                renderToolsPage();
+                renderGallery('modalDomainRecsGrid', recommendedProvidersData, 'getDeal');
+                renderGallery('modalProviderRecsGrid', recommendedProvidersData, 'getDeal');
+                lucide.createIcons();
+            } catch (e) { /* keep the built-in lists */ }
+        }
 
         // --- APP STATE ---
         let currentUser = null;
@@ -241,6 +263,7 @@
         let subscriptions = [];
         let pendingPlanChoice = null;   // ?plan=… from the homepage's pricing table
         let pendingBilling = null;      // ?billing=lifetime from the lifetime-deal page
+        const CLAIM_KEY = 'dv.claim';   // activation link for a payment made before sign-up
         let authMode = 'login';          // login | register | forgot | recover
         let recoveryToken = null;        // from a password-reset link; kept out of the URL
         let revealedPassword = null;     // credentials modal only, forgotten when it closes
@@ -335,11 +358,19 @@
                 if (params.has('register')) setAuthMode('register');
                 pendingPlanChoice = canonicalPlan(params.get('plan'));
                 pendingBilling = params.get('billing') === 'lifetime' ? 'lifetime' : null;
+                // An activation link from the "activate your plan" email: kept
+                // for this tab until the visitor has signed up or logged in.
+                if (/^[A-Za-z0-9_-]{43}$/.test(params.get('claim') || '')) {
+                    try { sessionStorage.setItem(CLAIM_KEY, params.get('claim')); } catch (e) { /* storage blocked */ }
+                    setAuthMode('register');
+                    showAuthMessage((translations[settings.language] || translations.en).claimIntro, 'success');
+                }
                 // Used once: a reload must not reopen the checkout.
-                if (params.has('register') || params.has('plan') || params.has('billing')) {
+                if (params.has('register') || params.has('plan') || params.has('billing') || params.has('claim')) {
                     params.delete('register');
                     params.delete('plan');
                     params.delete('billing');
+                    params.delete('claim');
                     history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash);
                 }
                 // Restore a previous session, if there is one. The old build
@@ -417,17 +448,17 @@
                 document.getElementById('otherProviderGroup').style.display = this.value === 'other' ? 'block' : 'none';
             });
 
-            // Tools Filter
-            const toolFilterBtns = document.querySelectorAll('#toolsFilterTags .filter-tag');
-            toolFilterBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    toolFilterBtns.forEach(b => b.classList.remove('active'));
-                    e.target.classList.add('active');
-                    currentToolFilter = e.target.dataset.tag;
-                    renderToolsPage();
-                    lucide.createIcons();
-                });
+            // Tools filter: chips are built from the tags in the catalog.
+            document.getElementById('toolsFilterTags').addEventListener('click', (e) => {
+                const btn = e.target.closest('.filter-tag');
+                if (!btn) return;
+                currentToolFilter = btn.dataset.tag;
+                renderToolFilters();
+                renderToolsPage();
+                lucide.createIcons();
             });
+            renderToolFilters();
+            loadCatalog();
 
             // Header Actions
             document.getElementById('translateBtn').addEventListener('click', async () => {
@@ -726,18 +757,23 @@
             btn.disabled = true;
 
             try {
+                const claimToken = pendingClaim();
                 if (authMode === 'login') {
-                    const res = await apiCall('loginUser', { email: email, password: pass });
+                    const res = await apiCall('loginUser', { email: email, password: pass, claimToken: claimToken || undefined });
+                    if (res.claimedPlan || res.claimMessage) clearClaim();
                     if (res.success) {
                         currentUser = res.user;
                         enterApp();
+                        if (res.claimedPlan) showToast(`Your ${res.claimedPlan} plan is active.`, 'success');
+                        if (res.claimMessage) showToast(res.claimMessage, 'danger');
                     } else {
-                        showAuthMessage(res.message, 'danger');
+                        showAuthMessage(res.claimMessage ? `${res.message} ${res.claimMessage}` : res.message, 'danger');
                     }
                 } else if (authMode === 'register') {
                     const place = await fetchLocation();
                     const phone = document.getElementById('authPhone').value;
-                    const res = await apiCall('registerUser', { email: email, password: pass, phone: phone, location: place });
+                    const res = await apiCall('registerUser', { email: email, password: pass, phone: phone, location: place, claimToken: claimToken || undefined });
+                    if (res.success && claimToken) clearClaim();
                     showAuthMessage(res.message, res.success ? 'success' : 'danger');
                     if (res.success) setTimeout(() => { if (authMode === 'register') setAuthMode('login'); }, 3000);
                 } else if (authMode === 'forgot') {
@@ -818,6 +854,7 @@
                     openUpgrade(pendingPlanChoice);
                     pendingPlanChoice = null;
                 }
+                redeemPendingClaim();
             }).catch(err => {
                 showToast("Could not reach the server to load your vault. Reload the page to try again.", "danger");
             });
@@ -1004,16 +1041,20 @@
                 for(let i=0; i<Math.floor(item.rating); i++) starsHtml += '<i data-lucide="star" style="fill: var(--primary); color: var(--primary);"></i>';
                 if(item.rating % 1 !== 0) starsHtml += '<i data-lucide="star-half" style="fill: var(--primary); color: var(--primary);"></i>';
 
+                // Catalog entries come from the database: escape them, and only
+                // ever link to http(s).
+                const icon = /^[a-z0-9-]+$/.test(item.icon || '') ? item.icon : 'globe';
+                const url = /^https?:\/\//i.test(item.url || '') ? item.url : '#';
                 container.innerHTML += `
                     <div class="recommendation-card">
-                        <i data-lucide="${item.icon}" class="card-icon"></i>
+                        <i data-lucide="${icon}" class="card-icon"></i>
                         <div class="gallery-info" style="flex-grow:1;">
-                            <div class="gallery-title">${item.name}</div>
-                            <div class="gallery-subtitle">${item.desc}</div>
+                            <div class="gallery-title">${escapeHTML(item.name)}</div>
+                            <div class="gallery-subtitle">${escapeHTML(item.desc || '')}</div>
                         </div>
                         <div class="gallery-rating">${starsHtml}</div>
                         <div class="gallery-action">
-                            <a href="${item.url}" target="_blank" class="btn btn-secondary" style="width:100%; font-size: 0.9em; white-space:nowrap;">
+                            <a href="${escapeHTML(url)}" target="_blank" rel="noopener" class="btn btn-secondary" style="width:100%; font-size: 0.9em; white-space:nowrap;">
                                 ${translations[lang][btnTranslateKey] || 'Visit'} <i data-lucide="external-link" style="width: 14px; margin-left: 4px;"></i>
                             </a>
                         </div>
@@ -1022,8 +1063,22 @@
             });
         };
 
+        /** Filter chips: "All" plus every tag in the catalog, common ones first. */
+        function renderToolFilters() {
+            const box = document.getElementById('toolsFilterTags');
+            if (!box) return;
+            const preferred = ['domains', 'dns', 'hosting', 'email', 'ssl'];
+            const tags = [...new Set([...recommendedProvidersData, ...toolsData].flatMap(i => i.tags || []))]
+                .sort((a, b) => (preferred.indexOf(a) + 1 || 99) - (preferred.indexOf(b) + 1 || 99) || a.localeCompare(b));
+            if (currentToolFilter !== 'all' && !tags.includes(currentToolFilter)) currentToolFilter = 'all';
+            const label = (t) => ({ dns: 'DNS', ssl: 'SSL' })[t] || t.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase());
+            box.innerHTML = ['all', ...tags].map(t =>
+                `<button class="filter-tag${t === currentToolFilter ? ' active' : ''}" data-tag="${escapeHTML(t)}">${t === 'all' ? 'All' : escapeHTML(label(t))}</button>`
+            ).join('');
+        }
+
         const renderToolsPage = () => {
-            const combinedResources = [...expandedRecommendationsData, ...toolsData];
+            const combinedResources = [...recommendedProvidersData, ...toolsData];
             const filtered = currentToolFilter === 'all' 
                 ? combinedResources 
                 : combinedResources.filter(item => item.tags && item.tags.includes(currentToolFilter));
@@ -1052,6 +1107,7 @@
             });
             if(pageId === 'calendar') renderCalendar();
             if(pageId === 'reports') renderReportsPage();
+            if(pageId === 'downloads') renderDownloads();
             lucide.createIcons();
             document.getElementById('mobileNav').classList.remove('open');
             document.getElementById('navOverlay').classList.remove('open');
@@ -1934,6 +1990,63 @@
                 </div>`;
             }).join('');
             list.innerHTML = subRows + manage + payRows;
+        }
+
+        // --- DOWNLOADS (inside the dashboard) ---
+        // Same builds as the public downloads page, read from config.js.
+
+        function renderDownloads() {
+            const box = document.getElementById('downloadCards');
+            if (!box) return;
+            const t = translations[settings.language] || translations.en;
+            const builds = (window.DOMAIN_VAULT_CONFIG && window.DOMAIN_VAULT_CONFIG.downloads) || {};
+            const ua = navigator.userAgent;
+            const mine = /Mac/i.test(ua) ? 'macos' : /Win/i.test(ua) ? 'windows' : /Linux|X11/i.test(ua) ? 'linux' : null;
+            const platforms = [
+                { key: 'macos', name: 'macOS', icon: 'fa-apple', note: 'macOS 11 or later · Apple Silicon and Intel' },
+                { key: 'windows', name: 'Windows', icon: 'fa-windows', note: 'Windows 10 or later · 64-bit' },
+                { key: 'linux', name: 'Linux', icon: 'fa-linux', note: 'Ubuntu / Debian (.deb), or any distribution (.AppImage)' }
+            ];
+            const banner = document.getElementById('desktopBanner');
+            if (banner) banner.style.display = window.domainVaultDesktop ? '' : 'none';
+            box.innerHTML = platforms.map(p => {
+                const b = builds[p.key];
+                const url = b && (typeof b === 'string' ? b : b.url);
+                const alt = b && typeof b === 'object' && b.alt && b.alt.url ? b.alt : null;
+                const safe = (u) => /^https:\/\//.test(u || '') ? escapeHTML(u) : '';
+                return `<div class="download-card${p.key === mine ? ' recommended' : ''}">
+                    <i class="fa-brands ${p.icon} download-icon"></i>
+                    <h3>${p.name}</h3>
+                    ${p.key === mine ? `<span class="download-badge">${escapeHTML(t.thisComputer)}</span>` : ''}
+                    <p class="field-hint" style="font-size:0.85em; min-height: 2.6em;">${escapeHTML(p.note)}</p>
+                    ${url
+                        ? `<a class="btn btn-primary" style="width:100%;" href="${safe(url)}" rel="noopener"><i data-lucide="download"></i> ${escapeHTML(t.downloadFor)} ${p.name}</a>`
+                        : `<button class="btn btn-secondary" style="width:100%;" disabled>${escapeHTML(t.comingSoon)}</button>`}
+                    ${alt ? `<a class="field-hint" style="display:block; margin-top:10px; color:var(--primary);" href="${safe(alt.url)}" rel="noopener">${escapeHTML(t.orDownload)} ${escapeHTML(alt.label)}</a>` : ''}
+                </div>`;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // --- ACTIVATION LINKS (paid before signing up) ---
+
+        function pendingClaim() {
+            try { return sessionStorage.getItem(CLAIM_KEY); } catch (e) { return null; }
+        }
+        function clearClaim() {
+            try { sessionStorage.removeItem(CLAIM_KEY); } catch (e) { /* storage blocked */ }
+        }
+
+        /** Already signed in when the link was opened: attach the purchase now. */
+        async function redeemPendingClaim() {
+            const token = pendingClaim();
+            if (!token) return;
+            const res = await persist('claimPurchase', { token }, null, false);
+            clearClaim();
+            if (res) {
+                await reloadUserData();
+                showToast(res.message || 'Your plan is active.', 'success');
+            }
         }
 
         // --- DISMISSED NOTIFICATIONS ---
