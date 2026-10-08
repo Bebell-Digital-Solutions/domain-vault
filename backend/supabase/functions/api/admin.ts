@@ -385,3 +385,105 @@ export async function adminAudit(p: any) {
   if (error) throw new HttpError(500, error.message);
   return { success: true, entries: data ?? [] };
 }
+
+// ---------------------------------------------------------------------------
+// Tools & recommendations (catalog_items)
+// ---------------------------------------------------------------------------
+
+const CATALOG_KINDS = ["provider", "tool"] as const;
+
+export async function adminListCatalog() {
+  const { data, error } = await serviceClient()
+    .from("catalog_items")
+    .select("id, kind, name, description, url, icon, rating, tags, sort, active, updated_at")
+    .order("sort").order("name");
+  if (error) throw new HttpError(500, error.message);
+  return { success: true, items: (data ?? []).map((r) => ({ ...r, rating: Number(r.rating) })) };
+}
+
+/** Create (no id) or update (id) one item. Fields are validated here and again by table constraints. */
+// deno-lint-ignore no-explicit-any
+export async function adminSaveCatalogItem(admin: Caller, p: any) {
+  const item = p?.item ?? {};
+  const name = str(item.name, 80);
+  if (!name) throw new BadRequest("Name is required.");
+  const url = str(item.url, 500);
+  if (!url || !/^https?:\/\/[^\s"<>]+$/.test(url)) throw new BadRequest("URL must start with https:// (or http://).");
+  if (!CATALOG_KINDS.includes(item.kind)) throw new BadRequest("Kind must be provider or tool.");
+  const icon = (str(item.icon, 40) ?? "globe").toLowerCase();
+  if (!/^[a-z0-9-]{1,40}$/.test(icon)) throw new BadRequest("Icon must be a Lucide icon name, e.g. globe or shield-check.");
+  const rating = item.rating === undefined || item.rating === "" ? 5 : Number(item.rating);
+  if (!Number.isFinite(rating) || rating < 0 || rating > 5) throw new BadRequest("Rating must be between 0 and 5.");
+  const rawTags: unknown[] = Array.isArray(item.tags) ? item.tags : String(item.tags ?? "").split(",");
+  const tags = [...new Set(rawTags.map((t) => String(t).trim().toLowerCase().replace(/\s+/g, "-")).filter(Boolean))];
+  if (tags.length > 8 || tags.some((t) => !/^[a-z0-9-]{1,30}$/.test(t))) {
+    throw new BadRequest("Up to 8 tags, each made of letters, digits and dashes.");
+  }
+  const sort = item.sort === undefined || item.sort === "" ? 100 : Math.round(Number(item.sort));
+  if (!Number.isFinite(sort)) throw new BadRequest("Order must be a number.");
+
+  const row = {
+    kind: item.kind,
+    name,
+    description: str(item.description, 200) ?? "",
+    url,
+    icon,
+    rating: Math.round(rating * 10) / 10,
+    tags,
+    sort,
+    active: item.active !== false,
+  };
+
+  const db = serviceClient();
+  let before: Record<string, unknown> | null = null;
+  let saved: Record<string, unknown> | null = null;
+  if (item.id) {
+    if (!isUuid(item.id)) throw new BadRequest("id must be a uuid");
+    ({ data: before } = await db.from("catalog_items").select("*").eq("id", item.id).maybeSingle());
+    if (!before) throw new HttpError(404, "Item not found.");
+    const { data, error } = await db.from("catalog_items").update(row).eq("id", item.id).select().single();
+    if (error) throw new HttpError(400, error.message);
+    saved = data;
+  } else {
+    const { data, error } = await db.from("catalog_items").insert(row).select().single();
+    if (error) throw new HttpError(400, error.message);
+    saved = data;
+  }
+
+  await audit(admin, item.id ? "update_catalog_item" : "add_catalog_item", null, { before, after: saved });
+  return adminListCatalog();
+}
+
+// deno-lint-ignore no-explicit-any
+export async function adminDeleteCatalogItem(admin: Caller, p: any) {
+  if (!isUuid(p?.id)) throw new BadRequest("id must be a uuid");
+  const db = serviceClient();
+  const { data: before } = await db.from("catalog_items").select("*").eq("id", p.id).maybeSingle();
+  if (!before) throw new HttpError(404, "Item not found.");
+  const { error } = await db.from("catalog_items").delete().eq("id", p.id);
+  if (error) throw new HttpError(500, error.message);
+  await audit(admin, "delete_catalog_item", null, { before });
+  return adminListCatalog();
+}
+
+// ---------------------------------------------------------------------------
+// Live-chat operator widget
+//
+// The helpdesk's operator widget needs an API key that must not appear in a
+// public file (admin.html is downloadable by anyone, logged in or not). It
+// lives in the function environment and is handed out only to admins.
+// ---------------------------------------------------------------------------
+
+export function adminSupportWidget() {
+  const widgetID = Deno.env.get("HELPDESK_WIDGET_ID") ?? "";
+  const apiKey = Deno.env.get("HELPDESK_ADMIN_API_KEY") ?? "";
+  if (!widgetID || !apiKey) return { success: true, configured: false };
+  return {
+    success: true,
+    configured: true,
+    widgetID,
+    apiKey,
+    moduleConfigUrl: Deno.env.get("HELPDESK_MODULE_URL") ?? "https://app.helpdesk.icu/app",
+    consoleUrl: "https://app.helpdesk.icu/app",
+  };
+}

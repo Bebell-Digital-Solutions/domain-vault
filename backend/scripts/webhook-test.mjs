@@ -180,11 +180,47 @@ r = await sub({ txn_type: "subscr_payment", subscr_id: S("personal"), txn_id: tx
 check("a Personal subscription then grants Personal", subAccount() === "Personal/active", `${r.text}; ${subAccount()}`);
 sql(`update billing_config set unpaid_plan = 'Personal'; select refresh_plans(true);`);
 
+// ======================================== pay first, sign up after (LTD page)
+const API_URL = `${BASE}/api`;
+const apiCall = (body) => fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((x) => x.json());
+const claimFor = (col, id) => sql(`select coalesce(token,'') from purchase_claims where ${col} = '${id}' and claimed_at is null limit 1;`);
+const BUYER = `ltd-buyer-${Date.now()}@example.com`;
+
+// Newer PayPal checkouts (Pay Links) describe the item cart-style.
+r = await ipn({ custom: "", payer_email: `paypal-${BUYER}`, txn_id: txn("ltd-1"), payment_status: "Completed",
+  txn_type: "cart", item_number1: "business", item_name1: "Domain Vault Business LTD", mc_gross: "99.00" });
+const ltdToken = claimFor("txn_id", txn("ltd-1"));
+check("a lifetime payment from someone without an account is held, with an activation link",
+  purchase(txn("ltd-1")) === "unmatched" && /^[A-Za-z0-9_-]{43}$/.test(ltdToken), `${r.text}; token=${ltdToken ? "yes" : "no"}`);
+
+r = await apiCall({ action: "registerUser", email: BUYER, password: "correct-horse-battery", claimToken: ltdToken });
+const buyerAccount = () => sql(`select plan || '/' || status from profiles where email = '${BUYER}';`);
+check("signing up through the link activates the plan, even with approval switched on",
+  r.success && r.claimedPlan === "Business" && buyerAccount() === "Business/active" && purchase(txn("ltd-1")) === "completed",
+  `${r.message}; ${buyerAccount()}`);
+
+r = await apiCall({ action: "loginUser", email: BUYER, password: "correct-horse-battery", claimToken: ltdToken });
+check("the link cannot be used twice", r.success === true && /invalid|used|expired/i.test(r.claimMessage || ""), r.claimMessage);
+
+// A subscription bought outside the app, claimed, then renewed.
+const SUB_BUYER = `sub-buyer-${Date.now()}@example.com`;
+r = await ipn({ custom: "", payer_email: `paypal-${SUB_BUYER}`, txn_type: "subscr_signup", subscr_id: S("ext"), item_number: "start-up", mc_amount3: "48.00", period3: "1 Y" });
+r = await ipn({ custom: "", payer_email: `paypal-${SUB_BUYER}`, txn_type: "subscr_payment", subscr_id: S("ext"), txn_id: txn("ext-1"), payment_status: "Completed", item_number: "start-up", mc_gross: "48.00" });
+const subToken = claimFor("subscr_id", S("ext"));
+check("one activation link covers the whole subscription", /^[A-Za-z0-9_-]{43}$/.test(subToken) &&
+  sql(`select count(*) from purchase_claims where subscr_id = '${S("ext")}';`) === "1");
+await apiCall({ action: "registerUser", email: SUB_BUYER, password: "correct-horse-battery", claimToken: subToken });
+const subBuyer = () => sql(`select plan || '/' || status from profiles where email = '${SUB_BUYER}';`);
+check("claiming attaches the subscription and its payment", subBuyer() === "Start-up/active" && subStatus(S("ext")) === "active", subBuyer());
+r = await ipn({ custom: "", payer_email: `paypal-${SUB_BUYER}`, txn_type: "subscr_payment", subscr_id: S("ext"), txn_id: txn("ext-2"), payment_status: "Completed", item_number: "start-up", mc_gross: "48.00" });
+check("next year's renewal goes to the subscription's owner", purchase(txn("ext-2")) === "completed" && subBuyer() === "Start-up/active", r.text);
+
 // ----------------------------------------------------------------- cleanup
 sql(`delete from purchases where txn_id like '${run}-%';
      delete from subscriptions where subscr_id like 'S-${run}-%';
      delete from webhook_events where id like '%${run}-%';
-     delete from auth.users where email in ('${EMAIL}', '${SUB_EMAIL}');
+     delete from purchase_claims where txn_id like '${run}-%' or subscr_id like 'S-${run}-%';
+     delete from auth.users where email in ('${EMAIL}', '${SUB_EMAIL}', '${BUYER}', '${SUB_BUYER}');
      update plan_prices set amount = null, lifetime_amount = null;
      delete from rate_limits;`);
 

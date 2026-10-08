@@ -34,8 +34,12 @@ import {
   adminGetPrices,
   adminListUsers,
   adminOverview,
+  adminDeleteCatalogItem,
+  adminListCatalog,
   adminSales,
+  adminSaveCatalogItem,
   adminSetBillingConfig,
+  adminSupportWidget,
   adminSetPrice,
   adminUpdateUser,
 } from "./admin.ts";
@@ -89,6 +93,34 @@ function toClientProvider(row: any, hasPassword: boolean) {
 // Actions
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Activation links (payments made before the buyer had an account)
+// ---------------------------------------------------------------------------
+
+const CLAIM_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+/**
+ * Attach the payment behind an activation link to a user. The link was
+ * emailed to the PayPal payer by the billing webhook; holding it is the
+ * proof. Returns the plan afterwards, or a user-facing error.
+ */
+async function redeemClaim(req: Request, token: unknown, userId: string) {
+  if (typeof token !== "string" || !CLAIM_TOKEN_RE.test(token)) {
+    return { ok: false as const, message: "This activation link is not valid." };
+  }
+  await rateLimit(`claim:${clientIp(req)}`, 10, 3600);
+  const { data, error } = await serviceClient().rpc("claim_purchase", { p_token: token, p_user: userId });
+  if (error) {
+    return {
+      ok: false as const,
+      message: /invalid|expired|used/i.test(error.message)
+        ? "This activation link is invalid, already used or expired. Contact support if your plan is not active."
+        : "Could not activate the purchase. Contact support.",
+    };
+  }
+  return { ok: true as const, plan: data as string };
+}
+
 // deno-lint-ignore no-explicit-any
 async function registerUser(req: Request, p: any) {
   const email = isValidEmail(p?.email) ? p.email.trim().toLowerCase() : null;
@@ -135,6 +167,17 @@ async function registerUser(req: Request, p: any) {
     await admin.from("profiles").update({ status: "active" }).eq("id", data.user.id).eq("status", "pending");
   }
 
+  // Signing up through an activation link: attach the purchase now. A paid
+  // plan activates the account (recompute_plan), so the buyer can log in
+  // straight away even when sign-ups otherwise wait for approval.
+  let claimedPlan: string | null = null;
+  let claimMessage: string | null = null;
+  if (p?.claimToken && data.user) {
+    const claim = await redeemClaim(req, p.claimToken, data.user.id);
+    if (claim.ok) claimedPlan = claim.plan;
+    else claimMessage = claim.message;
+  }
+
   if (ADMIN_EMAIL) {
     await sendEmail(
       ADMIN_EMAIL,
@@ -168,11 +211,19 @@ async function registerUser(req: Request, p: any) {
     ? "Welcome to Domain Vault! Your account is pending activation."
     : "Welcome to Domain Vault! Your account is ready.");
 
+  if (claimedPlan) {
+    return {
+      success: true,
+      claimedPlan,
+      message: `Account created and your ${claimedPlan} plan is active. You can log in now.`,
+    };
+  }
   return {
     success: true,
-    message: needsApproval
-      ? "Account created! Pending admin activation."
-      : "Account created! You can log in now.",
+    message: [
+      needsApproval ? "Account created! Pending admin activation." : "Account created! You can log in now.",
+      claimMessage,
+    ].filter(Boolean).join(" "),
   };
 }
 
@@ -192,6 +243,16 @@ async function loginUser(req: Request, p: any) {
     return { success: false, message: "Invalid email or password." };
   }
 
+  // Logging in through an activation link: attach the purchase first, so a
+  // paid plan can activate an account that was still waiting for approval.
+  let claimedPlan: string | null = null;
+  let claimMessage: string | null = null;
+  if (p?.claimToken) {
+    const claim = await redeemClaim(req, p.claimToken, data.user.id);
+    if (claim.ok) claimedPlan = claim.plan;
+    else claimMessage = claim.message;
+  }
+
   const { data: profile } = await serviceClient()
     .from("profiles")
     .select("id, email, phone, plan, status, is_admin")
@@ -208,6 +269,8 @@ async function loginUser(req: Request, p: any) {
 
   return {
     success: true,
+    ...(claimedPlan ? { claimedPlan } : {}),
+    ...(claimMessage ? { claimMessage } : {}),
     user: {
       id: profile.id,
       email: profile.email,
@@ -602,6 +665,17 @@ function escapeHtml(value: string): string {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
+/** Public: the active tools and recommended providers, for the app. */
+async function getCatalog() {
+  const { data, error } = await serviceClient()
+    .from("catalog_items")
+    .select("id, kind, name, description, url, icon, rating, tags")
+    .eq("active", true)
+    .order("sort").order("name");
+  if (error) throw new HttpError(500, error.message);
+  return { success: true, items: (data ?? []).map((r) => ({ ...r, rating: Number(r.rating) })) };
+}
+
 /**
  * Public: plan prices for the upgrade modal. `amount` is the yearly
  * subscription price, `lifetimeAmount` the one-time price; null = not sold.
@@ -625,10 +699,11 @@ async function getPrices() {
 // Router
 // ---------------------------------------------------------------------------
 
-const PUBLIC_ACTIONS = new Set(["registerUser", "loginUser", "getPrices", "requestPasswordReset"]);
+const PUBLIC_ACTIONS = new Set(["registerUser", "loginUser", "getPrices", "getCatalog", "requestPasswordReset"]);
 const ADMIN_ACTIONS = new Set([
   "adminOverview", "adminListUsers", "adminUpdateUser",
   "adminSales", "adminGetPrices", "adminSetPrice", "adminSetBillingConfig", "adminAudit",
+  "adminListCatalog", "adminSaveCatalogItem", "adminDeleteCatalogItem", "adminSupportWidget",
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -647,6 +722,10 @@ Deno.serve(async (req: Request) => {
       if (action === "registerUser") return json(req, await registerUser(req, body));
       if (action === "loginUser") return json(req, await loginUser(req, body));
       if (action === "requestPasswordReset") return json(req, await requestPasswordReset(req, body));
+      if (action === "getCatalog") {
+        await rateLimit(`catalog:${clientIp(req)}`, 60, 60);
+        return json(req, await getCatalog());
+      }
       await rateLimit(`prices:${clientIp(req)}`, 60, 60);
       return json(req, await getPrices());
     }
@@ -669,6 +748,14 @@ Deno.serve(async (req: Request) => {
           return json(req, await adminSetPrice(caller, body));
         case "adminSetBillingConfig":
           return json(req, await adminSetBillingConfig(caller, body));
+        case "adminListCatalog":
+          return json(req, await adminListCatalog());
+        case "adminSaveCatalogItem":
+          return json(req, await adminSaveCatalogItem(caller, body));
+        case "adminDeleteCatalogItem":
+          return json(req, await adminDeleteCatalogItem(caller, body));
+        case "adminSupportWidget":
+          return json(req, adminSupportWidget());
         case "adminAudit":
           return json(req, await adminAudit(body));
       }
@@ -694,6 +781,12 @@ Deno.serve(async (req: Request) => {
         return json(req, await getCalendarFeed(caller));
       case "resetCalendarFeed":
         return json(req, await resetCalendarFeed(caller));
+      case "claimPurchase": {
+        const claim = await redeemClaim(req, body?.token, caller.id);
+        return json(req, claim.ok
+          ? { success: true, plan: claim.plan, message: `Your ${claim.plan} plan is active.` }
+          : { success: false, message: claim.message });
+      }
       default:
         return json(req, { success: false, message: "Unknown API action" }, 400);
     }

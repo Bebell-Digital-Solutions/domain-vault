@@ -518,3 +518,106 @@ begin
     then 'PASS t33 (settings and subscriptions are server-side only; others'' rows invisible)'
     else 'FAIL t33 cfg=' || cfg_blocked || ' sub=' || sub_blocked || ' visible=' || others end;
 end $$;
+
+-- ===========================================================================
+-- Activation links for payments made before sign-up (20261008000100)
+-- ===========================================================================
+\set QUIET on
+insert into auth.users (id, email) values ('efefefef-0000-4000-8000-000000000009', 'late-signup@example.com');
+-- stays pending: the claim must activate it
+insert into public.purchases (txn_id, email, payer_email, plan, amount, currency, status, kind)
+values ('LTD-UNMATCHED', null, 'buyer@paypal.example', 'Business', 79, 'USD', 'unmatched', 'lifetime');
+insert into public.purchases (txn_id, payer_email, plan, amount, currency, status, kind, subscr_id)
+values ('SUB-UNMATCHED', 'buyer2@paypal.example', 'Start-up', 48, 'USD', 'unmatched', 'subscription', 'S-UNMATCHED');
+insert into public.subscriptions (subscr_id, payer_email, plan, status) values ('S-UNMATCHED', 'buyer2@paypal.example', 'Start-up', 'unmatched');
+insert into public.purchase_claims (token, txn_id, email, plan) values
+  ('claimTokenLTDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'LTD-UNMATCHED', 'buyer@paypal.example', 'Business');
+insert into public.purchase_claims (token, subscr_id, email, plan) values
+  ('claimTokenSUBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'S-UNMATCHED', 'buyer2@paypal.example', 'Start-up');
+insert into public.purchase_claims (token, txn_id, email, plan, expires_at) values
+  ('claimTokenOLDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'LTD-UNMATCHED', 'buyer@paypal.example', 'Business', now() - interval '1 day');
+\set QUIET off
+
+\echo '--- T34: an activation link attaches the payment, activates the account, works once'
+do $$
+declare u uuid := 'efefefef-0000-4000-8000-000000000009'; v text; s text; again boolean := false;
+begin
+  v := public.claim_purchase('claimTokenLTDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', u);
+  select status into s from public.profiles where id = u;
+  begin
+    perform public.claim_purchase('claimTokenLTDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', u);
+  exception when others then again := true;
+  end;
+  raise notice '%', case when v = 'Business' and s = 'active'
+                          and (select status from public.purchases where txn_id = 'LTD-UNMATCHED') = 'completed' and again
+    then 'PASS t34 (Business attached, account active, second use refused)'
+    else 'FAIL t34 plan=' || v || ' status=' || s || ' reuseRefused=' || again end;
+end $$;
+
+\echo '--- T35: an expired link is refused'
+do $$
+declare refused boolean := false;
+begin
+  begin
+    perform public.claim_purchase('claimTokenOLDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'efefefef-0000-4000-8000-000000000009');
+  exception when others then refused := true;
+  end;
+  raise notice '%', case when refused then 'PASS t35 (expired link refused)' else 'FAIL t35' end;
+end $$;
+
+\echo '--- T36: a claimed subscription gets an end date, not "forever"'
+do $$
+declare u uuid := 'efefefef-0000-4000-8000-000000000009'; until timestamptz; sub text;
+begin
+  perform public.claim_purchase('claimTokenSUBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', u);
+  select paid_until into until from public.purchases where txn_id = 'SUB-UNMATCHED';
+  select status into sub from public.subscriptions where subscr_id = 'S-UNMATCHED';
+  raise notice '%', case when until > now() + interval '360 days' and until < now() + interval '375 days' and sub = 'active'
+    then 'PASS t36 (subscription active until about a year from the payment)'
+    else 'FAIL t36 until=' || coalesce(until::text, 'null') || ' sub=' || sub end;
+end $$;
+
+\echo '--- T37: customers cannot read activation links or call claim_purchase directly'
+do $$
+declare blocked_t boolean := false; blocked_f boolean := false;
+begin
+  perform set_config('request.jwt.claim.sub','efefefef-0000-4000-8000-000000000009',true);
+  execute 'set local role authenticated';
+  begin perform 1 from public.purchase_claims; exception when insufficient_privilege then blocked_t := true; end;
+  begin perform public.claim_purchase('x', 'efefefef-0000-4000-8000-000000000009'); exception when insufficient_privilege then blocked_f := true; end;
+  execute 'reset role';
+  raise notice '%', case when blocked_t and blocked_f then 'PASS t37 (links and claiming are server-side only)'
+    else 'FAIL t37 table=' || blocked_t || ' fn=' || blocked_f end;
+end $$;
+
+-- ===========================================================================
+-- Tools catalog (20261008000200)
+-- ===========================================================================
+\echo '--- T38: the catalog is seeded; visitors see active items only and cannot edit'
+do $$
+declare seeded int; visible int; hidden_name text; blocked boolean := false;
+begin
+  select count(*) into seeded from public.catalog_items;
+  update public.catalog_items set active = false where name = 'Vercel';
+  execute 'set local role anon';
+  select count(*) into visible from public.catalog_items;
+  select name into hidden_name from public.catalog_items where name = 'Vercel';
+  begin
+    insert into public.catalog_items (name, url) values ('Evil', 'https://evil.example');
+  exception when insufficient_privilege then blocked := true;
+  end;
+  execute 'reset role';
+  update public.catalog_items set active = true where name = 'Vercel';
+  raise notice '%', case when seeded >= 15 and visible = seeded - 1 and hidden_name is null and blocked
+    then 'PASS t38 (seeded ' || seeded || ', inactive hidden, writes refused)'
+    else 'FAIL t38 seeded=' || seeded || ' visible=' || visible || ' blocked=' || blocked end;
+end $$;
+
+\echo '--- T39: catalog rejects script URLs and odd icon names'
+do $$
+declare js boolean := false; icon boolean := false;
+begin
+  begin insert into public.catalog_items (name, url) values ('X', 'javascript:alert(1)'); exception when check_violation then js := true; end;
+  begin insert into public.catalog_items (name, url, icon) values ('X', 'https://ok.example', '"><img'); exception when check_violation then icon := true; end;
+  raise notice '%', case when js and icon then 'PASS t39 (javascript: URL and bad icon refused)' else 'FAIL t39 js=' || js || ' icon=' || icon end;
+end $$;

@@ -28,7 +28,7 @@ const res = await apiCall('saveDomains', { domains });   // script.js
 - `api.js` refreshes expired tokens, retries once on 401, and keeps the
   session across reloads (`localStorage` key `dv.session`).
 - Public actions (no session needed) are `registerUser`, `loginUser`,
-  `getPrices` and `requestPasswordReset`. If you add a public action to the
+  `getPrices`, `getCatalog` and `requestPasswordReset`. If you add a public action to the
   server, add it to `call()` in `api.js` too.
 - A response with `expired: true` means the session is gone for good; the app
   logs out with the message.

@@ -22,6 +22,9 @@ has to provide and the deployment steps in order.
 | Plans | Yearly PayPal subscriptions (Personal, Start-up, Business, Agency), plus optional one-time "lifetime deals". The plan is **derived from a payment ledger**: each subscription payment grants a year, so a lapsed subscription, a refund or a chargeback takes back exactly what was paid for. |
 | Payments | PayPal IPN, verified with PayPal, checked against our receiver account and **against the price list for that kind of payment** (yearly or lifetime; amount and currency), deduplicated, and recorded, including the ones refused. Subscription signups, cancellations, failed renewals and ends of term are tracked. |
 | Owner settings | From the admin panel: what accounts without a paid plan get (Personal for free, or Free with no domains), and whether new sign-ups wait for approval. |
+| Pay first, sign up after | A payment nobody's account matches (e.g. from the lifetime-deal page) emails the payer a one-time **activation link**; signing up or logging in through it attaches the purchase. |
+| Tools & recommendations | Managed in Admin → Tools (`catalog_items`); the app's Tools page and "Recommended providers" read them through `getCatalog`. |
+| Live chat | The helpdesk operator widget loads in the admin panel after login; its key comes from the server (`adminSupportWidget`), never from the page source. |
 | Admin | `app/admin.html`: activate and suspend users, override plans, set prices, sales report with CSV export, audit log. |
 | Reminders | Daily pg_cron job. Fires on the most urgent milestone a domain has *crossed* (default 30/7/1/0 days), so a domain added late or a missed run still produces exactly one reminder. One digest per user, not one email per domain. Per-user opt-out, channels and lead days. |
 | Lookups | WHOIS / DNS proxied, validated, cached and rate limited. The app calls only this proxy. |
@@ -59,7 +62,9 @@ domain-vault/                    (repo root = the website, served by GitHub Page
     │   │   ├── …0928000100_reminders.sql      milestone reminders, digests, preferences
     │   │   ├── …1005000100_calendar_feed.sql  calendar subscription tokens
     │   │   ├── …1006000100_free_tier.sql      Free tier (enum value only)
-    │   │   └── …1006000200_subscriptions.sql  yearly subscriptions, owner settings
+    │   │   ├── …1006000200_subscriptions.sql  yearly subscriptions, owner settings
+    │   │   ├── …1008000100_purchase_claims.sql activation links (pay first)
+    │   │   └── …1008000200_catalog.sql        tools & recommendations
     │   ├── functions/
     │   │   ├── _shared/         cors, crypto, validation, db/auth, email + WhatsApp
     │   │   ├── api/             user + admin actions (index.ts, admin.ts)
@@ -236,10 +241,18 @@ first in PayPal, which we cannot do for them.
 **Matching payments to accounts.** By `custom` (the account email the app
 sends). If a payment carries none — a button used outside the app — the
 payer's PayPal email is used when an account has that address; PayPal has
-verified it. Otherwise the payment is held as `unmatched` for the admin.
-Unmatched payments are **not** claimed automatically when someone later
-registers with that email: sign-up emails are not verified, so that would let
-anyone register a payer's address and take their payment.
+verified it. A renewal always goes to the subscription's owner.
+
+Otherwise the payment is held as `unmatched` and the payer is emailed an
+**activation link** (`purchase_claims`, 256-bit token, single use, 30 days).
+Signing up or logging in through it (`registerUser` / `loginUser` with
+`claimToken`, or `claimPurchase` when already signed in) attaches the payment
+and activates the account. This is what makes the lifetime-deal page's
+"pay first" buttons work. Unmatched payments are deliberately **not** handed
+to whoever registers with the payer's email: sign-up emails are not verified,
+so that would let anyone take someone else's payment; the link proves the
+person reads the payer's inbox. Payments in newer PayPal checkouts (Pay
+Links) that describe the item cart-style (`item_number1`) are recognised too.
 
 The effective plan is the admin override if one is set, otherwise the
 highest-ranked plan with a payment that is still running, otherwise the
@@ -389,9 +402,10 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 
 | Action | Who | Payload | Notes |
 |---|---|---|---|
-| `registerUser` | public | `email`, `password`, `phone`, `location` | Password ≥ 10 chars. 5/hour per IP. |
+| `registerUser` | public | `email`, `password`, `phone`, `location`, `claimToken?` | Password ≥ 10 chars. 5/hour per IP. With an activation link, attaches the purchase and activates the account. |
 | `requestPasswordReset` | public | `email`, `redirectTo?` | Emails a reset link back to `redirectTo` if its origin is in `ALLOWED_ORIGINS`, else `SITE_URL/app/`. Same answer for unknown addresses. 5/hour per IP, 3 per address. |
-| `loginUser` | public | `email`, `password` | Returns `user` (incl. `plan`, `isAdmin`) and `session`. |
+| `loginUser` | public | `email`, `password`, `claimToken?` | Returns `user` (incl. `plan`, `isAdmin`) and `session`; `claimedPlan` / `claimMessage` when a link was used. |
+| `getCatalog` | public | — | Active tools and recommended providers. |
 | `getPrices` | public | — | Per plan: `amount` (yearly), `lifetimeAmount` (one-time), `currency`; `null` = not for sale that way. |
 | `getUserData` | user | — | Domains, providers, settings, current `plan`, `isAdmin`, own `purchases` (with `kind`, `paid_until`) and `subscriptions` (with `paidUntil`). |
 | `saveDomains` | user | `domains[]` | Atomic sync. Plan limit enforced. |
@@ -399,6 +413,7 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `saveSettings` | user | `settings{}` | Base64 avatars are moved to Storage. |
 | `revealCredential` | user | `providerId` | 10/hour, audited. |
 | `changePassword` | user | `currentPassword`, `newPassword` | Current password checked; ≥ 10 chars. Signs out every other session; `api.js` adopts the returned one. 5 per 15 min. |
+| `claimPurchase` | user | `token` | Redeem an activation link while signed in. 10/hour per IP. |
 | `getCalendarFeed` | user | — | `{ token }` for the private feed, created on first use. `DomainVaultAPI.calendarFeedUrl(token)` builds the URL. |
 | `resetCalendarFeed` | user | — | New token; the old URL returns 404. |
 | `adminOverview` | admin | — | Counts by status and plan, domains, sales, payments needing review. |
@@ -406,6 +421,8 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `adminUpdateUser` | admin | `userId`, `status?`, `planOverride?`, `isAdmin?` | Audited. Emails the user on activation. Can't demote or suspend yourself. |
 | `adminSales` | admin | `from?`, `to?`, `status?` | Ledger plus totals per currency. |
 | `adminGetPrices` / `adminSetPrice` | admin | `plan`, `amount`, `lifetimeAmount`, `currency` | Returns prices and the owner settings (`config`). `null` takes a price off sale; an omitted field is left alone. Audited. |
+| `adminListCatalog` / `adminSaveCatalogItem` / `adminDeleteCatalogItem` | admin | `item{ id?, kind, name, url, description, icon, rating, tags, sort, active }` / `id` | Tools & recommendations. Audited. |
+| `adminSupportWidget` | admin | — | Helpdesk widget id and operator key from `HELPDESK_WIDGET_ID` / `HELPDESK_ADMIN_API_KEY`. |
 | `adminSetBillingConfig` | admin | `unpaidPlan` (`Free`/`Personal`), `requireApproval` | Owner settings. Changing `unpaidPlan` re-derives every plan. Audited. |
 | `adminAudit` | admin | `limit?` | Recent admin changes, before and after. |
 

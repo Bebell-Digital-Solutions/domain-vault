@@ -281,6 +281,33 @@ ok("settings restored", r.config?.unpaidPlan === "Personal" && r.config?.require
 r = await walkInApi.call("getUserData", {});
 ok("…and the account is back on Personal", r.plan === "Personal" && Array.isArray(r.subscriptions), r.plan);
 
+// --------------------------------------------------- tools & recommendations
+r = await browser().api.call("getCatalog", {});
+ok("the tools catalog is public and seeded", r.success && r.items?.length >= 15 && r.items.some((i) => i.kind === "provider"),
+  `${r.items?.length} items`);
+const toolName = `Smoke Tool ${stamp}`;
+r = await ADMIN.call("adminSaveCatalogItem", { item: { name: toolName, url: "https://example.com/tool", kind: "tool", tags: "dns, New Tag", rating: 4.5 } });
+const added = r.items?.find((i) => i.name === toolName);
+ok("admin adds a tool", r.success && added && added.tags.join(",") === "dns,new-tag", JSON.stringify(added?.tags));
+r = await ADMIN.call("adminSaveCatalogItem", { item: { id: added.id, name: toolName, url: "https://example.com/tool2", kind: "provider", active: false } });
+ok("admin edits and hides it", r.success && r.items.find((i) => i.id === added.id)?.active === false);
+r = await browser().api.call("getCatalog", {});
+ok("hidden tools are not shown to users", !r.items.some((i) => i.name === toolName));
+r = await ADMIN.call("adminSaveCatalogItem", { item: { name: "Bad", url: "javascript:alert(1)", kind: "tool" } });
+ok("a javascript: link is refused", r.success === false, r.message);
+r = await ADMIN.call("adminSaveCatalogItem", { item: { name: "Bad", url: "https://ok.example", kind: "tool", icon: "\"><img" } });
+ok("a bad icon name is refused", r.success === false, r.message);
+r = await ADMIN.call("adminDeleteCatalogItem", { id: added.id });
+ok("admin deletes it", r.success && !r.items.some((i) => i.id === added.id));
+r = await walkInApi.call("adminSaveCatalogItem", { item: { name: "Nope", url: "https://x.example", kind: "tool" } });
+ok("customers cannot manage the catalog", r.success === false && /administrators only/i.test(r.message), r.message);
+
+r = await ADMIN.call("adminSupportWidget", {});
+ok("chat widget config is admin-only and reports when unset", r.success && r.configured === false);
+
+r = await walkInApi.call("claimPurchase", { token: "x".repeat(43) });
+ok("an unknown activation link is refused clearly", r.success === false && /invalid|used|expired/i.test(r.message), r.message);
+
 r = await ADMIN.call("adminSales", {});
 ok("adminSales", r.success === true && Array.isArray(r.purchases));
 
@@ -288,7 +315,8 @@ r = await ADMIN.call("adminAudit", { limit: 50 });
 const actions = (r.entries || []).filter((e) => e.admin_email === adminEmail).map((e) => e.action);
 ok("every admin change is audited", actions.filter((a) => a === "update_user").length === 3 &&
   actions.filter((a) => a === "set_price").length === 4 &&
-  actions.filter((a) => a === "set_billing_config").length === 3, actions.join(","));
+  actions.filter((a) => a === "set_billing_config").length === 3 &&
+  ["add_catalog_item", "update_catalog_item", "delete_catalog_item"].every((a) => actions.includes(a)), actions.join(","));
 
 // ============================================================== cleanup
 sql(`delete from admin_audit_log where admin_email = '${adminEmail}';

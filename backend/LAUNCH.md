@@ -30,6 +30,8 @@ project, as of 2026-10-05:
 | PayPal: 4 yearly **subscription** buttons (Personal 29, Start-up 48, Business 79, Agency 98 USD), IPN pointed at the new project's `billing-webhook` | ✅ created by the owner (2026-10-06); ids in `config.js` |
 | Subscription billing (migrations `…1006000100/200`, `billing-webhook`, `api`) + yearly prices in `plan_prices` + `PAYPAL_RECEIVER_EMAIL` = `hello.bebelldesignstudio@gmail.com` | ⏳ deploy in this order: migrations, functions, receiver email, prices, then the site. Until the receiver is set the webhook answers 500 and PayPal retries, so no payment is lost meanwhile |
 | Owner decisions in **Admin → Prices → Plan settings**: Free tier for unpaid accounts? approval for new sign-ups? | ⏳ defaults keep the original behaviour (Personal free, approval on) |
+| Lifetime deals (pay first): owner's PayPal Pay Links on the lifetime pages; `lifetime_amount` per plan in Admin → Prices; activation links emailed to unmatched payers | ⏳ lifetime prices to confirm; one real test purchase |
+| Live chat in the admin panel: secrets `HELPDESK_WIDGET_ID`, `HELPDESK_ADMIN_API_KEY` | ⏳ the operator key that was committed and then removed (8bfbf0c) is public in git history — **regenerate it** in helpdesk.icu, then set the new one |
 | `domain-vault.elnegocio.digital` (GitHub Pages) | ⏳ still serves the old single-site copy against the new backend; redirect it to the new domain, then desktop 1.0.2 |
 
 The PayPal `notify_url` in §3 now points at the new project.

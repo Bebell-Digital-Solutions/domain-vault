@@ -62,16 +62,20 @@ const retryLater = (msg: string) => new Response(msg, { status: 500 });
 /**
  * The plan a payment is for. item_number is the reliable field (personal /
  * startup / start-up / business / agency on each PayPal button); item_name is
- * a fallback for buttons created without one.
+ * a fallback for buttons created without one. Newer PayPal checkouts (Pay
+ * Links) report the item cart-style, as item_number1 / item_name1.
  */
 function planFor(params: URLSearchParams): Plan | null {
-  const code = (params.get("item_number") ?? "").trim().toLowerCase().replace(/[\s_-]/g, "");
-  if (code === "personal") return "Personal";
-  if (code === "startup") return "Start-up";
-  if (code === "business") return "Business";
-  if (code === "agency") return "Agency";
+  for (const field of ["item_number", "item_number1"]) {
+    const code = (params.get(field) ?? "").trim().toLowerCase().replace(/[\s_-]/g, "");
+    if (code === "personal") return "Personal";
+    if (code === "startup") return "Start-up";
+    if (code === "business") return "Business";
+    if (code === "agency") return "Agency";
+  }
 
-  const name = params.get("item_name") ?? "";
+  const name = [params.get("item_name"), params.get("item_name1"), params.get("transaction_subject")]
+    .filter(Boolean).join(" ");
   if (/agency/i.test(name)) return "Agency";
   if (/business/i.test(name)) return "Business";
   if (/start[\s-]?up/i.test(name)) return "Start-up";
@@ -172,6 +176,55 @@ async function matchAccount(p: URLSearchParams) {
   return { profile: null, email: custom || payer, payer };
 }
 
+/** 32 random bytes, base64url: 43 characters (purchase_claims_token_shape). */
+function newToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * A payment nobody's account matched: email the payer — PayPal has verified
+ * that address — a link that attaches it to the account they sign up with or
+ * log into. One open link per payment (or per subscription, which covers all
+ * its payments). Returns whether a link went out.
+ */
+async function offerClaim(
+  target: { txnId?: string | null; subscrId?: string | null },
+  plan: Plan | null,
+  payer: string,
+  what: string,
+): Promise<boolean> {
+  if (!payer || !SITE_URL) return false;
+  const db = serviceClient();
+  let open = db.from("purchase_claims").select("token").is("claimed_at", null).gt("expires_at", new Date().toISOString());
+  open = target.subscrId ? open.eq("subscr_id", target.subscrId) : open.eq("txn_id", target.txnId!);
+  const { data: existing } = await open.limit(1);
+  if (existing && existing.length > 0) return true;
+
+  const token = newToken();
+  const { error } = await db.from("purchase_claims").insert({
+    token,
+    txn_id: target.subscrId ? null : target.txnId,
+    subscr_id: target.subscrId ?? null,
+    email: payer,
+    plan,
+  });
+  if (error) {
+    console.error("could not create activation link", error.message);
+    return false;
+  }
+  const link = `${SITE_URL}/app/?claim=${token}`;
+  return await sendEmail(
+    payer,
+    `Activate your Domain Vault ${plan ?? ""} plan`,
+    `<h3>Thank you for your purchase!</h3>
+     <p>To activate your <b>${escapeHtml(plan ?? "")}</b> ${escapeHtml(what)}, create your Domain Vault account
+     — or log in, if you already have one — with this link:</p>
+     <p><a href="${link}" style="display:inline-block;background:#ff5011;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Activate my plan</a></p>
+     <p style="color:#777">The link works once and stays valid for 30 days. If you did not make this purchase, you can ignore this email.</p>`,
+  );
+}
+
 async function prices(plan: Plan) {
   const { data } = await serviceClient()
     .from("plan_prices").select("amount, lifetime_amount, currency").eq("plan", plan).maybeSingle();
@@ -195,7 +248,19 @@ async function handleCompleted(p: URLSearchParams, txnId: string, kind: Kind): P
   const tax = p.get("tax") ?? "0";
   const currency = (p.get("mc_currency") ?? "").toUpperCase();
   const subscrId = p.get("subscr_id");
-  const { profile, email, payer } = await matchAccount(p);
+  const match = await matchAccount(p);
+  const { email, payer } = match;
+  let profile = match.profile;
+
+  // A renewal belongs to whoever owns the subscription, even when neither
+  // email matches (the subscription was attached by an activation link).
+  if (subscrId) {
+    const { data: sub } = await db.from("subscriptions").select("user_id").eq("subscr_id", subscrId).maybeSingle();
+    if (sub?.user_id) {
+      const { data: owner } = await db.from("profiles").select("id, email").eq("id", sub.user_id).maybeSingle();
+      if (owner) profile = owner as { id: string; email: string };
+    }
+  }
 
   const { data: existing } = await db
     .from("purchases").select("id, status").eq("txn_id", txnId).maybeSingle();
@@ -252,8 +317,10 @@ async function handleCompleted(p: URLSearchParams, txnId: string, kind: Kind): P
   // --- whose account ------------------------------------------------------
   if (!profile) {
     await record("unmatched", `no account for "${email}"`, null);
+    const sent = await offerClaim(kind === "subscription" && subscrId ? { subscrId } : { txnId }, plan, payer, label);
     await alertAdmin("Payment received but no matching account", {
       txnId, kind, accountEmail: email, payerEmail: payer, plan, paid: `${gross} ${currency}`,
+      activationLink: sent ? `emailed to ${payer}` : "NOT sent — apply the plan by hand",
     });
     return ok("no matching account");
   }
@@ -437,7 +504,11 @@ async function handleSubscriptionEvent(p: URLSearchParams, event: string, subscr
     if (error) throw new Error(`could not record subscription: ${error.message}`);
 
     if (status !== "active") {
-      await alertAdmin(`Subscription ${status} — check it in PayPal`, { subscrId, email, payer, plan, amount, currency, period, reason });
+      const sent = status === "unmatched" ? await offerClaim({ subscrId }, plan, payer, "yearly subscription") : false;
+      await alertAdmin(`Subscription ${status} — check it in PayPal`, {
+        subscrId, email, payer, plan, amount, currency, period, reason,
+        ...(status === "unmatched" ? { activationLink: sent ? `emailed to ${payer}` : "NOT sent" } : {}),
+      });
       return ok(`subscription ${status}`);
     }
 

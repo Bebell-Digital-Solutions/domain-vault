@@ -39,6 +39,15 @@ sql(`update profiles set status='active' where email in ('${customer}','${admin}
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: true });
 
+/** A browser context with the third-party chat widget stubbed out: the tests
+    check our pages, and the widget's own scripts throw into the console. */
+async function newContext(options) {
+  const ctx = await browser.newContext(options);
+  await ctx.route(/helpdesk\.icu|chatconnect\.cloud/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  return ctx;
+}
+
 function watch(page, bucket) {
   page.on('pageerror', e => bucket.push('pageerror: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') bucket.push('console: ' + m.text()); });
@@ -67,7 +76,7 @@ async function reload(page) {
 // ---------------------------------------------------------------- customer
 {
   const errors = [];
-  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  const ctx = await newContext({ viewport: { width: 1400, height: 900 } });
   const page = await ctx.newPage(); watch(page, errors);
   await login(page, customer);
   ok('customer logs in through the real page', true);
@@ -115,6 +124,22 @@ async function reload(page) {
   ok('plan badge updates after PayPal return', true);
   ok('?payment=success removed from the URL', !page.url().includes('payment='));
 
+  // Downloads open inside the dashboard, from config.js.
+  await page.click('.sidebar .menu-item[data-page="downloads"]');
+  await page.waitForSelector('#downloadCards .download-card');
+  ok('downloads open inside the dashboard',
+    await page.locator('#downloadCards .download-card').count() === 3 &&
+    await page.locator('#downloadCards a[href*="releases/download"]').count() >= 3 &&
+    page.url().includes('/app/'));
+
+  // Tools come from the catalog the admin manages.
+  await page.click('.sidebar .menu-item[data-page="tools"]');
+  await page.waitForFunction(() => document.querySelectorAll('#toolsGridContainer .recommendation-card').length >= 15);
+  const chips = await page.locator('#toolsFilterTags .filter-tag').allTextContents();
+  ok('tools page shows the catalog with tag filters', chips.includes('All') && chips.includes('DNS') && chips.includes('Cheap renewal'), chips.join('/'));
+  await page.click('#toolsFilterTags .filter-tag[data-tag="ssl"]');
+  ok('a tag filter narrows the list', await page.locator('#toolsGridContainer .recommendation-card').count() === 1);
+
   ok('no JavaScript errors (desktop)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
@@ -122,13 +147,13 @@ async function reload(page) {
 // --------------------------------------------------------- mobile navigation
 {
   const errors = [];
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const ctx = await newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage(); watch(page, errors);
   await login(page, customer);
   await page.click('.menu-toggle');
   await page.waitForSelector('#mobileNav.open');
   const items = await page.locator('#mobileNav .menu-item[data-page]').count();
-  ok('mobile drawer now contains the menu', items === 8, `${items} items`);
+  ok('mobile drawer now contains the menu', items === 9, `${items} items`);
   await page.waitForTimeout(700);   // let the slide-in transition finish
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/mobile-nav.png` });
   await page.click('#mobileNav .menu-item[data-page="providers"]');
@@ -142,7 +167,7 @@ async function reload(page) {
 {
   // Refusals answered with 4xx are part of this journey; anything else is not.
   const errors = [];
-  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  const ctx = await newContext({ viewport: { width: 1400, height: 900 } });
   const page = await ctx.newPage(); watch(page, errors);
   // The duplicate-domain refusal below, as the network and the console report it.
   const expected = (e) => /http 409: .*functions\/v1\/api$/.test(e) || /status of 409 \(Conflict\)/.test(e);
@@ -282,7 +307,7 @@ async function reload(page) {
 // ------------------------------------------------------------------- admin
 {
   const errors = [];
-  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  const ctx = await newContext({ viewport: { width: 1400, height: 900 } });
   const page = await ctx.newPage(); watch(page, errors);
   await login(page, admin);
   await page.waitForSelector('.sidebar .admin-link:not([hidden])', { timeout: 15000 });
@@ -318,6 +343,21 @@ async function reload(page) {
   await page.waitForFunction(() => /Business price saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
   ok('price saved from the prices tab', sql(`select amount from plan_prices where plan='Business'`) === '99.00');
 
+  // Tools tab: add a tool, see it listed, delete it.
+  await page.click('.tab[data-tab="tools"]');
+  await page.waitForSelector('#catalogRows tr');
+  await page.fill('#catalogName', `UI Tool ${t}`);
+  await page.fill('#catalogUrl', 'https://example.com/ui-tool');
+  await page.fill('#catalogTags', 'dns');
+  await page.click('#catalogSave');
+  await page.waitForSelector(`#catalogRows >> text=UI Tool ${t}`, { timeout: 15000 });
+  ok('admin adds a tool from the Tools tab', sql(`select count(*) from catalog_items where name = 'UI Tool ${t}'`) === '1');
+  await page.locator('#catalogRows tr', { hasText: `UI Tool ${t}` }).locator('button[data-act="delete-tool"]').click();
+  await page.waitForSelector(`#catalogRows >> text=UI Tool ${t}`, { state: 'detached', timeout: 15000 });
+  ok('…and deletes it', sql(`select count(*) from catalog_items where name = 'UI Tool ${t}'`) === '0');
+
+  await page.click('.tab[data-tab="prices"]');
+  await page.waitForSelector('#unpaidPlan');
   await page.selectOption('#unpaidPlan', 'Free');
   await page.click('#saveBillingConfig');
   await page.waitForFunction(() => /Plan settings saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
@@ -358,7 +398,7 @@ async function reload(page) {
 
 // --------------------------------------------------- admin page, non-admin
 {
-  const ctx = await browser.newContext();
+  const ctx = await newContext();
   const page = await ctx.newPage(); page.on('dialog', d => d.accept());
   await page.goto(SITE + '/app/admin.html');
   await page.waitForSelector('#loginView:not([hidden])');
@@ -373,7 +413,7 @@ async function reload(page) {
 // ---------------------------------------------------------------- downloads
 {
   const errors = [];
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } });
+  const ctx = await newContext({ viewport: { width: 1440, height: 950 } });
   const page = await ctx.newPage(); watch(page, errors);
   await page.goto(SITE + '/downloads.html');
   await page.waitForSelector('.platform');
@@ -406,7 +446,7 @@ async function reload(page) {
 
 // The same page with NO builds configured must never show dead buttons.
 {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } });
+  const ctx = await newContext({ viewport: { width: 1440, height: 950 } });
   const page = await ctx.newPage();
   await page.route('**/config.js', route => route.fulfill({
     contentType: 'application/javascript', body: 'window.DOMAIN_VAULT_CONFIG = { downloads: {} };',
@@ -421,7 +461,7 @@ async function reload(page) {
 
 // Same page, but with builds configured in config.js.
 {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } });
+  const ctx = await newContext({ viewport: { width: 1440, height: 950 } });
   const page = await ctx.newPage();
   await page.route('**/config.js', route => route.fulfill({
     contentType: 'application/javascript',
@@ -438,7 +478,7 @@ async function reload(page) {
 
 // Mobile: the three cards must stack.
 {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
+  const ctx = await newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
   const page = await ctx.newPage();
   await page.goto(SITE + '/downloads.html');
   await page.waitForSelector('.platform');
