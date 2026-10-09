@@ -1,0 +1,125 @@
+    
+    
+
+    <section class="py-24 border-b border-brand-border px-6" id="features">
+        <div class="max-w-6xl mx-auto">
+            <div class="mb-16 md:w-2/3 mx-auto text-center">
+                <div class="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-bgDark/50 px-3 py-1 mb-6 ">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+                    <span class="text-xs font-medium text-brand-muted uppercase tracking-wider font-tech">Características Principales</span>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-brand-textMain mb-4">
+                    Todo lo que hace Domain Vault.
+                </h2>
+                <p class="text-brand-muted leading-relaxed text-lg">
+                    Reemplaza las desordenadas hojas de cálculo con un panel en modo oscuro creado para propietarios de dominios, freelancers y pequeñas agencias.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 1. Renewal Calendar -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="calendar-clock" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Calendario de Renovaciones</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Mira cada renovación en una cuadrícula mensual. Exporta a Google Calendar o descarga archivos .ics. Recibe alertas generadas automáticamente 30 días antes de la expiración.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 2. DNS Inspector -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="network" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Inspector DNS en Vivo</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Consulta registros A, AAAA, MX, TXT, CNAME y NS directamente desde tu panel. Verifica la propagación sin abrir una terminal.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 3. Financial Reporting -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="bar-chart-2" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Seguimiento de Costos e Inversiones</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Totales de renovación anual, gráficos de costos mensuales e inversión de por vida por dominio. Exporta reportes CSV filtrados para contabilidad.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 4. Provider Vault -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="key-round" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Bóveda de Credenciales de Proveedores</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Usuarios de registradores, contraseñas e ID de cuentas en un solo lugar. Ya no tendrás que buscar en administradores de contraseñas cuando sea el momento de renovar.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 5. Notifications -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="bell" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Alertas Inteligentes de Expiración</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Las notificaciones persistentes se activan 30 días antes y se intensifican el día de la expiración. Recuentos de notificaciones en la barra lateral y el encabezado. Descártalas cuando las hayas gestionado.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 6. Bilingual -->
+                <div class="bg-brand-card border border-brand-border rounded-xl overflow-hidden flex flex-col group relative hover:border-brand-secondary transition-colors">
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"></div>
+                    <div class="h-40 bg-brand-hover border-b border-brand-border flex items-center justify-center p-6 relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-40 group-hover:opacity-75 transition-opacity duration-500 bg-cover bg-center" style="background-image: url('https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/Backgrounds/matrix-banner.webp');"></div>
+                        <div class="w-16 h-16 rounded-xl bg-brand-bgDark border border-brand-border flex items-center justify-center relative z-10 group-hover:scale-105 group-hover:border-brand-primary transition-all duration-300 shadow-[0_0_20px_rgba(255,80,17,0.2)]">
+                            <i data-lucide="languages" class="w-8 h-8 text-brand-textMain group-hover:text-brand-primary transition-colors"></i>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-brand-textMain font-semibold mb-2">Inglés y Español</h3>
+                        <p class="text-sm text-brand-muted leading-relaxed">
+                            Traducción completa de la interfaz con un solo clic. Creado para equipos y freelancers que trabajan en más de un idioma.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+    
