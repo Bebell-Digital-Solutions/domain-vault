@@ -286,7 +286,7 @@
 
                         <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
                             <div class="h-8 flex items-center">
-                                <img src="https://ik.imagekit.io/bebell/AIM%E2%84%A2%20AI%20Mastery%20Program/5star.png?updatedAt=1767838917560" class="object-contain h-5 opacity-70 grayscale" alt="Hulu logo" />
+                                <img src="https://assets.aceternity.com/logos/hulu.webp" class="object-contain h-5 opacity-70 grayscale" alt="Hulu logo" />
                             </div>
                             <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
                                 <p>English and Spanish support natively is fantastic for our distributed team across the Americas.</p>
