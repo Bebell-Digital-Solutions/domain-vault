@@ -135,50 +135,7 @@
 </head>
 <body class="font-sans antialiased selection:bg-brand-primary selection:text-white flex flex-col min-h-screen bg-brand-bgDark text-brand-muted">
 
-    <nav class="sticky top-0 z-50 w-full backdrop-blur-md bg-brand-bgDark/80 border-b border-brand-border transition-all duration-300">
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <!-- Left: Brand -->
-            <a href="/" class="flex items-center gap-3 text-brand-textMain font-semibold group uppercase tracking-wider font-tech">
-                <div class="relative w-8 h-8">
-                    <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" 
-                         alt="Domain Vault Logo" 
-                         class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 group-hover:opacity-0" />
-                    <img src="https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612" 
-                         alt="Domain Vault Logo Hover" 
-                         class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100" />
-                </div>
-                Domain Vault
-            </a>
-
-            <!-- Center: Muted Links (Hidden on mobile) -->
-            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-brand-muted">
-                <a href="/#workflow" class="hover:text-brand-textMain transition-colors duration-300">How It Works</a>
-                <a href="/#features" class="hover:text-brand-textMain transition-colors duration-300">Features</a>
-                <a href="/#download" class="hover:text-brand-textMain transition-colors duration-300">Download</a>                
-                <a href="/#pricing" class="hover:text-brand-textMain transition-colors duration-300">Pricing</a>
-                <a href="/#reviews" class="hover:text-brand-textMain transition-colors duration-300">Reviews</a>                
-                <a href="/#faq" class="hover:text-brand-textMain transition-colors duration-300">FAQ</a>
-            </div>
-
-            <!-- Right: Primary CTA -->
-            <div class="flex items-center gap-4">
-                <div class="header-icon cursor-pointer hover:text-brand-textMain" id="translateBtn" title="Translate to Spanish/English">
-                    <i data-lucide="languages"></i>
-                </div>            
-                <script>
-                document.getElementById('translateBtn').addEventListener('click', function() {
-                    window.location.href = '/es/precio-oferta';
-                });
-                </script>        
-                <a href="/app" class="block text-sm font-medium text-brand-muted hover:text-brand-textMain transition-colors duration-300">Log in</a>
-                <a href="#pricing-grid" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow">
-                    Get Started
-                </a>
-            </div>
-        </div>
-    </nav>
-
-    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         
         <div class="text-center max-w-3xl mx-auto mb-12">
             <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-brand-textMain mb-4 flex items-center justify-center gap-3">
@@ -250,6 +207,8 @@
             </div>
         </div>
     </main>
+    
+    
        
     <section class="py-8 mt-12 bg-brand-bgDarker">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -258,19 +217,10 @@
         </div>
     </section>
 
-    <footer class="relative z-10 py-12 px-6 mt-auto bg-brand-bgDarker">
-        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
-            <div class="flex flex-col gap-2 md:col-span-3">
-                <div class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight text-sm uppercase tracking-wider font-tech">
-                    <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault Logo" class="w-8 h-8 object-contain">
-                    Domain Vault
-                </div>
-                <div class="text-xs text-brand-muted">
-                    &copy; 2026 Domain Vault. All rights reserved.
-                </div>
-            </div>
-        </div>
-    </footer>
+
+
+   
+    
 
     <script>
         // Initialize Lucide icons
