@@ -1,0 +1,307 @@
+    
+
+    <section class="w-full max-w-[1600px] mx-auto border-y border-zinc-800 bg-zinc-950/50 py-24 overflow-hidden" id="reviews">
+        <!-- Header -->
+        <div class="mb-16 md:w-2/3 mx-auto text-center">
+            <div class="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-bgDark/50 px-3 py-1 mb-6 ">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+                <span class="text-xs font-medium text-brand-muted uppercase tracking-wider font-tech">Testimonials</span>
+            </div>
+            <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-brand-textMain mb-4">
+                Loved by domain investors and agencies.
+            </h2>
+            <p class="text-brand-muted leading-relaxed text-lg">
+                See how professionals manage hundreds of domains with zero anxiety.
+            </p>
+        </div>        
+
+        <!-- Scrolling Area Container -->
+        <div class="border-t border-zinc-800/50 relative">
+            <!-- Fade masks applied here -->
+            <div class="fade-mask overflow-hidden flex flex-col group">
+                
+                <!-- First Row (Scrolls Left) -->
+                <div class="flex scrolling-container animate-scroll-left w-max">
+                    <!-- Original Set -->
+                    <div class="flex">
+                        <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://cdn.simpleicons.org/shopify/white" class="object-contain h-6 opacity-70" alt="Shopify logo" />
+                                <span class="ml-2 font-medium tracking-wide text-sm hidden">Shopify</span>
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>We manage over 200 client domains. Domain Vault's single dashboard and automated alerts mean we never miss a renewal.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=27" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Chris Meyer" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Chris Meyer</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Agency Founder, Harbor</p>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="w-[450px] min-w-[450px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://cdn.simpleicons.org/github/white" class="object-contain h-7 opacity-90" alt="GitHub logo" />
+                                <span class="ml-2 font-medium tracking-wide text-sm hidden">GitHub</span>
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>Finally, a domain tracker built for engineers. No scraping, no API key sharing, just a secure, row-level protected database.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=9" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Priya Nair" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Priya Nair</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Staff Engineer, Kernel</p>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="w-[450px] min-w-[450px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://assets.aceternity.com/logos/openai.png" class="object-contain h-7 opacity-90 invert" alt="OpenAI logo" />
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>The DNS inspector tool is a masterpiece. Checking propagation without leaving the dashboard saves us countless terminal queries.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=68" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Daniel Frost" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Daniel Frost</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">DevOps Lead, Relay</p>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://assets.aceternity.com/logos/twitch.webp" class="object-contain h-6 opacity-70 grayscale" alt="Twitch logo" />
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>Consolidating our domains from five different registrars was seamless. The financial reporting is a massive bonus.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=16" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Amelia Park" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Amelia Park</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">IT Director, Lumen Co</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <!-- Duplicated Set for Looping -->
+                    <div class="flex" aria-hidden="true">
+                         <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://cdn.simpleicons.org/shopify/white" class="object-contain h-6 opacity-70" alt="Shopify logo" />
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>We manage over 200 client domains. Domain Vault's single dashboard and automated alerts mean we never miss a renewal.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=27" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Chris Meyer" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Chris Meyer</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Agency Founder, Harbor</p>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="w-[450px] min-w-[450px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://cdn.simpleicons.org/github/white" class="object-contain h-7 opacity-90" alt="GitHub logo" />
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>Finally, a domain tracker built for engineers. No scraping, no API key sharing, just a secure, row-level protected database.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=9" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Priya Nair" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Priya Nair</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Staff Engineer, Kernel</p>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="w-[450px] min-w-[450px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://assets.aceternity.com/logos/openai.png" class="object-contain h-7 opacity-90 invert" alt="OpenAI logo" />
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>The DNS inspector tool is a masterpiece. Checking propagation without leaving the dashboard saves us countless terminal queries.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=68" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Daniel Frost" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Daniel Frost</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">DevOps Lead, Relay</p>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://assets.aceternity.com/logos/twitch.webp" class="object-contain h-6 opacity-70 grayscale" alt="Twitch logo" />
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>Consolidating our domains from five different registrars was seamless. The financial reporting is a massive bonus.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=16" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Amelia Park" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Amelia Park</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">IT Director, Lumen Co</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <!-- Second Row (Scrolls Right) -->
+                <div class="flex scrolling-container animate-scroll-right w-max">
+                     <!-- Original Set -->
+                    <div class="flex">
+                        <article class="w-[450px] min-w-[450px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center gap-2">
+                                <svg class="w-6 h-6 text-brand-primary" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22M12 6l7.5 13h-15z"/></svg>
+                                <span class="font-semibold text-white tracking-wide text-sm">Vercel</span>
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>We cut our domain administrative time by 80%. Seeing all expirations in a single calendar view is incredible.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=52" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Elena Rodriguez" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Elena Rodriguez</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Operations, LaunchPad</p>
+                                </div>
+                            </div>
+                        </article>
+
+                         <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center gap-2">
+                                <svg class="w-6 h-6 text-cyan-400" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2L2 11l9 9 9-9-9-9zm0 2.83L17.17 11 11 17.17 4.83 11 11 4.83zM13 15h2v2h-2v-2zm0-8h2v6h-2V7z"/></svg>
+                                <span class="font-semibold text-white tracking-wide text-sm">Raycast</span>
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>The privacy-first approach is what sold us. We don't want third parties having access to our registrar credentials.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=44" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Nina Volkov" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Nina Volkov</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Security Engineer, Arc Studio</p>
+                                </div>
+                            </div>
+                        </article>
+
+                         <article class="w-[450px] min-w-[450px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                                <span class="font-semibold text-white tracking-wide text-sm">Raycast</span>
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>Exporting our entire portfolio data as a CSV for accounting takes one click. Domain Vault paid for itself in a week.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=12" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Sarah Chen" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Sarah Chen</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Operations VP, Northwind</p>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://assets.aceternity.com/logos/hulu.webp" class="object-contain h-5 opacity-70 grayscale" alt="Hulu logo" />
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>English and Spanish support natively is fantastic for our distributed team across the Americas.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=33" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Marcus Webb" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Marcus Webb</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Tech Lead, Orbit Labs</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <!-- Duplicated Set for Looping -->
+                    <div class="flex" aria-hidden="true">
+                        <article class="w-[450px] min-w-[450px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center gap-2">
+                                <svg class="w-6 h-6 text-brand-primary" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22M12 6l7.5 13h-15z"/></svg>
+                                <span class="font-semibold text-white tracking-wide text-sm">Vercel</span>
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>We cut our domain administrative time by 80%. Seeing all expirations in a single calendar view is incredible.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=52" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Elena Rodriguez" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Elena Rodriguez</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Operations, LaunchPad</p>
+                                </div>
+                            </div>
+                        </article>
+
+                         <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center gap-2">
+                                <svg class="w-6 h-6 text-cyan-400" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2L2 11l9 9 9-9-9-9zm0 2.83L17.17 11 11 17.17 4.83 11 11 4.83zM13 15h2v2h-2v-2zm0-8h2v6h-2V7z"/></svg>
+                                <span class="font-semibold text-white tracking-wide text-sm">Raycast</span>
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>The privacy-first approach is what sold us. We don't want third parties having access to our registrar credentials.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=44" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Nina Volkov" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Nina Volkov</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Security Engineer, Arc Studio</p>
+                                </div>
+                            </div>
+                        </article>
+
+                         <article class="w-[450px] min-w-[450px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                                <span class="font-semibold text-white tracking-wide text-sm">Raycast</span>
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>Exporting our entire portfolio data as a CSV for accounting takes one click. Domain Vault paid for itself in a week.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=12" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Sarah Chen" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Sarah Chen</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Operations VP, Northwind</p>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="w-[400px] min-w-[400px] bg-zinc-900/10 border-b border-r border-zinc-800/50 flex-col flex p-8 gap-6 shrink-0 transition-colors hover:bg-zinc-800/30">
+                            <div class="h-8 flex items-center">
+                                <img src="https://ik.imagekit.io/bebell/AIM%E2%84%A2%20AI%20Mastery%20Program/5star.png?updatedAt=1767838917560" class="object-contain h-5 opacity-70 grayscale" alt="Hulu logo" />
+                            </div>
+                            <blockquote class="flex-col flex-grow flex text-[15px] text-zinc-300 font-normal whitespace-normal leading-relaxed">
+                                <p>English and Spanish support natively is fantastic for our distributed team across the Americas.</p>
+                            </blockquote>
+                            <div class="items-center flex gap-4 mt-auto">
+                                <img src="https://i.pravatar.cc/150?img=33" class="object-cover w-10 h-10 rounded-lg border border-zinc-700/50 grayscale opacity-80" alt="Marcus Webb" />
+                                <div class="flex-grow">
+                                    <p class="text-white text-sm font-medium">Marcus Webb</p>
+                                    <p class="text-zinc-500 text-xs mt-0.5">Tech Lead, Orbit Labs</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section> 
