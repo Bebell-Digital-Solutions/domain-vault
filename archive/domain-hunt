@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Vault - True Cost Aggregator</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* Skeleton Loader Animation */
+        .skeleton {
+            background: #e2e8f0;
+            background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
+            border-radius: 5px;
+            background-size: 200% 100%;
+            animation: 1.5s shine linear infinite;
+        }
+
+        @keyframes shine {
+            to {
+                background-position-x: -200%;
+            }
+        }
+
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: max-content;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%; 
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            font-weight: 400;
+        }
+
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Smooth row transition */
+        .row-enter {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2 text-brand-600">
+                <i class="fa-solid fa-vault text-2xl"></i>
+                <span class="text-xl font-bold tracking-tight">Domain Vault</span>
+            </div>
+            <nav class="hidden md:flex gap-6 text-sm font-medium text-slate-600">
+                <a href="#" class="hover:text-brand-600 transition-colors">Pricing Data</a>
+                <a href="#" class="hover:text-brand-600 transition-colors">API Integration</a>
+                <a href="#" class="hover:text-brand-600 transition-colors">About</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        
+        <div class="text-center max-w-3xl mx-auto mb-10">
+            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 mb-4">
+                Find the <span class="text-brand-600">True Cost</span> of Your Domain
+            </h1>
+            <p class="text-lg text-slate-600 mb-8">
+                We bypass promotional obfuscation to reveal the true 5-year total cost across major registrars. No hidden renewal fees, no surprises.
+            </p>
+
+            <form id="search-form" class="relative flex items-center w-full max-w-2xl mx-auto shadow-sm rounded-full bg-white border border-slate-300 focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-brand-500 overflow-hidden transition-all">
+                <div class="pl-5 text-slate-400">
+                    <i class="fa-solid fa-globe"></i>
+                </div>
+                <input type="text" id="domain-input" placeholder="Enter your ideal domain (e.g., mystartup.com)" class="w-full py-4 px-4 outline-none text-slate-700 placeholder-slate-400 bg-transparent text-lg" required autocomplete="off" spellcheck="false">
+                <button type="submit" id="search-btn" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold py-4 px-8 transition-colors flex items-center gap-2 h-full rounded-r-full">
+                    <span>Search</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+            <div id="error-message" class="text-red-500 text-sm mt-3 hidden">Please enter a valid domain name.</div>
+        </div>
+
+        <div id="status-container" class="hidden max-w-4xl mx-auto mb-8 transition-all">
+            <div id="status-card" class="rounded-xl p-6 border flex items-center justify-between shadow-sm">
+                <div class="flex items-center gap-4">
+                    <div id="status-icon-wrapper" class="w-12 h-12 rounded-full flex items-center justify-center text-xl">
+                        <i id="status-icon" class="fa-solid fa-spinner fa-spin"></i>
+                    </div>
+                    <div>
+                        <h2 id="status-domain-name" class="text-2xl font-bold text-slate-900">...</h2>
+                        <p id="status-message" class="text-slate-500 text-sm mt-1">Executing RDAP gateway check...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="results-container" class="hidden max-w-5xl mx-auto bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-sm font-semibold text-slate-600">
+                            <th class="py-4 px-6 whitespace-nowrap">Registrar</th>
+                            <th class="py-4 px-6 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onclick="handleSort('purchasing')">
+                                <div class="flex items-center gap-1">
+                                    1st Year Price
+                                    <i id="sort-icon-purchasing" class="fa-solid fa-sort text-slate-400"></i>
+                                </div>
+                            </th>
+                            <th class="py-4 px-6 whitespace-nowrap">Renewal Price</th>
+                            <th class="py-4 px-6 whitespace-nowrap cursor-pointer hover:bg-slate-100 transition-colors" onclick="handleSort('total')">
+                                <div class="flex items-center gap-1 text-brand-600">
+                                    5-Year Total Cost
+                                    <i id="sort-icon-total" class="fa-solid fa-sort-up"></i>
+                                </div>
+                            </th>
+                            <th class="py-4 px-6 text-center whitespace-nowrap">WHOIS Privacy</th>
+                            <th class="py-4 px-6 text-center whitespace-nowrap">SSL Included</th>
+                            <th class="py-4 px-6 text-right whitespace-nowrap">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-100">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-8 mt-12">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-sm">© 2026 Domain Vault Aggregator. All prices include mandatory ICANN fees.</p>
+            <p class="text-xs text-slate-500">Disclaimer: We may earn a commission if you purchase through our links. This does not affect our normalized ranking algorithm.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Data Normalization Schema from PRD (Table 1 based)
+        const registrarsData = [
+            { id: 'spaceship', name: 'Spaceship', purchasePrice: 8.88, renewalPrice: 10.18, whois: 'Free Forever', ssl: 'Paid Add-on', url: 'https://spaceship.com', notes: null },
+            { id: 'cloudflare', name: 'Cloudflare', purchasePrice: 10.46, renewalPrice: 10.46, whois: 'Free Forever', ssl: 'Free via CDN', url: 'https://cloudflare.com', notes: 'Locked to Cloudflare Nameservers' },
+            { id: 'porkbun', name: 'Porkbun', purchasePrice: 11.08, renewalPrice: 11.08, whois: 'Free Forever', ssl: 'Free (Let\'s Encrypt)', url: 'https://porkbun.com', notes: null },
+            { id: 'hostinger', name: 'Hostinger', purchasePrice: 1.99, renewalPrice: 19.99, whois: 'Free', ssl: 'Free', url: 'https://hostinger.com', notes: 'Promo requires 2yr term or hosting bundle' },
+            { id: 'namecheap', name: 'Namecheap', purchasePrice: 11.28, renewalPrice: 18.48, whois: 'Free Forever', ssl: 'Paid Add-on', url: 'https://namecheap.com', notes: null },
+            { id: 'godaddy', name: 'GoDaddy', purchasePrice: 13.19, renewalPrice: 23.19, whois: 'Basic', ssl: 'Paid Add-on', url: 'https://godaddy.com', notes: null },
+            { id: 'ionos', name: 'IONOS', purchasePrice: 1.00, renewalPrice: 20.00, whois: 'Free', ssl: 'Paid Add-on', url: 'https://ionos.com', notes: null },
+            { id: 'namesilo', name: 'NameSilo', purchasePrice: 10.95, renewalPrice: 10.95, whois: 'Free Forever', ssl: 'Paid Add-on', url: 'https://namesilo.com', notes: null }
+        ];
+
+        let currentDomain = "";
+        let resultsList = [];
+        let currentSort = { column: 'total', direction: 'asc' }; // default by 5-Year Total Cost
+        let isSearchActive = false;
+
+        // DOM Elements
+        const form = document.getElementById('search-form');
+        const input = document.getElementById('domain-input');
+        const searchBtn = document.getElementById('search-btn');
+        const errorMsg = document.getElementById('error-message');
+        const statusContainer = document.getElementById('status-container');
+        const statusCard = document.getElementById('status-card');
+        const statusIconWrapper = document.getElementById('status-icon-wrapper');
+        const statusIcon = document.getElementById('status-icon');
+        const statusDomainName = document.getElementById('status-domain-name');
+        const statusMessage = document.getElementById('status-message');
+        const resultsContainer = document.getElementById('results-container');
+        const tableBody = document.getElementById('table-body');
+
+        function calculateTotalCost(purchase, renewal) {
+            // 5-Year Formula: Total Cost = (Purchasing Price) + (Standard Renewal Price * 4)
+            return (purchase + (renewal * 4)).toFixed(2);
+        }
+
+        function formatCurrency(amount) {
+            return `$${parseFloat(amount).toFixed(2)}`;
+        }
+
+        function renderBooleanIcon(value) {
+            if (value.toLowerCase().includes('free')) {
+                return `<div class="tooltip-container">
+                            <i class="fa-solid fa-circle-check text-green-500 text-lg"></i>
+                            <span class="tooltip-text">${value}</span>
+                        </div>`;
+            } else if (value.toLowerCase().includes('basic')) {
+                return `<div class="tooltip-container">
+                            <i class="fa-solid fa-shield-halved text-yellow-500 text-lg"></i>
+                            <span class="tooltip-text">${value}</span>
+                        </div>`;
+            } else {
+                return `<div class="tooltip-container">
+                            <i class="fa-solid fa-circle-xmark text-slate-300 text-lg"></i>
+                            <span class="tooltip-text">${value}</span>
+                        </div>`;
+            }
+        }
+
+        function isValidDomain(str) {
+            const regex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+            return regex.test(str);
+        }
+
+        function renderSkeletonRows() {
+            tableBody.innerHTML = '';
+            registrarsData.forEach(reg => {
+                const tr = document.createElement('tr');
+                tr.id = `row-${reg.id}`;
+                tr.innerHTML = `
+                    <td class="py-4 px-6">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 skeleton rounded-full"></div>
+                            <div class="h-4 w-24 skeleton"></div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6"><div class="h-4 w-16 skeleton"></div></td>
+                    <td class="py-4 px-6"><div class="h-4 w-16 skeleton"></div></td>
+                    <td class="py-4 px-6"><div class="h-5 w-20 skeleton"></div></td>
+                    <td class="py-4 px-6 text-center"><div class="h-5 w-5 mx-auto skeleton rounded-full"></div></td>
+                    <td class="py-4 px-6 text-center"><div class="h-5 w-5 mx-auto skeleton rounded-full"></div></td>
+                    <td class="py-4 px-6 text-right"><div class="h-8 w-24 ml-auto skeleton rounded-md"></div></td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function populateRow(data) {
+            const tr = document.getElementById(`row-${data.id}`);
+            if (!tr) return;
+
+            const totalCost = calculateTotalCost(data.purchasePrice, data.renewalPrice);
+            data.totalCost = parseFloat(totalCost); // Save for sorting
+
+            let nameHtml = `<span class="font-medium text-slate-900">${data.name}</span>`;
+            if (data.notes) {
+                nameHtml += `<div class="tooltip-container ml-2">
+                                <i class="fa-solid fa-circle-info text-slate-400 text-sm"></i>
+                                <span class="tooltip-text w-48">${data.notes}</span>
+                             </div>`;
+            }
+
+            tr.classList.add('row-enter', 'hover:bg-slate-50', 'transition-colors');
+            tr.innerHTML = `
+                <td class="py-4 px-6 flex items-center">
+                    ${nameHtml}
+                </td>
+                <td class="py-4 px-6 font-mono text-slate-700">${formatCurrency(data.purchasePrice)}</td>
+                <td class="py-4 px-6 font-mono text-slate-500">${formatCurrency(data.renewalPrice)}/yr</td>
+                <td class="py-4 px-6 font-mono font-bold text-slate-900">${formatCurrency(totalCost)}</td>
+                <td class="py-4 px-6 text-center">${renderBooleanIcon(data.whois)}</td>
+                <td class="py-4 px-6 text-center">${renderBooleanIcon(data.ssl)}</td>
+                <td class="py-4 px-6 text-right">
+                    <a href="${data.url}?affiliate_id=123&domain=${currentDomain}" target="_blank" class="inline-block bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors shadow-sm">
+                        Get It
+                    </a>
+                </td>
+            `;
+        }
+
+        window.handleSort = function(column) {
+            if (resultsList.length < registrarsData.length) return; // Prevent sorting while loading
+
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+
+            // Update Icons
+            document.getElementById('sort-icon-purchasing').className = 'fa-solid fa-sort text-slate-400';
+            document.getElementById('sort-icon-total').className = 'fa-solid fa-sort text-slate-400';
+            
+            const activeIcon = document.getElementById(`sort-icon-${column}`);
+            activeIcon.className = `fa-solid fa-sort-${currentSort.direction === 'asc' ? 'up' : 'down'} text-brand-600`;
+
+            // Sort Array
+            resultsList.sort((a, b) => {
+                let valA, valB;
+                if (column === 'total') {
+                    valA = a.totalCost;
+                    valB = b.totalCost;
+                } else if (column === 'purchasing') {
+                    valA = a.purchasePrice;
+                    valB = b.purchasePrice;
+                }
+
+                if (currentSort.direction === 'asc') {
+                    return valA - valB;
+                } else {
+                    return valB - valA;
+                }
+            });
+
+            // Re-render table body based on sorted list
+            tableBody.innerHTML = '';
+            resultsList.forEach(data => {
+                const tr = document.createElement('tr');
+                tr.id = `row-${data.id}`;
+                tableBody.appendChild(tr);
+                populateRow(data);
+            });
+        }
+
+        async function performSearch(e) {
+            e.preventDefault();
+            if (isSearchActive) return;
+
+            const domain = input.value.trim().toLowerCase();
+            
+            if (!isValidDomain(domain)) {
+                errorMsg.classList.remove('hidden');
+                input.classList.add('border-red-500');
+                return;
+            }
+            
+            errorMsg.classList.add('hidden');
+            input.classList.remove('border-red-500');
+            isSearchActive = true;
+            currentDomain = domain;
+            resultsList = [];
+            
+            // UI Transition to Loading State
+            searchBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            searchBtn.classList.add('opacity-80', 'cursor-not-allowed');
+            resultsContainer.classList.add('hidden');
+            statusContainer.classList.remove('hidden');
+            
+            statusCard.className = 'rounded-xl p-6 border flex items-center justify-between shadow-sm bg-white border-slate-200';
+            statusIconWrapper.className = 'w-12 h-12 rounded-full flex items-center justify-center text-xl bg-slate-100 text-slate-600';
+            statusIcon.className = 'fa-solid fa-spinner fa-spin';
+            statusDomainName.textContent = domain;
+            statusMessage.textContent = 'Querying authoritative RDAP registry...';
+
+            // Simulate Network Latency for RDAP Check (Tier 1)
+            await new Promise(r => setTimeout(r, 800));
+
+            // Randomize availability for demonstration (80% chance available)
+            const isAvailable = Math.random() < 0.8;
+
+            if (!isAvailable) {
+                // Handle Unavailable State
+                statusCard.classList.replace('bg-white', 'bg-red-50');
+                statusCard.classList.replace('border-slate-200', 'border-red-200');
+                statusIconWrapper.classList.replace('bg-slate-100', 'bg-red-100');
+                statusIconWrapper.classList.replace('text-slate-600', 'text-red-600');
+                statusIcon.className = 'fa-solid fa-circle-xmark';
+                statusMessage.innerHTML = '<span class="text-red-700 font-medium">Unavailable</span>. This domain is already registered.';
+                
+                resetSearchState();
+                return;
+            }
+
+            // Handle Available State
+            statusCard.classList.replace('bg-white', 'bg-green-50');
+            statusCard.classList.replace('border-slate-200', 'border-green-200');
+            statusIconWrapper.classList.replace('bg-slate-100', 'bg-green-100');
+            statusIconWrapper.classList.replace('text-slate-600', 'text-green-600');
+            statusIcon.className = 'fa-solid fa-circle-check';
+            statusMessage.innerHTML = '<span class="text-green-700 font-medium">Available!</span> Gathering real-time pricing...';
+
+            // Show Table Skeleton
+            resultsContainer.classList.remove('hidden');
+            renderSkeletonRows();
+
+            // Simulate Concurrent Backend Fan-out (SSE Streaming to Client)
+            const promises = registrarsData.map(regData => {
+                return new Promise(resolve => {
+                    // Random delay between 0.5s and 3s to simulate varied API latencies
+                    const delay = Math.floor(Math.random() * 2500) + 500;
+                    setTimeout(() => {
+                        resultsList.push(regData);
+                        populateRow(regData);
+                        resolve();
+                    }, delay);
+                });
+            });
+
+            // Wait for all streams to finish
+            await Promise.all(promises);
+
+            // Finish State
+            statusMessage.innerHTML = '<span class="text-green-700 font-medium">Available!</span> Pricing aggregation complete.';
+            resetSearchState();
+            
+            // Initial Sort by Total Cost
+            handleSort('total');
+        }
+
+        function resetSearchState() {
+            isSearchActive = false;
+            searchBtn.innerHTML = `<span>Search</span><i class="fa-solid fa-arrow-right"></i>`;
+            searchBtn.classList.remove('opacity-80', 'cursor-not-allowed');
+        }
+
+        form.addEventListener('submit', performSearch);
+        
+        // Auto format input to lowercase
+        input.addEventListener('input', function(e) {
+            e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, '');
+        });
+
+    </script>
+</body>
+</html>
