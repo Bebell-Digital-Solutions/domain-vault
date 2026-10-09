@@ -113,6 +113,7 @@
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Secure Domain Manager",
                 dashboard: "Dashboard", allDomains: "All Domains", domainProviders: "Domain Providers", toolsResources: "Tools & Resources",
                 calendar: "Calendar", notifications: "Notifications", settings: "Settings", downloads: "Downloads", searchPlaceholder: "Search domains...",
+                team: "Team", vaultLabel: "Vault", inviteIntro: "You've been invited to a team vault. Create your account below, or switch to Log In if you already have one.",
                 dashboardOverview: "Dashboard Overview", addNewDomain: "Add New Domain", totalDomains: "Total Domains",
                 annualCost: "Annual Cost", expiringSoon: "Expiring Soon", renewalCostsByMonth: "Renewal Costs by Month",
                 providersDistribution: "Providers Distribution", domainName: "Domain Name", provider: "Provider",
@@ -162,6 +163,7 @@
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Gestor Seguro de Dominios",
                 dashboard: "Tablero", allDomains: "Todos los Dominios", domainProviders: "Proveedores", toolsResources: "Herramientas",
                 calendar: "Calendario", notifications: "Notificaciones", settings: "Configuración", downloads: "Descargas", searchPlaceholder: "Buscar dominios...",
+                team: "Equipo", vaultLabel: "Bóveda", inviteIntro: "Te invitaron a la bóveda de un equipo. Crea tu cuenta abajo, o cambia a Iniciar sesión si ya tienes una.",
                 dashboardOverview: "Resumen del Tablero", addNewDomain: "Añadir Dominio", totalDomains: "Dominios Totales",
                 annualCost: "Costo Anual", expiringSoon: "Próximos a Vencer", renewalCostsByMonth: "Costos de Renovación por Mes",
                 providersDistribution: "Distribución de Proveedores", domainName: "Nombre de Dominio", provider: "Proveedor",
@@ -264,13 +266,17 @@
         let pendingPlanChoice = null;   // ?plan=… from the homepage's pricing table
         let pendingBilling = null;      // ?billing=lifetime from the lifetime-deal page
         const CLAIM_KEY = 'dv.claim';   // activation link for a payment made before sign-up
+        const INVITE_KEY = 'dv.invite'; // team invitation link, kept until signed in
+        const VAULT_CHOICE_KEY = 'dv.vaultChoice';   // { userId: vault last opened }
+        let vaults = [];                 // the user's own vault, then the teams they belong to
+        let currentVault = null;         // the vault on screen: { id, ownerEmail, plan, isOwner, permissions }
+        let currentVaultId = null;       // null = the user's own vault
         let authMode = 'login';          // login | register | forgot | recover
         let recoveryToken = null;        // from a password-reset link; kept out of the URL
         let revealedPassword = null;     // credentials modal only, forgotten when it closes
         let credentialsProviderId = null;
-        // saveDomains/saveProviders replace the whole list on the server, so
-        // nothing may be saved until the real list has been loaded: saving
-        // from an empty screen after a failed load would delete everything.
+        // Nothing is saved until the vault on screen has loaded: an edit made
+        // while switching vaults would land in the wrong one.
         let vaultLoaded = false;
 
         const colorThemes = {
@@ -365,12 +371,22 @@
                     setAuthMode('register');
                     showAuthMessage((translations[settings.language] || translations.en).claimIntro, 'success');
                 }
+                // A team invitation from the "you're invited" email: joined
+                // once the visitor is signed in (straight away if they are).
+                if (/^[A-Za-z0-9_-]{43}$/.test(params.get('invite') || '')) {
+                    try { sessionStorage.setItem(INVITE_KEY, params.get('invite')); } catch (e) { /* storage blocked */ }
+                    if (!window.DomainVaultAPI.session) {
+                        setAuthMode('register');
+                        showAuthMessage((translations[settings.language] || translations.en).inviteIntro, 'success');
+                    }
+                }
                 // Used once: a reload must not reopen the checkout.
-                if (params.has('register') || params.has('plan') || params.has('billing') || params.has('claim')) {
+                if (params.has('register') || params.has('plan') || params.has('billing') || params.has('claim') || params.has('invite')) {
                     params.delete('register');
                     params.delete('plan');
                     params.delete('billing');
                     params.delete('claim');
+                    params.delete('invite');
                     history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash);
                 }
                 // Restore a previous session, if there is one. The old build
@@ -419,11 +435,24 @@
 
             // Modals & Navigation
             document.getElementById('addDomainBtn').addEventListener('click', () => {
-                if (domains.length >= planLimit(currentUser?.plan || 'Personal')) return openUpgrade();
+                if (domains.length >= planLimit(vaultPlan())) {
+                    if (currentVault && !currentVault.isOwner) {
+                        return showToast(`This vault is full on its ${vaultPlan()} plan. Ask the owner to upgrade.`, "warning");
+                    }
+                    return openUpgrade();
+                }
                 openModal('domainModal', 'addNewDomain', 'addDomain', {});
             });
             document.getElementById('addDomainBtnSecondary').addEventListener('click', () => document.getElementById('addDomainBtn').click());
             document.getElementById('addProviderBtn').addEventListener('click', () => openModal('providerModal', 'addNewProvider', 'addProvider', {}));
+
+            // Team vaults
+            document.getElementById('vaultSelect').addEventListener('change', (e) => switchVault(e.target.value));
+            document.getElementById('teamInviteForm').addEventListener('submit', submitInvite);
+            document.getElementById('copyInviteBtn').addEventListener('click', () =>
+                copyToClipboard(document.getElementById('inviteLink').value, 'Invitation link copied.'));
+            document.getElementById('teamUpgradeBtn').addEventListener('click', () => openUpgrade());
+            document.getElementById('page-team').addEventListener('click', handleTeamClick);
             
             document.querySelectorAll('.modal-close').forEach(btn => {
                 btn.addEventListener('click', (e) => closeModal(e.target.closest('.modal')));
@@ -758,22 +787,36 @@
 
             try {
                 const claimToken = pendingClaim();
+                const inviteToken = pendingInvite();
                 if (authMode === 'login') {
-                    const res = await apiCall('loginUser', { email: email, password: pass, claimToken: claimToken || undefined });
+                    const res = await apiCall('loginUser', {
+                        email: email, password: pass,
+                        claimToken: claimToken || undefined, inviteToken: inviteToken || undefined
+                    });
                     if (res.claimedPlan || res.claimMessage) clearClaim();
+                    if (res.joinedVault || res.inviteMessage) clearInvite();
                     if (res.success) {
                         currentUser = res.user;
+                        // Open the team just joined.
+                        if (res.joinedVault) storeVaultChoice(res.joinedVault.vaultId);
                         enterApp();
                         if (res.claimedPlan) showToast(`Your ${res.claimedPlan} plan is active.`, 'success');
                         if (res.claimMessage) showToast(res.claimMessage, 'danger');
+                        if (res.joinedVault) showToast(`You joined the team of ${res.joinedVault.ownerEmail}.`, 'success');
+                        if (res.inviteMessage) showToast(res.inviteMessage, 'danger');
                     } else {
-                        showAuthMessage(res.claimMessage ? `${res.message} ${res.claimMessage}` : res.message, 'danger');
+                        showAuthMessage([res.message, res.claimMessage, res.inviteMessage].filter(Boolean).join(' '), 'danger');
                     }
                 } else if (authMode === 'register') {
                     const place = await fetchLocation();
                     const phone = document.getElementById('authPhone').value;
-                    const res = await apiCall('registerUser', { email: email, password: pass, phone: phone, location: place, claimToken: claimToken || undefined });
+                    const res = await apiCall('registerUser', {
+                        email: email, password: pass, phone: phone, location: place,
+                        claimToken: claimToken || undefined, inviteToken: inviteToken || undefined
+                    });
                     if (res.success && claimToken) clearClaim();
+                    // Kept if it was not used (an existing address): logging in uses it.
+                    if (res.joinedVault) clearInvite();
                     showAuthMessage(res.message, res.success ? 'success' : 'danger');
                     if (res.success) setTimeout(() => { if (authMode === 'register') setAuthMode('login'); }, 3000);
                 } else if (authMode === 'forgot') {
@@ -809,7 +852,9 @@
             setAuthMode('login');
             if (message) showAuthMessage(message, 'danger');
             domains = []; providers = []; notifications = []; purchases = []; subscriptions = [];
+            vaults = []; currentVault = null; currentVaultId = null;
             vaultLoaded = false;
+            renderVaultBar();
             // The desktop shell keeps reminding about the last list it was
             // given; a signed-out vault has none to show.
             if (window.domainVaultDesktop) {
@@ -825,7 +870,11 @@
 
             document.getElementById('settingsAccountEmail').value = currentUser.email;
 
-            apiCall('getUserData', {}).then(data => {
+            // The vault opened last time, if it was a team's.
+            const choice = storedVaultChoice();
+            currentVaultId = choice && choice !== currentUser.id ? choice : null;
+
+            fetchUserData().then(data => {
                 // An expired session, or an account suspended since it last
                 // signed in: showing an empty vault would invite the user to
                 // start re-entering data that cannot be saved.
@@ -844,6 +893,15 @@
                 if (data.settings) settings = Object.assign({}, settings, data.settings);
                 else settings.username = currentUser.email.split('@')[0];
                 applyAccountState(data);
+                applyVaultState(data);
+
+                // Someone who signed up to join a team has an empty vault of
+                // their own: open the team's instead, until they pick one.
+                const team = vaults.find(v => !v.isOwner && v.active);
+                if (!storedVaultChoice() && currentVault && currentVault.isOwner && team &&
+                    domains.length === 0 && providers.length === 0) {
+                    switchVault(team.id, true);
+                }
 
                 applySettings();
                 setLanguage(settings.language);
@@ -855,21 +913,42 @@
                     pendingPlanChoice = null;
                 }
                 redeemPendingClaim();
+                redeemPendingInvite();
             }).catch(err => {
                 showToast("Could not reach the server to load your vault. Reload the page to try again.", "danger");
             });
         }
 
+        /**
+         * getUserData for the vault on screen. A team vault the user can no
+         * longer open (removed, or the owner's plan has fewer seats now)
+         * falls back to their own.
+         */
+        async function fetchUserData() {
+            let data = await apiCall('getUserData', vaultPayload());
+            if (currentVaultId && data && data.success === false && /no longer have access/i.test(data.message || '')) {
+                showToast("You no longer have access to that team vault. Showing your own vault.", "warning");
+                currentVaultId = null;
+                storeVaultChoice(currentUser.id);
+                data = await apiCall('getUserData', {});
+            }
+            return data;
+        }
+
         /** Re-read domains, providers and plan, so the screen shows what the server holds. */
         async function reloadUserData() {
-            const data = await apiCall('getUserData', {});
-            if (!data || data.success === false) return;
+            const data = await fetchUserData();
+            if (!data || data.success === false) {
+                if (data && data.message) showToast(data.message, "danger");
+                return;
+            }
             domains = data.domains || [];
             providers = data.providers || [];
             purchases = data.purchases || [];
             subscriptions = data.subscriptions || [];
             vaultLoaded = true;
             applyAccountState(data);
+            applyVaultState(data);
             renderAll();
         }
 
@@ -880,7 +959,7 @@
          * was not saved. Resolves with the response, or null on failure.
          */
         async function persist(action, payload, successMessage, reloadOnFailure = true) {
-            if (!vaultLoaded && (action === 'saveDomains' || action === 'saveProviders')) {
+            if (!vaultLoaded && /^(save|delete)(Domain|Provider)$/.test(action)) {
                 showToast("Your vault has not loaded, so nothing was saved. Reload the page and try again.", "danger");
                 return null;
             }
@@ -950,6 +1029,9 @@
          */
         function reportRenewalsToDesktop() {
             if (!window.domainVaultDesktop) return;
+            // The desktop reminds about the user's own vault; a team vault on
+            // screen leaves the last list it was given alone.
+            if (currentVault && !currentVault.isOwner) return;
             try {
                 window.domainVaultDesktop.reportRenewals(
                     domains.map(d => ({ name: d.name, renewalDate: (d.renewalDate || '').split('T')[0] })),
@@ -964,7 +1046,7 @@
             window.DomainVaultAPI.updateUser({ plan: currentUser.plan, isAdmin: currentUser.isAdmin });
 
             document.getElementById('userPlanBadgeText').textContent = currentUser.plan.toUpperCase();
-            const limit = planLimit(currentUser.plan);
+            const limit = planLimit(vaultPlan());
             const limitEl = document.getElementById('stat-domain-limit');
             if (limitEl) limitEl.textContent = `/ ${limit === Infinity ? '∞' : limit}`;
             document.querySelectorAll('.admin-link').forEach(a => { a.hidden = !currentUser.isAdmin; });
@@ -1108,6 +1190,7 @@
             if(pageId === 'calendar') renderCalendar();
             if(pageId === 'reports') renderReportsPage();
             if(pageId === 'downloads') renderDownloads();
+            if(pageId === 'team') loadTeam();
             lucide.createIcons();
             document.getElementById('mobileNav').classList.remove('open');
             document.getElementById('navOverlay').classList.remove('open');
@@ -1225,8 +1308,8 @@
                             <span class="action-btn dns-btn" data-id="${d.id}" title="Check DNS"><i data-lucide="network"></i></span>
                             <span class="action-btn gcal-btn" data-id="${d.id}" title="Add to Google Calendar"><i data-lucide="calendar-plus"></i></span>
                             <span class="action-btn ical-btn" data-id="${d.id}" title="Download iCal Event"><i data-lucide="download"></i></span>
-                            <span class="action-btn" data-id="${d.id}" title="Edit"><i data-lucide="pencil"></i></span>
-                            <span class="action-btn" data-id="${d.id}" title="Delete"><i data-lucide="trash-2"></i></span>
+                            ${can('editDomains') ? `<span class="action-btn" data-id="${d.id}" title="Edit"><i data-lucide="pencil"></i></span>` : ''}
+                            ${can('delete') ? `<span class="action-btn" data-id="${d.id}" title="Delete"><i data-lucide="trash-2"></i></span>` : ''}
                         </td>
                     </tr>`;
                     tbody1.innerHTML += tr;
@@ -1272,6 +1355,12 @@
             });
         }
 
+        /** Edit and delete buttons for a provider, as far as this vault allows. */
+        function providerActions(p) {
+            return (can('editProviders') ? `<span class="action-btn" data-id="${p.id}" title="Edit Provider"><i data-lucide="pencil"></i></span>` : '') +
+                (can('delete') ? `<span class="action-btn" data-id="${p.id}" title="Delete Provider"><i data-lucide="trash-2"></i></span>` : '');
+        }
+
         function renderProviders() {
             const tbody = document.getElementById('providersTableBody');
             const grid = document.getElementById('providersGrid');
@@ -1290,8 +1379,7 @@
                         <td>${escapeHTML(p.user)}</td>
                         <td>${count}</td>
                         <td>
-                            <span class="action-btn" data-id="${p.id}" title="Edit Provider"><i data-lucide="pencil"></i></span>
-                            <span class="action-btn" data-id="${p.id}" title="Delete Provider"><i data-lucide="trash-2"></i></span>
+                            ${providerActions(p)}
                         </td>
                     </tr>`;
                 }
@@ -1305,8 +1393,7 @@
                                     <h3 class="provider-name">${escapeHTML(p.name)}</h3>
                                 </div>
                                 <div class="actions">
-                                    <span class="action-btn" data-id="${p.id}" title="Edit Provider"><i data-lucide="pencil"></i></span>
-                                    <span class="action-btn" data-id="${p.id}" title="Delete Provider"><i data-lucide="trash-2"></i></span>
+                                    ${providerActions(p)}
                                 </div>
                             </div>
                             <div class="provider-stats">
@@ -1324,7 +1411,7 @@
         }
 
         function updateStats() {
-            const statLimit = planLimit(currentUser?.plan || 'Personal');
+            const statLimit = planLimit(vaultPlan());
             document.getElementById('stat-total-domains').innerHTML = `${domains.length} <span id="stat-domain-limit" style="font-size: 14px; color:var(--text-muted);">/ ${statLimit === Infinity ? '∞' : statLimit}</span>`;
             
             const uniqueProviders = [...new Set(domains.map(d => d.provider))].length;
@@ -1666,8 +1753,9 @@
                 const credPass = document.getElementById('credPass');
                 credPass.textContent = data.hasPassword ? '••••••••' : 'Not set';
                 credPass.dataset.shown = '';
+                // Team members see stored passwords only if the owner allowed it.
                 ['credRevealBtn', 'credCopyBtn', 'credPassNote'].forEach(el => {
-                    document.getElementById(el).style.display = data.hasPassword ? '' : 'none';
+                    document.getElementById(el).style.display = data.hasPassword && can('passwords') ? '' : 'none';
                 });
                 document.getElementById('credUid').textContent = data.uid || 'Not set';
             }
@@ -1685,17 +1773,23 @@
             if (m.id === 'domainModal') document.getElementById('otherProviderGroup').style.display = 'none';
         }
         
+        /** Put the server's copy of an item where the local one (by its local id) was. */
+        function swapItem(list, localId, saved) {
+            const idx = list.findIndex(x => String(x.id) === String(localId));
+            if (idx > -1) list[idx] = saved; else list.push(saved);
+        }
+
         async function saveDomain(e) {
             e.preventDefault();
             let pName = document.getElementById('domainProvider').value;
-            let isNewProvider = false;
+            let newProvider = null;
 
             if (pName === 'other') {
                 const oName = document.getElementById('otherProvider').value.trim();
                 if (!oName) return showToast("Enter the provider's name.", "warning");
                 if (!providers.some(p => p.name.toLowerCase() === oName.toLowerCase())) {
-                    providers.push({ id: newId('prov'), name: oName, url: '', user: '', uid: '', hasPassword: false });
-                    isNewProvider = true;
+                    newProvider = { id: newId('prov'), name: oName, url: '', user: '', uid: '' };
+                    providers.push(Object.assign({ hasPassword: false }, newProvider));
                 }
                 pName = oName;
             }
@@ -1712,17 +1806,20 @@
                 autoRenew: document.getElementById('domainAutoRenew').checked
             };
 
-            const idx = domains.findIndex(d => String(d.id) === String(id));
-            if (idx > -1) domains[idx] = domain; else domains.push(domain);
-
+            swapItem(domains, id, domain);
             closeModal(document.getElementById('domainModal'));
             renderAll();
 
-            if (!await persist('saveDomains', { domains }, isNewProvider ? null : "Domain saved.")) return;
-            if (isNewProvider && await persist('saveProviders', { providers: providersPayload() }, "Domain saved.")) {
-                clearPendingSecrets();
-                renderProviders();
+            // One item at a time: someone else in the team may be editing
+            // other domains of this vault right now.
+            const res = await persist('saveDomain', vaultPayload({ domain }), newProvider ? null : "Domain saved.");
+            if (!res) return;
+            swapItem(domains, id, res.domain);
+            if (newProvider) {
+                const saved = await persist('saveProvider', vaultPayload({ provider: newProvider }), "Domain saved.");
+                if (saved) swapItem(providers, newProvider.id, saved.provider);
             }
+            renderAll();
             reportRenewalsToDesktop();
         }
 
@@ -1730,33 +1827,15 @@
             if(confirm("Delete this domain?")) {
                 domains = domains.filter(d => String(d.id) !== String(id));
                 renderAll();
-                if (await persist('saveDomains', { domains }, "Domain deleted.")) reportRenewalsToDesktop();
+                if (await persist('deleteDomain', vaultPayload({ id }), "Domain deleted.")) reportRenewalsToDesktop();
             }
-        }
-
-        /**
-         * What saveProviders sends. A password goes out only when the user just
-         * typed one; a blank one tells the server to keep what it stores.
-         */
-        function providersPayload() {
-            return providers.map(p => ({
-                id: p.id, name: p.name, url: p.url, user: p.user, uid: p.uid,
-                pass: p.pass || '',
-                removePassword: p.removePassword === true
-            }));
-        }
-
-        /** After a save, typed passwords and delete flags have done their job. */
-        function clearPendingSecrets() {
-            providers.forEach(p => { delete p.pass; delete p.removePassword; });
         }
 
         async function saveProvider(e) {
             e.preventDefault();
             const id = document.getElementById('providerId').value || newId('prov');
             const newName = document.getElementById('providerName').value.trim();
-            const idx = providers.findIndex(p => String(p.id) === String(id));
-            const existing = idx > -1 ? providers[idx] : null;
+            const existing = providers.find(p => String(p.id) === String(id));
             const pass = document.getElementById('providerPass').value;
             const removePassword = !pass && document.getElementById('providerRemovePass').checked;
 
@@ -1765,29 +1844,26 @@
                 url: document.getElementById('providerUrl').value.trim(),
                 user: document.getElementById('providerUser').value.trim(),
                 uid: document.getElementById('providerUid').value.trim(),
-                pass: pass,
-                removePassword: removePassword,
                 hasPassword: pass ? true : (removePassword ? false : !!(existing && existing.hasPassword))
             };
 
-            let nameChanged = false;
-            if (existing) {
-                const oldName = existing.name;
-                if(oldName !== newName) {
-                    domains.forEach(d => { if(d.provider === oldName) d.provider = newName; });
-                    nameChanged = true;
-                }
-                providers[idx] = provider;
-            } else {
-                providers.push(provider);
+            // The server moves the provider's domains to the new name too.
+            if (existing && existing.name !== newName) {
+                domains.forEach(d => { if (d.provider === existing.name) d.provider = newName; });
             }
-
+            swapItem(providers, id, provider);
             closeModal(document.getElementById('providerModal'));
             renderAll();
 
-            const saved = await persist('saveProviders', { providers: providersPayload() }, "Provider saved.");
-            clearPendingSecrets();
-            if (saved && nameChanged) await persist('saveDomains', { domains });
+            // A password goes out only when the user just typed one; a blank
+            // one tells the server to keep what it stores.
+            const res = await persist('saveProvider', vaultPayload({
+                provider: { id, name: newName, url: provider.url, user: provider.user, uid: provider.uid, pass, removePassword }
+            }), "Provider saved.");
+            if (res) {
+                swapItem(providers, id, res.provider);
+                renderAll();
+            }
         }
 
         async function deleteProvider(id) {
@@ -1798,7 +1874,7 @@
             if(confirm(`Delete ${p.name}?`)) {
                 providers = providers.filter(x => String(x.id) !== String(id));
                 renderProviders();
-                await persist('saveProviders', { providers: providersPayload() }, "Provider deleted.");
+                await persist('deleteProvider', vaultPayload({ id }), "Provider deleted.");
             }
         }
 
@@ -1882,7 +1958,7 @@
         /** The provider's stored password, fetched once per opening of the credentials modal. */
         async function fetchStoredPassword() {
             if (revealedPassword !== null) return revealedPassword;
-            const res = await persist('revealCredential', { providerId: credentialsProviderId }, null, false);
+            const res = await persist('revealCredential', vaultPayload({ providerId: credentialsProviderId }), null, false);
             if (!res) return null;
             revealedPassword = res.password;
             return revealedPassword;
@@ -2046,6 +2122,303 @@
             if (res) {
                 await reloadUserData();
                 showToast(res.message || 'Your plan is active.', 'success');
+            }
+        }
+
+        // --- TEAM VAULTS ---
+        // A vault is one account's domains and providers. Its owner can invite
+        // people and choose what each may do. The server enforces all of it;
+        // what is hidden here is only what the user could not do anyway.
+
+        const TEAM_PERMS = [
+            ['editDomains', 'Add & edit domains'],
+            ['editProviders', 'Add & edit providers'],
+            ['delete', 'Delete'],
+            ['passwords', 'See passwords'],
+            ['export', 'Export data'],
+            ['manage', 'Manage team'],
+            ['reminders', 'Renewal reminder emails']
+        ];
+
+        /** Request fields for the vault on screen (none for the user's own). */
+        function vaultPayload(extra) {
+            return Object.assign(currentVaultId ? { vaultId: currentVaultId } : {}, extra || {});
+        }
+
+        /** The plan whose limits apply to the vault on screen. */
+        function vaultPlan() {
+            return (currentVault && currentVault.plan) || currentUser?.plan || 'Personal';
+        }
+
+        /** May the user do this in the vault on screen? Owners may do everything. */
+        function can(perm) {
+            if (!currentVault || currentVault.isOwner) return true;
+            return !!(currentVault.permissions && currentVault.permissions[perm]);
+        }
+
+        function vaultLabel(v) {
+            return v.isOwner ? 'My vault' : `${v.ownerName || v.ownerEmail}'s vault`;
+        }
+
+        function storedVaultChoice() {
+            if (!currentUser) return null;
+            try { return (JSON.parse(localStorage.getItem(VAULT_CHOICE_KEY)) || {})[currentUser.id] || null; } catch (e) { return null; }
+        }
+        function storeVaultChoice(vaultId) {
+            if (!currentUser) return;
+            try {
+                const all = JSON.parse(localStorage.getItem(VAULT_CHOICE_KEY)) || {};
+                all[currentUser.id] = vaultId;
+                localStorage.setItem(VAULT_CHOICE_KEY, JSON.stringify(all));
+            } catch (e) { /* storage blocked: the own vault opens next time */ }
+        }
+
+        function applyVaultState(data) {
+            vaults = data.vaults || [];
+            currentVault = data.vault || null;
+            currentVaultId = currentVault && !currentVault.isOwner ? currentVault.id : null;
+            renderVaultBar();
+            const own = !currentVault || currentVault.isOwner;
+            document.getElementById('addDomainBtn').hidden = !can('editDomains');
+            document.getElementById('addDomainBtnSecondary').hidden = !can('editDomains');
+            document.getElementById('addProviderBtn').hidden = !can('editProviders');
+            ['exportCsvBtn', 'exportJsonBtn', 'pageDownloadReportBtn', 'pageEmailReportBtn'].forEach(id => {
+                document.getElementById(id).hidden = !can('export');
+            });
+            // The calendar subscription covers the user's own vault.
+            document.getElementById('syncGCalBtn').hidden = !own;
+            if (document.getElementById('page-team').classList.contains('active')) loadTeam();
+        }
+
+        function renderVaultBar() {
+            const bar = document.getElementById('vaultBar');
+            const teams = vaults.filter(v => !v.isOwner);
+            bar.hidden = teams.length === 0;
+            if (bar.hidden) return;
+            document.getElementById('vaultSelect').innerHTML = vaults.map(v =>
+                `<option value="${escapeHTML(v.id)}"${currentVault && v.id === currentVault.id ? ' selected' : ''}${v.active ? '' : ' disabled'}>` +
+                `${escapeHTML(vaultLabel(v))}${v.active ? '' : ' (no access)'}</option>`).join('');
+            let role = 'You own this vault.';
+            if (currentVault && !currentVault.isOwner) {
+                const allowed = TEAM_PERMS.filter(([k]) => k !== 'reminders' && currentVault.permissions[k]).map(([, l]) => l.toLowerCase());
+                role = `Team member: view${allowed.length ? ', ' + allowed.join(', ') : ' only'}.`;
+            }
+            document.getElementById('vaultRole').textContent = role;
+        }
+
+        /** Show another vault. `quiet` skips the toast (automatic switches). */
+        async function switchVault(vaultId, quiet) {
+            if (!currentUser) return;
+            storeVaultChoice(vaultId);
+            currentVaultId = vaultId && vaultId !== currentUser.id ? vaultId : null;
+            vaultLoaded = false;
+            domains = []; providers = [];
+            renderAll();
+            await reloadUserData();
+            if (!quiet && currentVault) showToast(`Showing ${vaultLabel(currentVault).replace(/^My/, 'your')}.`, 'success');
+        }
+
+        function pendingInvite() {
+            try { return sessionStorage.getItem(INVITE_KEY); } catch (e) { return null; }
+        }
+        function clearInvite() {
+            try { sessionStorage.removeItem(INVITE_KEY); } catch (e) { /* storage blocked */ }
+        }
+
+        /** Already signed in when the invitation was opened: join now, and open the team. */
+        async function redeemPendingInvite() {
+            const token = pendingInvite();
+            if (!token) return;
+            clearInvite();
+            const res = await persist('acceptInvitation', { token }, null, false);
+            if (!res) return;
+            await switchVault(res.vaultId, true);
+            setActivePage('dashboard');
+            showToast(res.message, 'success');
+        }
+
+        function permBoxes(perms, editable) {
+            return TEAM_PERMS.map(([key, label]) => {
+                // A manager who is not the owner can only hand out what they
+                // hold themselves (the server refuses the rest).
+                const locked = !editable || (key !== 'reminders' && !can(key) && !(perms && perms[key]));
+                return `<label class="perm-chip"><input type="checkbox" data-perm="${key}"` +
+                    `${perms && perms[key] ? ' checked' : ''}${locked ? ' disabled' : ''}> ${label}</label>`;
+            }).join('');
+        }
+
+        function readPerms(container) {
+            const perms = {};
+            container.querySelectorAll('input[data-perm]').forEach(cb => { perms[cb.dataset.perm] = cb.checked; });
+            return perms;
+        }
+
+        function shortDate(iso) {
+            return iso ? new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+        }
+
+        const ACTIVITY_TEXT = {
+            'domain.add': 'added the domain', 'domain.edit': 'edited the domain', 'domain.delete': 'deleted the domain',
+            'provider.add': 'added the provider', 'provider.edit': 'edited the provider', 'provider.delete': 'deleted the provider',
+            'password.reveal': 'viewed the password of', 'team.invite': 'invited', 'team.update': 'changed the permissions of',
+            'team.remove': 'removed', 'team.cancel_invite': 'cancelled the invitation of', 'team.join': 'joined the team',
+            'team.leave': 'left the team'
+        };
+
+        function activityLine(a) {
+            const verb = ACTIVITY_TEXT[a.action] || a.action;
+            const self = a.action === 'team.join' || a.action === 'team.leave';
+            const password = a.details && a.details.password === 'set' ? ' and set its password'
+                : a.details && a.details.password === 'removed' ? ' and removed its password' : '';
+            return `<li><time>${escapeHTML(shortDate(a.at))}</time><strong>${escapeHTML(a.actor || 'Someone')}</strong> ` +
+                `${escapeHTML(verb)}${self || !a.target ? '' : ' <strong>' + escapeHTML(a.target) + '</strong>'}${escapeHTML(password)}</li>`;
+        }
+
+        let teamState = null;
+
+        /** The Team page: the team of the vault on screen, and the teams the user belongs to. */
+        async function loadTeam() {
+            const manage = can('manage');
+            const intro = document.getElementById('teamIntro');
+            document.getElementById('teamManage').hidden = true;
+            document.getElementById('teamSeats').hidden = true;
+            document.getElementById('teamUpgradeBtn').hidden = true;
+            renderTeamMemberships();
+            if (!currentVault) return;
+            if (!manage) {
+                intro.textContent = `You are a member of ${vaultLabel(currentVault)}. Only its owner or a team manager can invite people or change what members can do.`;
+                return;
+            }
+            intro.textContent = 'Loading the team…';
+            const res = await persist('getTeam', vaultPayload(), null, false);
+            if (!res) { intro.textContent = ''; return; }
+            teamState = res;
+            renderTeam();
+        }
+
+        function renderTeam() {
+            const t = teamState;
+            const own = t.vault.isOwner;
+            const limit = t.seats.limit;
+            const full = limit !== null && t.seats.used >= limit;
+            const seats = document.getElementById('teamSeats');
+            seats.hidden = false;
+            seats.textContent = `${t.seats.used} of ${limit === null ? '∞' : limit} people`;
+            seats.className = `status ${full ? 'status-warning' : 'status-active'}`;
+
+            const intro = document.getElementById('teamIntro');
+            const upgrade = document.getElementById('teamUpgradeBtn');
+            upgrade.hidden = !(own && full);
+            if (limit === 1) {
+                intro.textContent = own
+                    ? `Your ${t.vault.plan} plan is for one person. Upgrade to Start-up (2 people), Business (5 people) or Agency (unlimited) to invite your team.`
+                    : `This vault's ${t.vault.plan} plan is for one person. Ask the owner to upgrade.`;
+            } else {
+                const people = limit === null ? 'unlimited people' : `${limit} people, the owner included`;
+                intro.textContent = `${own ? 'Your' : `${t.vault.ownerEmail}'s`} ${t.vault.plan} plan includes ${people}.` +
+                    (full ? (own ? ' All seats are taken: upgrade, or remove someone, to invite more.' : ' All seats are taken.') : '');
+            }
+
+            document.getElementById('teamManage').hidden = limit === 1 && t.members.length === 0 && t.invitations.length === 0;
+            const form = document.getElementById('teamInviteForm');
+            form.querySelectorAll('input, button').forEach(el => { el.disabled = full; });
+            document.getElementById('invitePerms').innerHTML = permBoxes({}, !full);
+
+            const ownerRow = `<div class="team-row"><div class="team-row-head"><strong>${escapeHTML(t.vault.ownerEmail)}${own ? ' (you)' : ''}</strong>` +
+                `<span class="status status-active">Owner · full access</span></div></div>`;
+            document.getElementById('teamMembers').innerHTML = ownerRow + t.members.map(m => `
+                <div class="team-row" data-member="${escapeHTML(m.id)}" data-email="${escapeHTML(m.email)}">
+                    <div class="team-row-head">
+                        <strong>${escapeHTML(m.email)}${m.isYou ? ' (you)' : ''}</strong>
+                        <span class="status ${m.active ? 'status-active' : 'status-expired'}">${m.active ? 'Active' : 'No access: ' + escapeHTML(m.inactiveReason || '')}</span>
+                    </div>
+                    <div class="perm-list">${permBoxes(m.permissions, !m.isYou)}</div>
+                    ${m.isYou ? '<p class="field-hint">Only the owner can change your own permissions.</p>' : `
+                    <div class="team-row-actions">
+                        <button type="button" class="btn btn-secondary" data-team-act="save-member">Save changes</button>
+                        <button type="button" class="btn btn-danger-outline" data-team-act="remove-member">Remove</button>
+                    </div>`}
+                </div>`).join('') +
+                (t.members.length === 0 ? '<p class="team-empty">Nobody else yet. Invite someone to share this vault.</p>' : '');
+
+            document.getElementById('teamInvitations').innerHTML = t.invitations.length === 0
+                ? '<p class="team-empty">No pending invitations.</p>'
+                : t.invitations.map(inv => `
+                <div class="team-row" data-email="${escapeHTML(inv.email)}" data-perms="${escapeHTML(JSON.stringify(inv.permissions))}">
+                    <div class="team-row-head">
+                        <strong>${escapeHTML(inv.email)}</strong>
+                        <span class="field-hint">Sent ${escapeHTML(shortDate(inv.sentAt))} · expires ${escapeHTML(shortDate(inv.expiresAt))}</span>
+                    </div>
+                    <div class="team-row-actions" style="margin-top:8px;">
+                        <button type="button" class="btn btn-secondary" data-team-act="resend">Send again</button>
+                        <button type="button" class="btn btn-danger-outline" data-team-act="cancel-invite">Cancel</button>
+                    </div>
+                </div>`).join('');
+
+            document.getElementById('teamActivity').innerHTML = t.activity.length === 0
+                ? '<li class="team-empty">Nothing yet.</li>'
+                : t.activity.map(activityLine).join('');
+            lucide.createIcons();
+        }
+
+        function renderTeamMemberships() {
+            const teams = vaults.filter(v => !v.isOwner);
+            document.getElementById('teamMemberships').hidden = teams.length === 0;
+            document.getElementById('teamVaultList').innerHTML = teams.map(v => `
+                <div class="team-row" data-vault="${escapeHTML(v.id)}" data-label="${escapeHTML(vaultLabel(v))}">
+                    <div class="team-row-head">
+                        <strong>${escapeHTML(vaultLabel(v))}</strong>
+                        <span class="status ${v.active ? 'status-active' : 'status-expired'}">${v.active ? escapeHTML(v.plan) : 'No access right now'}</span>
+                    </div>
+                    ${v.active ? '' : '<p class="field-hint">The owner\'s plan has fewer seats than the team, or their account is paused. Ask the owner.</p>'}
+                    <div class="team-row-actions" style="margin-top:8px;">
+                        ${v.active && (!currentVault || currentVault.id !== v.id) ? '<button type="button" class="btn btn-secondary" data-team-act="open-vault">Open</button>' : ''}
+                        <button type="button" class="btn btn-danger-outline" data-team-act="leave">Leave team</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        async function submitInvite(e) {
+            e.preventDefault();
+            const email = document.getElementById('inviteEmail').value.trim();
+            if (!email) return;
+            await sendInvite(email, readPerms(document.getElementById('invitePerms')));
+        }
+
+        async function sendInvite(email, permissions) {
+            const res = await persist('inviteMember', vaultPayload({ email, permissions }), null, false);
+            if (!res) return;
+            showToast(res.message, res.emailed ? 'success' : 'warning');
+            document.getElementById('teamInviteForm').reset();
+            document.getElementById('inviteLink').value = res.inviteUrl || '';
+            document.getElementById('inviteLinkBox').hidden = !res.inviteUrl;
+            await loadTeam();
+        }
+
+        async function handleTeamClick(e) {
+            const btn = e.target.closest('[data-team-act]');
+            if (!btn) return;
+            const row = btn.closest('.team-row');
+            const act = btn.dataset.teamAct;
+            if (act === 'save-member') {
+                if (await persist('updateMember', vaultPayload({ memberId: row.dataset.member, permissions: readPerms(row) }), 'Permissions saved.', false)) loadTeam();
+            } else if (act === 'remove-member') {
+                if (!confirm(`Remove ${row.dataset.email} from the team? They lose access to this vault at once.`)) return;
+                if (await persist('removeMember', vaultPayload({ memberId: row.dataset.member }), 'Removed from the team.', false)) loadTeam();
+            } else if (act === 'resend') {
+                await sendInvite(row.dataset.email, JSON.parse(row.dataset.perms || '{}'));
+            } else if (act === 'cancel-invite') {
+                if (await persist('cancelInvitation', vaultPayload({ email: row.dataset.email }), 'Invitation cancelled.', false)) loadTeam();
+            } else if (act === 'open-vault') {
+                await switchVault(row.dataset.vault);
+                setActivePage('dashboard');
+            } else if (act === 'leave') {
+                if (!confirm(`Leave ${row.dataset.label}? You will need a new invitation to come back.`)) return;
+                const vaultId = row.dataset.vault;
+                if (!await persist('leaveTeam', { vaultId }, 'You left the team.', false)) return;
+                // Reloading redraws this page (applyVaultState).
+                if (currentVault && currentVault.id === vaultId) await switchVault(currentUser.id, true);
+                else await reloadUserData();
             }
         }
 

@@ -409,6 +409,32 @@
         .cred-row .form-control { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
         .purchase-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9em; }
         .purchase-row:last-child { border-bottom: none; }
+
+        /* Components that set their own display would otherwise ignore the hidden attribute. */
+        [hidden] { display: none !important; }
+
+        /* Team vaults */
+        .vault-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 25px; background: var(--bg-hover); border-bottom: 1px solid var(--border); font-size: 0.9em; }
+        .vault-bar[hidden] { display: none; }
+        .vault-bar i { width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+        .vault-bar select { width: auto; min-width: 0; max-width: 100%; margin: 0; padding: 6px 10px; height: auto; }
+        .vault-bar .vault-role { color: var(--text-muted); flex: 1 1 200px; min-width: 0; }
+        .team-intro { color: var(--text-muted); margin-bottom: 20px; max-width: 760px; }
+        .perm-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+        .perm-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85em; cursor: pointer; user-select: none; }
+        .perm-chip:has(input:checked) { border-color: var(--primary); }
+        .perm-chip:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+        .team-row { padding: 14px 0; border-bottom: 1px solid var(--border); }
+        .team-row:last-child { border-bottom: none; }
+        .team-row-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .team-row-head strong { overflow-wrap: anywhere; }
+        .team-row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .team-row-actions .btn { padding: 6px 12px; font-size: 0.85em; }
+        .team-empty { color: var(--text-muted); font-size: 0.9em; padding: 10px 0; }
+        .team-activity li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9em; list-style: none; overflow-wrap: anywhere; }
+        .team-activity li:last-child { border-bottom: none; }
+        .team-activity time { color: var(--text-muted); margin-right: 8px; }
+        .team-section-title { color: var(--text-main); margin: 20px 0 6px; }
         .main-footer a { color: var(--text-muted); margin: 0 6px; }
         .main-footer a:hover { color: var(--primary); }
         @media (min-width: 992px) { .settings-grid { grid-template-columns: 1fr 1fr; } }
@@ -534,6 +560,7 @@
                     <i data-lucide="bell"></i><span data-translate-key="notifications">Notifications</span>
                     <span class="notification-badge"></span>
                 </div>
+                <div class="menu-item" data-page="team"><i data-lucide="users"></i><span data-translate-key="team">Team</span></div>
                 <div class="menu-item" data-page="settings"><i data-lucide="settings"></i><span data-translate-key="settings">Settings</span></div>
                 <div class="menu-item" data-page="downloads"><i data-lucide="download"></i><span data-translate-key="downloads">Downloads</span></div>
                 <a class="menu-item admin-link" href="admin.html" hidden><i data-lucide="shield"></i><span>Admin</span></a>
@@ -576,6 +603,14 @@
                 <div class="user-avatar" id="userAvatar">U</div>
                 <div class="user-name" id="userName">Loading...</div>
             </div>
+        </div>
+
+        <!-- Shown to people who belong to a team: which vault is on screen. -->
+        <div class="vault-bar" id="vaultBar" hidden>
+            <i data-lucide="vault"></i>
+            <label for="vaultSelect" data-translate-key="vaultLabel">Vault</label>
+            <select id="vaultSelect" class="form-control"></select>
+            <span class="vault-role" id="vaultRole"></span>
         </div>
 
         <div class="content">
@@ -812,6 +847,54 @@
                 <p data-translate-key="downloadsIntro" style="color: var(--text-muted); margin-bottom: 20px;">Domain Vault on your computer, with renewal reminders even when the window is closed. Same account, same data.</p>
                 <p id="desktopBanner" class="field-hint" style="display:none; font-size:0.9em; margin-bottom: 16px; color: var(--success);" data-translate-key="desktopNote">You're using the desktop app.</p>
                 <div class="downloads-grid" id="downloadCards"></div>
+            </div>
+
+            <!-- Team Page -->
+            <div id="page-team" class="page">
+                <div class="page-title">
+                    <h2 data-translate-key="team">Team</h2>
+                    <span class="status status-active" id="teamSeats" hidden></span>
+                </div>
+                <p class="team-intro" id="teamIntro"></p>
+                <button type="button" class="btn btn-primary" id="teamUpgradeBtn" hidden style="margin-bottom: 20px;"><i data-lucide="arrow-up-circle"></i> <span>Upgrade plan</span></button>
+                <div id="teamManage" hidden>
+                    <div class="settings-grid">
+                        <div class="card">
+                            <h3 class="card-title" style="margin-bottom:6px;">Invite someone</h3>
+                            <p class="field-hint" style="font-size: 0.85em; margin-bottom: 16px;">Everyone in the team can see this vault's domains and providers. Tick what else they may do. They get an email with a link to join.</p>
+                            <form id="teamInviteForm">
+                                <div class="form-group">
+                                    <label class="form-label" for="inviteEmail">Email</label>
+                                    <input type="email" id="inviteEmail" class="form-control" required maxlength="254" autocomplete="off" placeholder="name@company.com">
+                                </div>
+                                <div class="perm-list" id="invitePerms"></div>
+                                <button type="submit" class="btn btn-primary" id="inviteSubmitBtn"><i data-lucide="send"></i> <span>Send invitation</span></button>
+                            </form>
+                            <div id="inviteLinkBox" hidden style="margin-top: 16px;">
+                                <label class="form-label" for="inviteLink">Invitation link (works once, for 7 days)</label>
+                                <div class="cred-row">
+                                    <input type="text" id="inviteLink" class="form-control" readonly>
+                                    <button type="button" class="btn btn-secondary" id="copyInviteBtn"><i data-lucide="copy"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3 class="card-title" style="margin-bottom:6px;">People</h3>
+                            <div id="teamMembers"></div>
+                            <h4 class="team-section-title">Pending invitations</h4>
+                            <div id="teamInvitations"></div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top: 30px;">
+                        <h3 class="card-title" style="margin-bottom:6px;">Recent activity</h3>
+                        <p class="field-hint" style="font-size: 0.85em;">What team members changed in this vault, and changes to the team.</p>
+                        <ul class="team-activity" id="teamActivity" style="padding:0; margin: 10px 0 0;"></ul>
+                    </div>
+                </div>
+                <div class="card" id="teamMemberships" style="margin-top: 30px;" hidden>
+                    <h3 class="card-title" style="margin-bottom:6px;">Teams you belong to</h3>
+                    <div id="teamVaultList"></div>
+                </div>
             </div>
 
             <!-- Settings Page -->
@@ -1187,9 +1270,9 @@
 
     <!-- Backend configuration, API client and the application, shared with
          the admin panel. Paths are relative: this page lives at /app/. -->
-    <script src="../config.js"></script>
-    <script src="../api.js"></script>
-    <script src="../script.js"></script>
+    <script src="../config.js?v=20261009"></script>
+    <script src="../api.js?v=20261009"></script>
+    <script src="../script.js?v=20261009"></script>
 
 
 

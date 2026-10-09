@@ -291,8 +291,14 @@
       actions += `<button class="${BAD_BTN}" data-act="suspend" data-id="${h(u.id)}" data-email="${h(u.email)}"><i data-lucide="slash" class="w-3.5 h-3.5"></i> Suspend</button>`;
     }
 
+    // Team accounts: people in this user's vault, and teams they belong to.
+    const team = [
+      u.team_members ? `${u.team_members} team member${u.team_members === 1 ? "" : "s"}` : "",
+      u.member_of ? `in ${u.member_of} other team${u.member_of === 1 ? "" : "s"}` : "",
+    ].filter(Boolean).join(" · ");
+
     return `<tr>
-      <td class="font-medium text-white">${h(u.email)}</td>
+      <td class="font-medium text-white">${h(u.email)}${team ? `<div class="text-[11px] text-slate-400 mt-0.5 font-normal">${h(team)}</div>` : ""}</td>
       <td><span class="badge ${badgeClass(u.status)}">${h(u.status)}</span></td>
       <td>${h(u.plan)}${sub ? `<div class="text-[11px] text-slate-400 mt-0.5">${h(sub)}</div>` : ""}</td>
       <td><select data-act="override" data-id="${h(u.id)}" class="input-base !h-8 !w-36 text-xs" aria-label="Plan override for ${h(u.email)}">${overrideOptions}</select></td>
