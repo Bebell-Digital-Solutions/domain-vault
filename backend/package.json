@@ -15,6 +15,7 @@
     "test:webhook": "node scripts/webhook-test.mjs",
     "test:e2e": "./scripts/e2e.sh",
     "test:ui": "node scripts/ui-test.mjs",
+    "test:team": "node scripts/team-test.mjs",
     "test:reminders": "node scripts/reminders-test.mjs"
   },
   "dependencies": {

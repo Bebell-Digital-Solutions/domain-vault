@@ -19,7 +19,7 @@ never add a secret to it.
 ## Calling the backend
 
 ```js
-const res = await apiCall('saveDomains', { domains });   // script.js
+const res = await apiCall('saveDomain', vaultPayload({ domain }));   // script.js
 // → window.DomainVaultAPI.call(action, payload)
 ```
 
@@ -51,8 +51,12 @@ const res = await apiCall('saveDomains', { domains });   // script.js
 | PayPal returns to `/app/?payment=success`. The app polls until the plan changes. The landing page forwards a bare `/?payment=success` (and stray reset links) to `/app/`. | `handlePaymentReturn()` |
 | A reset link's token is taken out of the address bar before anything else runs. | DOMContentLoaded |
 | The desktop shell gets domain names, renewal dates and reminder settings — nothing else — and an empty list on logout. | `reportRenewalsToDesktop()`, `handleLogout()` |
+| The app's own scripts are loaded as `script.js?v=YYYYMMDD`. Cloudflare lets browsers keep scripts for 4 hours but re-checks pages every time, so **bump the version in `app/index.html` / `app/admin.html` whenever a release changes both the page and its script**. | `<script>` tags |
 | The mobile drawer is filled by copying `.sidebar-menu` at startup. New menu items only need adding once, in the sidebar. | DOMContentLoaded |
 | Anything from the database that goes into `innerHTML` must be escaped (`escapeHTML` in script.js, `h()` in admin.js). | everywhere |
+| **Every vault request carries `vaultPayload()`** (the open team vault's id, nothing for the user's own), and saves are one item at a time (`saveDomain`, `deleteProvider`, …): several people may be editing the same vault. | script.js |
+| Buttons follow `can(perm)` for the open vault. Cosmetic: the database refuses the rest. Plan limits on screen come from `vaultPlan()`, the vault owner's plan; billing and settings are always the user's own. | `applyVaultState()` |
+| `?invite=` links are kept in `sessionStorage` (`dv.invite`) until the user is signed in, then joined; the vault last opened is remembered per user (`dv.vaultChoice`). | DOMContentLoaded, `redeemPendingInvite()` |
 
 ## Checking a change
 

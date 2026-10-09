@@ -40,7 +40,40 @@ The migration script imports no passwords of either kind for this reason.
 | Service role key needed for the daily job | Dedicated cron secret, stored in Vault |
 | Delete-all-then-reinsert | Atomic upsert + targeted delete |
 | Lookups called from the browser | Proxied, validated, cached, rate limited |
+| One login per vault, shared by staff | Team members with their own logins; per-person permissions enforced by RLS; removal is immediate; members' changes logged |
 | No way to recover or change a password | Reset by email link (token removed from the URL at once); change requires the current password and signs out every other session |
+
+### Team vaults
+
+A vault is the rows one account owns. `member_can(owner, user, perm)` is the
+single permission check, and the RLS policies on `domains` and `providers`
+call it for every row of another vault. It is true only while:
+
+- the user is a member of that vault,
+- both accounts are active,
+- the member still fits the owner's seats (owner first, then members oldest
+  first, so a lapsed plan cannot keep a big team), and
+- the member holds the permission asked for. Viewing needs membership only.
+
+The rest of the model:
+
+- **Membership rows are written only by the api function.** Members cannot
+  edit their own permissions; a team manager who is not the owner can only
+  grant what they hold and cannot change their own row.
+- **Invitations are bearer links.** They are emailed to the invitee (256-bit,
+  single-use, 7 days). Holding the link is the proof. The accepting account's
+  own email is not checked, because sign-up emails are not verified. The
+  inviter is shown the link as well, so they can share it if the email fails.
+  Anyone who may invite could invite an address of their own anyway. The team
+  screen lists each member's real account email.
+- **What "see passwords" protects.** Only the reveal action decrypts, and it
+  checks the permission. *Export* is enforced only in the app: anyone who can
+  view a vault can copy what they see. It hides the export buttons, nothing
+  more.
+- **Reminders** go to the members the owner ticked, on the owner's schedule,
+  only after the owner's own email has been delivered.
+- The calendar feed and the desktop app's native reminders cover the user's
+  own vault only.
 
 ---
 

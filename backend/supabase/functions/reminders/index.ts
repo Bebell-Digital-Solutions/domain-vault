@@ -8,6 +8,9 @@
 //
 // One digest per user per channel: ten domains renewing the same week is one
 // email, not ten.
+//
+// Team members whose owner ticked "receives reminders" get a copy of the
+// owner's email digest, on the owner's schedule, once it has been delivered.
 // ============================================================================
 
 import { serviceClient } from "../_shared/db.ts";
@@ -75,7 +78,8 @@ function subjectFor(rows: Due[]): string {
   return `${rows.length} domains renewing soon — first ${whenText(soonest.days_left)}`;
 }
 
-function emailBody(rows: Due[]): string {
+/** The digest; `teamOf` is the owner's address when this is a team member's copy. */
+function emailBody(rows: Due[], teamOf: string | null = null): string {
   const items = rows.map((r) => `
     <tr>
       <td style="padding:10px 14px;border-bottom:1px solid #eee">
@@ -108,7 +112,12 @@ function emailBody(rows: Due[]): string {
   }
       ${SITE_URL ? `<p style="margin:18px 0 0"><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}
       <p style="margin:22px 0 0;font-size:12px;color:#999">
-        You can change or switch off these reminders in Domain Vault under Settings.
+        ${
+    teamOf
+      ? `You receive these as a member of the domain vault of ${escapeHtml(teamOf)}.
+         The vault owner can switch them off for you on the Team page.`
+      : "You can change or switch off these reminders in Domain Vault under Settings."
+  }
       </p>
     </div>`;
 }
@@ -121,12 +130,26 @@ function whatsappBody(rows: Due[]): string {
   return `Domain Vault renewal reminder:\n${lines.join("\n")}`;
 }
 
+/** Email the owner's digest to the team members chosen for it. Returns how many were sent. */
+async function copyToTeam(admin: ReturnType<typeof serviceClient>, owner: Due, rows: Due[]): Promise<number> {
+  const { data, error } = await admin.rpc("team_reminder_recipients", { p_owner: owner.user_id });
+  if (error) {
+    console.error("team_reminder_recipients failed", error.message);
+    return 0;
+  }
+  let sent = 0;
+  for (const member of (data ?? []) as { member_id: string; email: string }[]) {
+    if (await sendEmail(member.email, subjectFor(rows), emailBody(rows, owner.email))) sent++;
+  }
+  return sent;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response("POST only", { status: 405 });
   if (!authorized(req)) return new Response("forbidden", { status: 403 });
 
   const admin = serviceClient();
-  const summary = { due: 0, sent: 0, recipients: 0, failed: 0 };
+  const summary = { due: 0, sent: 0, recipients: 0, failed: 0, teamCopies: 0 };
 
   for (const channel of CHANNELS) {
     const { data, error } = await admin.rpc("due_reminders", { p_channel: channel });
@@ -180,6 +203,9 @@ Deno.serve(async (req: Request) => {
       if (ok) {
         summary.sent += userRows.length;
         summary.recipients++;
+        // Only after the owner's copy went out: a failed send is retried
+        // tomorrow, and the team must not get the same digest twice.
+        if (channel === "email") summary.teamCopies += await copyToTeam(admin, who, userRows);
       } else {
         summary.failed += userRows.length;
         // Release the claim so the next sweep retries. Without this a failed

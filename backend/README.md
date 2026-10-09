@@ -17,7 +17,8 @@ has to provide and the deployment steps in order.
 | Area | How |
 |---|---|
 | Accounts | Supabase Auth (bcrypt). New sign-ups start `pending` until an admin activates them, or until they pay. |
-| Data isolation | Row Level Security on every table. A user's token can only ever reach that user's rows. |
+| Data isolation | Row Level Security on every table. A user's token can only ever reach that user's rows, and the rows of team vaults they were invited into, within the permissions they were given. |
+| Teams | An owner invites people by email into their vault and ticks what each may do (edit domains, edit providers, delete, see passwords, export, manage the team, get renewal reminders); viewing is always included. Seats per plan, owner included: Personal 1, Start-up 2, Business 5, Agency unlimited. No extra seats are sold. One person can be in several teams and switches between vaults in the app. Members' changes are logged for the owner. |
 | Registrar passwords | Optional. AES-256-GCM encrypted with a key that lives only in the function environment. Reveal is rate limited and audited. |
 | Plans | Yearly PayPal subscriptions (Personal, Start-up, Business, Agency), plus optional one-time "lifetime deals". The plan is **derived from a payment ledger**: each subscription payment grants a year, so a lapsed subscription, a refund or a chargeback takes back exactly what was paid for. |
 | Payments | PayPal IPN, verified with PayPal, checked against our receiver account and **against the price list for that kind of payment** (yearly or lifetime; amount and currency), deduplicated, and recorded, including the ones refused. Subscription signups, cancellations, failed renewals and ends of term are tracked. |
@@ -64,10 +65,11 @@ domain-vault/                    (repo root = the website, served by GitHub Page
     │   │   ├── …1006000100_free_tier.sql      Free tier (enum value only)
     │   │   ├── …1006000200_subscriptions.sql  yearly subscriptions, owner settings
     │   │   ├── …1008000100_purchase_claims.sql activation links (pay first)
-    │   │   └── …1008000200_catalog.sql        tools & recommendations
+    │   │   ├── …1008000200_catalog.sql        tools & recommendations
+    │   │   └── …1009000100_teams.sql          team vaults: members, permissions, seats
     │   ├── functions/
     │   │   ├── _shared/         cors, crypto, validation, db/auth, email + WhatsApp
-    │   │   ├── api/             user + admin actions (index.ts, admin.ts)
+    │   │   ├── api/             user, team + admin actions (index.ts, vault.ts, admin.ts)
     │   │   ├── lookup/          WHOIS + DNS proxy
     │   │   ├── billing-webhook/ PayPal IPN
     │   │   ├── reminders/       daily renewal sweep
@@ -76,6 +78,7 @@ domain-vault/                    (repo root = the website, served by GitHub Page
     └── scripts/
         ├── import-from-sheets.mjs   one-time migration from the old sheet
         ├── smoke-test.mjs           client + admin API journeys
+        ├── team-test.mjs            team vaults: invitations, permissions, seats
         ├── webhook-test.mjs         payment scenarios
         ├── ui-test.mjs              real-browser tests (headless Chrome)
         └── e2e.sh                   runs all three against the local stack
@@ -163,6 +166,7 @@ npm test            # SQL: every migration on a clean Postgres 16 + security ass
 npm run test:e2e    # starts a PayPal stub + test functions (no mail key), then runs:
                     #   smoke-test     customer and admin journeys through api.js,
                     #                  incl. lookups, calendar feed, password change
+                    #   team-test      invitations, permissions, seats, leaving
                     #   webhook-test   17 payment scenarios
                     #   reminders-test the daily sweep, end to end; only with
                     #                  MAIL_TESTS=1, which borrows the real mail key
@@ -193,6 +197,10 @@ What the suites prove, among other things:
   the reveal action;
 - the admin panel's actions work end to end, are all audited, and render
   database content as text (no XSS);
+- a team member reaches only the vaults they were invited into, can do only
+  what they were given, loses access at once when removed, and the newest
+  members lose access first when the owner's plan has fewer seats; a team
+  manager cannot hand out a permission they lack; an invitation works once;
 - the mobile menu works;
 - a save the server refuses says why and the screen reverts to what is stored;
 - a calendar link serves only its owner's renewals, stops working when reset,
@@ -402,22 +410,29 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 
 | Action | Who | Payload | Notes |
 |---|---|---|---|
-| `registerUser` | public | `email`, `password`, `phone`, `location`, `claimToken?` | Password ≥ 10 chars. 5/hour per IP. With an activation link, attaches the purchase and activates the account. |
+| `registerUser` | public | `email`, `password`, `phone`, `location`, `claimToken?`, `inviteToken?` | Password ≥ 10 chars. 5/hour per IP. With an activation link, attaches the purchase and activates the account. With a team invitation, joins the team and activates the account (`joinedVault`). |
 | `requestPasswordReset` | public | `email`, `redirectTo?` | Emails a reset link back to `redirectTo` if its origin is in `ALLOWED_ORIGINS`, else `SITE_URL/app/`. Same answer for unknown addresses. 5/hour per IP, 3 per address. |
-| `loginUser` | public | `email`, `password`, `claimToken?` | Returns `user` (incl. `plan`, `isAdmin`) and `session`; `claimedPlan` / `claimMessage` when a link was used. |
+| `loginUser` | public | `email`, `password`, `claimToken?`, `inviteToken?` | Returns `user` (incl. `plan`, `isAdmin`) and `session`; `claimedPlan` / `claimMessage`, `joinedVault` / `inviteMessage` when a link was used. |
 | `getCatalog` | public | — | Active tools and recommended providers. |
 | `getPrices` | public | — | Per plan: `amount` (yearly), `lifetimeAmount` (one-time), `currency`; `null` = not for sale that way. |
-| `getUserData` | user | — | Domains, providers, settings, current `plan`, `isAdmin`, own `purchases` (with `kind`, `paid_until`) and `subscriptions` (with `paidUntil`). |
-| `saveDomains` | user | `domains[]` | Atomic sync. Plan limit enforced. |
-| `saveProviders` | user | `providers[]` | Empty `pass` keeps the stored password; `removePassword: true` deletes it. |
+| `getUserData` | user | `vaultId?` | Domains and providers of one vault (own by default), the `vault` on screen with the caller's `permissions`, every vault they can open (`vaults`), and their own settings, `plan`, `isAdmin`, `purchases` (with `kind`, `paid_until`) and `subscriptions` (with `paidUntil`). |
+| `saveDomain` / `deleteDomain` | user | `vaultId?`, `domain{ id?, name, provider, purchaseDate, renewalDate, purchasePrice, renewalPrice, autoRenew }` / `id` | One item; creates or updates by id. The vault's plan limit applies. Needs *edit domains* / *delete* in a team vault. |
+| `saveProvider` / `deleteProvider` | user | `vaultId?`, `provider{ id?, name, url, user, uid, pass?, removePassword? }` / `id` | Empty `pass` keeps the stored password. A rename moves the provider's domains along. A provider with domains cannot be deleted. |
+| `saveDomains` / `saveProviders` | user | `domains[]` / `providers[]` | Whole-list sync of the caller's own vault, for clients from before teams. |
 | `saveSettings` | user | `settings{}` | Base64 avatars are moved to Storage. |
-| `revealCredential` | user | `providerId` | 10/hour, audited. |
+| `revealCredential` | user | `vaultId?`, `providerId` | 10/hour, audited. Needs *see passwords* in a team vault. |
 | `changePassword` | user | `currentPassword`, `newPassword` | Current password checked; ≥ 10 chars. Signs out every other session; `api.js` adopts the returned one. 5 per 15 min. |
 | `claimPurchase` | user | `token` | Redeem an activation link while signed in. 10/hour per IP. |
+| `getTeam` | user | `vaultId?` | Needs *manage*. Members with permissions and whether they fit the seats, open invitations, `seats{ used, limit }`, last 50 activity entries. |
+| `inviteMember` | user | `vaultId?`, `email`, `permissions{}` | Needs *manage* and a free seat. Emails a one-time link (7 days) and returns it as `inviteUrl`. A manager who is not the owner can only grant what they hold. 20/hour. |
+| `updateMember` / `removeMember` | user | `vaultId?`, `memberId`, `permissions{}` | Needs *manage*; not on yourself. |
+| `cancelInvitation` | user | `vaultId?`, `email` | Needs *manage*. |
+| `acceptInvitation` | user | `token` | Join a team while signed in. 10/hour per IP. |
+| `leaveTeam` | user | `vaultId` | Works even when the team is over its seats. |
 | `getCalendarFeed` | user | — | `{ token }` for the private feed, created on first use. `DomainVaultAPI.calendarFeedUrl(token)` builds the URL. |
 | `resetCalendarFeed` | user | — | New token; the old URL returns 404. |
 | `adminOverview` | admin | — | Counts by status and plan, domains, sales, payments needing review. |
-| `adminListUsers` | admin | `status?`, `search?`, `limit?`, `offset?` | With domain counts. |
+| `adminListUsers` | admin | `status?`, `search?`, `limit?`, `offset?` | With domain counts, team size (`team_members`) and teams joined (`member_of`). |
 | `adminUpdateUser` | admin | `userId`, `status?`, `planOverride?`, `isAdmin?` | Audited. Emails the user on activation. Can't demote or suspend yourself. |
 | `adminSales` | admin | `from?`, `to?`, `status?` | Ledger plus totals per currency. |
 | `adminGetPrices` / `adminSetPrice` | admin | `plan`, `amount`, `lifetimeAmount`, `currency` | Returns prices and the owner settings (`config`). `null` takes a price off sale; an omitted field is left alone. Audited. |

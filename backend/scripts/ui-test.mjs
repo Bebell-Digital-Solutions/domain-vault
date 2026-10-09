@@ -22,6 +22,8 @@ const customer = `ui-customer-${t}@example.com`;
 const admin = `ui-admin-${t}@example.com`;
 const newcomer = `ui-newcomer-${t}@example.com`;
 const member = `ui-member-${t}@example.com`;
+const teamOwner = `ui-teamowner-${t}@example.com`;
+const teammate = `ui-teammate-${t}@example.com`;
 const MAILPIT = 'http://127.0.0.1:54324';
 let failures = 0;
 const sql = (q) => execSync('docker exec -i supabase_db_backend psql -U postgres -qtA', { input: q }).toString().trim();
@@ -33,8 +35,10 @@ sql(`delete from rate_limits; update plan_prices set amount = null;
      delete from purchases where txn_id like 'UI-%';
      delete from admin_audit_log where admin_email like 'ui-admin-%';
      delete from auth.users where email like 'ui-%@example.com';`);
-for (const e of [customer, admin, newcomer, member]) await register(e);
-sql(`update profiles set status='active' where email in ('${customer}','${admin}','${member}');
+for (const e of [customer, admin, newcomer, member, teamOwner]) await register(e);
+sql(`update profiles set status='active' where email in ('${customer}','${admin}','${member}','${teamOwner}');
+     update profiles set plan_override='Business' where email='${teamOwner}';
+     select recompute_plan(id) from profiles where email='${teamOwner}';
      update profiles set is_admin=true where email='${admin}';`);
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: true });
@@ -153,7 +157,7 @@ async function reload(page) {
   await page.click('.menu-toggle');
   await page.waitForSelector('#mobileNav.open');
   const items = await page.locator('#mobileNav .menu-item[data-page]').count();
-  ok('mobile drawer now contains the menu', items === 9, `${items} items`);
+  ok('mobile drawer now contains the menu', items === 10, `${items} items`);
   await page.waitForTimeout(700);   // let the slide-in transition finish
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/mobile-nav.png` });
   await page.click('#mobileNav .menu-item[data-page="providers"]');
@@ -161,6 +165,114 @@ async function reload(page) {
   ok('drawer closes after navigating', !(await page.locator('#mobileNav').evaluate(el => el.classList.contains('open'))));
   ok('no JavaScript errors (mobile)', errors.length === 0, errors.join(' | '));
   await ctx.close();
+}
+
+// ------------------------------------------------------------ team vaults
+{
+  const errors = [];
+  const ownerCtx = await newContext({ viewport: { width: 1400, height: 900 } });
+  const owner = await ownerCtx.newPage(); watch(owner, errors);
+  const ownerId = sql(`select id from profiles where email='${teamOwner}'`);
+  await login(owner, teamOwner);
+  await owner.evaluate(async () => {
+    await window.DomainVaultAPI.call('saveProvider', { provider: { name: 'Porkbun', url: 'https://porkbun.com', user: 'boss', pass: 'team-ui-secret' } });
+    await window.DomainVaultAPI.call('saveDomain', { domain: { name: 'team-shared.com', provider: 'Porkbun', renewalDate: '2027-06-01', renewalPrice: 10 } });
+  });
+
+  // The owner invites someone from the Team page, view only.
+  await owner.click('.sidebar .menu-item[data-page="team"]');
+  await owner.waitForFunction(() => /1 of 5 people/.test(document.getElementById('teamSeats').textContent), null, { timeout: 15000 });
+  ok('team page shows the seats of the plan', /Business plan includes 5 people/.test(await owner.textContent('#teamIntro')));
+  await owner.fill('#inviteEmail', teammate);
+  await owner.click('#inviteSubmitBtn');
+  await owner.waitForSelector('#inviteLinkBox:not([hidden])', { timeout: 15000 });
+  const link = await owner.inputValue('#inviteLink');
+  ok('inviting gives a link to share', /\/app\/\?invite=[A-Za-z0-9_-]{43}$/.test(link), link);
+  await owner.waitForFunction((m) => document.getElementById('teamInvitations').textContent.includes(m), teammate);
+  ok('the invitation is listed as pending', true);
+  if (SHOTS) await owner.screenshot({ path: `${SHOTS}/team-owner.png`, fullPage: true });
+
+  // The invitee opens the link, signs up and logs in. (Five sign-ups from
+  // this address already: the hourly limit would refuse a sixth.)
+  sql('delete from rate_limits;');
+  const mateCtx = await newContext({ viewport: { width: 1400, height: 900 } });
+  const mate = await mateCtx.newPage(); watch(mate, errors);
+  await mate.goto(link);
+  await mate.waitForSelector('#registerFields', { state: 'visible' });
+  ok('the invitation opens sign-up with an explanation',
+    /invited to a team vault/i.test(await mate.textContent('#authMessage')) && !mate.url().includes('invite='));
+  await mate.fill('#authEmail', teammate);
+  await mate.fill('#authPassword', PW);
+  await mate.click('#authSubmitBtn');
+  await mate.waitForFunction(() => /joined the team|too many|error/i.test(document.getElementById('authMessage').textContent), null, { timeout: 20000 });
+  const joined = await mate.textContent('#authMessage');
+  ok('signing up joins the team, with approval still required for others', /joined the team/i.test(joined), joined);
+  await mate.waitForTimeout(3500);
+  await mate.fill('#authEmail', teammate);
+  await mate.fill('#authPassword', PW);
+  await mate.click('#authSubmitBtn');
+  await mate.waitForSelector('#auth-overlay', { state: 'hidden', timeout: 20000 });
+  await mate.waitForFunction(() => !document.getElementById('vaultBar').hidden &&
+    document.getElementById('urgentRenewalsBody').textContent.includes('team-shared.com'), null, { timeout: 20000 });
+  ok('a new member lands in the team vault', /view only/.test(await mate.textContent('#vaultRole')));
+  ok('view only: no add buttons', await mate.locator('#addDomainBtn').isHidden());
+  await mate.click('.sidebar .menu-item[data-page="domains"]');
+  ok('view only: domains have no edit or delete buttons',
+    await mate.locator('#domainsTableBody tr', { hasText: 'team-shared.com' }).count() === 1 &&
+    await mate.locator('#domainsTableBody .action-btn[title="Edit"], #domainsTableBody .action-btn[title="Delete"]').count() === 0);
+  await mate.click('.sidebar .menu-item[data-page="providers"]');
+  await mate.click('.credentials-btn');
+  ok('view only: stored passwords cannot be revealed', await mate.locator('#credRevealBtn').isHidden());
+  await mate.click('#credentialsModal .modal-close');
+  ok('view only: exports are hidden', await mate.locator('#exportCsvBtn').isHidden());
+
+  await mate.selectOption('#vaultSelect', (await mate.locator('#vaultSelect option').first().getAttribute('value')));
+  await mate.waitForFunction(() => document.getElementById('vaultRole').textContent.includes('You own'), null, { timeout: 15000 });
+  ok('switching to their own vault shows their own (empty) data',
+    await mate.locator('#domainsTableBody tr', { hasText: 'team-shared.com' }).count() === 0);
+
+  // The owner lets them edit domains.
+  await owner.click('.sidebar .menu-item[data-page="team"]');
+  const row = owner.locator(`.team-row[data-email="${teammate}"]`);
+  await row.waitFor({ timeout: 15000 });
+  await row.locator('input[data-perm="editDomains"]').check();
+  await row.locator('[data-team-act="save-member"]').click();
+  await owner.waitForFunction(() => /Permissions saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  ok('the owner changes permissions with checkboxes', true);
+
+  await mate.selectOption('#vaultSelect', ownerId);
+  await mate.waitForFunction(() => /edit domains/.test(document.getElementById('vaultRole').textContent), null, { timeout: 15000 });
+  await mate.click('.sidebar .menu-item[data-page="domains"]');
+  await mate.click('#addDomainBtnSecondary');
+  await mate.fill('#domainName', 'added-by-teammate.com');
+  await mate.selectOption('#domainProvider', 'Porkbun');
+  await mate.fill('#purchaseDate', '2025-01-01');
+  await mate.fill('#renewalDate', '2027-02-01');
+  await mate.fill('#purchasePrice', '1');
+  await mate.fill('#renewalPrice', '1');
+  await mate.click('#formSubmitBtn');
+  await mate.waitForFunction(() => /Domain saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  ok("a member's new domain is saved into the owner's vault",
+    sql(`select count(*) from domains where name='added-by-teammate.com' and user_id='${ownerId}'`) === '1');
+  ok('…and they still cannot delete', await mate.locator('#domainsTableBody .action-btn[title="Delete"]').count() === 0);
+
+  await owner.click('.sidebar .menu-item[data-page="dashboard"]');
+  await owner.click('.sidebar .menu-item[data-page="team"]');
+  await owner.waitForFunction(() => /added the domain added-by-teammate\.com/.test(document.getElementById('teamActivity').textContent), null, { timeout: 15000 });
+  ok('the owner sees it in the activity log', true);
+
+  // The vault bar and the Team page fit a phone.
+  await mate.setViewportSize({ width: 390, height: 844 });
+  await mate.click('.menu-toggle');
+  await mate.click('#mobileNav .menu-item[data-page="team"]');
+  await mate.waitForFunction(() => document.getElementById('teamMemberships').hidden === false);
+  await mate.waitForTimeout(700);   // let the drawer slide away
+  ok('team page and vault bar fit a phone', await mate.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  if (SHOTS) await mate.screenshot({ path: `${SHOTS}/team-member-mobile.png`, fullPage: true });
+
+  ok('team journey: no JavaScript errors', errors.length === 0, errors.join(' | '));
+  await ownerCtx.close();
+  await mateCtx.close();
 }
 
 // ------------------------------------------------- account features (member)
@@ -492,7 +604,7 @@ async function reload(page) {
 await browser.close();
 sql(`delete from purchases where txn_id = 'UI-${t}';
      delete from admin_audit_log where admin_email = '${admin}';
-     delete from auth.users where email in ('${customer}','${admin}','${newcomer}','${member}');
+     delete from auth.users where email in ('${customer}','${admin}','${newcomer}','${member}','${teamOwner}','${teammate}');
      update plan_prices set amount = null, lifetime_amount = null;
      update billing_config set unpaid_plan = 'Personal', require_approval = true;
      delete from rate_limits;`);

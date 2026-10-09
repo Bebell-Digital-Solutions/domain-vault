@@ -144,6 +144,18 @@ export async function adminListUsers(p: any) {
     }
   }
 
+  // People each user has let into their vault, and teams they belong to.
+  const teamSize = new Map<string, number>();
+  const memberOf = new Map<string, number>();
+  if (ids.length) {
+    const [owned, joined] = await Promise.all([
+      db.from("team_members").select("owner_id").in("owner_id", ids),
+      db.from("team_members").select("member_id").in("member_id", ids),
+    ]);
+    for (const r of owned.data ?? []) teamSize.set(r.owner_id, (teamSize.get(r.owner_id) ?? 0) + 1);
+    for (const r of joined.data ?? []) memberOf.set(r.member_id, (memberOf.get(r.member_id) ?? 0) + 1);
+  }
+
   return {
     success: true,
     total: count ?? 0,
@@ -151,6 +163,8 @@ export async function adminListUsers(p: any) {
       ...u,
       domain_count: counts.get(u.id) ?? 0,
       subscription: subs.get(u.id) ?? null,
+      team_members: teamSize.get(u.id) ?? 0,
+      member_of: memberOf.get(u.id) ?? 0,
     })),
   };
 }

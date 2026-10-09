@@ -14,6 +14,9 @@ import { fileURLToPath } from "node:url";
 
 const BASE = "http://127.0.0.1:54321/functions/v1";
 const EMAIL = "delivered@resend.dev";
+// Team members of EMAIL's vault: one chosen for reminders, one not.
+const TEAM_ON = "delivered+team@resend.dev";
+const TEAM_OFF = "delivered+quiet@resend.dev";
 const envFile = process.env.REMINDER_ENV ||
   fileURLToPath(new URL("../.env", import.meta.url));
 const CRON = (readFileSync(envFile, "utf8").match(/^CRON_SECRET=(.+)$/m) || [])[1];
@@ -32,9 +35,15 @@ const notificationsFor = (email) =>
 const notifications = () => notificationsFor(EMAIL);
 
 // ------------------------------------------------------------------ setup
-sql(`delete from auth.users where email = '${EMAIL}';`);
-sql(`insert into auth.users (id, email) values (gen_random_uuid(), '${EMAIL}');`);
-sql(`update profiles set status = 'active' where email = '${EMAIL}';`);
+sql(`delete from auth.users where email in ('${EMAIL}', '${TEAM_ON}', '${TEAM_OFF}');`);
+sql(`insert into auth.users (id, email) values (gen_random_uuid(), '${EMAIL}'),
+       (gen_random_uuid(), '${TEAM_ON}'), (gen_random_uuid(), '${TEAM_OFF}');`);
+sql(`update profiles set status = 'active' where email in ('${EMAIL}', '${TEAM_ON}', '${TEAM_OFF}');
+     update profiles set plan_override = 'Business' where email = '${EMAIL}';
+     select recompute_plan(id) from profiles where email = '${EMAIL}';
+     insert into team_members (owner_id, member_id, gets_reminders)
+     select o.id, m.id, m.email = '${TEAM_ON}' from profiles o, profiles m
+      where o.email = '${EMAIL}' and m.email in ('${TEAM_ON}', '${TEAM_OFF}');`);
 sql(`insert into domains (user_id, name, renewal_date, renewal_price, auto_renew, provider_name)
      select id, 'soon.com',   current_date + 1,  12.99, false, 'Namecheap' from profiles where email = '${EMAIL}';
      insert into domains (user_id, name, renewal_date, renewal_price, auto_renew)
@@ -49,6 +58,8 @@ ok("both due domains are picked up, the far-off one is not",
   r.body.due === 2 && r.body.sent === 2, JSON.stringify(r.body));
 ok("the two domains arrive as ONE digest, not two emails",
   r.body.recipients === 1, `recipients=${r.body.recipients}`);
+ok("the team member chosen for reminders gets a copy; the other does not",
+  r.body.teamCopies === 1, `teamCopies=${r.body.teamCopies}`);
 ok("milestones recorded: 1 day for soon.com, 30 for later.com",
   notifications() === "later.com:30,soon.com:1", notifications());
 
@@ -84,8 +95,9 @@ r = await sweep();
 const after = notificationsFor(BOUNCE);
 ok("a send that fails is not recorded as delivered, so tomorrow retries",
   r.body.failed > 0 && after === before, `failed=${r.body.failed}`);
+ok("…and the team gets no copy until the owner's goes out", r.body.teamCopies === 0, `teamCopies=${r.body.teamCopies}`);
 
 // --------------------------------------------------------------- cleanup
-sql(`delete from auth.users where email in ('${EMAIL}', '${BOUNCE}');`);
+sql(`delete from auth.users where email in ('${EMAIL}', '${BOUNCE}', '${TEAM_ON}', '${TEAM_OFF}');`);
 console.log(failures ? `\n${failures} reminder check(s) FAILED` : "\nAll reminder flows passed.");
 process.exit(failures ? 1 : 0);

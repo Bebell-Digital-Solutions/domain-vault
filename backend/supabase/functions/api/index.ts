@@ -26,7 +26,7 @@ import {
   serviceClient,
   userClient,
 } from "../_shared/db.ts";
-import { decryptSecret, encryptSecret, KEY_VERSION } from "../_shared/crypto.ts";
+import { encryptSecret, KEY_VERSION } from "../_shared/crypto.ts";
 import { BadRequest, boundedArray, isUuid, isValidEmail, str } from "../_shared/validate.ts";
 import { sendEmail, sendWhatsApp } from "../_shared/notify.ts";
 import {
@@ -43,6 +43,25 @@ import {
   adminSetPrice,
   adminUpdateUser,
 } from "./admin.ts";
+import {
+  cancelInvitation,
+  deleteDomain,
+  deleteProvider,
+  getTeam,
+  inviteMember,
+  leaveTeam,
+  listVaults,
+  redeemInvite,
+  removeMember,
+  resolveVault,
+  revealCredential,
+  saveDomain,
+  saveProvider,
+  toClientDomain,
+  toClientProvider,
+  updateMember,
+  vaultInfo,
+} from "./vault.ts";
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
 const ADMIN_PHONE = Deno.env.get("ADMIN_PHONE") ?? null;
@@ -52,42 +71,6 @@ const MIN_PASSWORD_LENGTH = 10;
 
 const MAX_DOMAINS = 5000;
 const MAX_PROVIDERS = 500;
-
-// ---------------------------------------------------------------------------
-// Row shaping — the database uses snake_case; the frontend expects the camel
-// case keys the old sheet produced. Translation lives here so no frontend
-// rendering code has to change.
-// ---------------------------------------------------------------------------
-
-// deno-lint-ignore no-explicit-any
-function toClientDomain(row: any) {
-  return {
-    id: row.id,
-    name: row.name,
-    provider: row.provider_name ?? "",
-    purchaseDate: row.purchase_date ?? "",
-    renewalDate: row.renewal_date ?? "",
-    purchasePrice: Number(row.purchase_price ?? 0),
-    renewalPrice: Number(row.renewal_price ?? 0),
-    autoRenew: Boolean(row.auto_renew),
-  };
-}
-
-// deno-lint-ignore no-explicit-any
-function toClientProvider(row: any, hasPassword: boolean) {
-  return {
-    id: row.id,
-    name: row.name,
-    url: row.url ?? "",
-    user: row.username ?? "",
-    uid: row.uid ?? "",
-    // The stored password is never sent with the rest of the data. The UI
-    // shows a masked placeholder from hasPassword and calls revealCredential
-    // only when the user explicitly asks to see it.
-    pass: "",
-    hasPassword,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Actions
@@ -178,6 +161,17 @@ async function registerUser(req: Request, p: any) {
     else claimMessage = claim.message;
   }
 
+  // Signing up through a team invitation: join the team now. That also
+  // activates the account — the vault owner vouched for this person.
+  let joinedVault: { vaultId: string; ownerEmail: string } | null = null;
+  let inviteMessage: string | null = null;
+  if (p?.inviteToken && data.user) {
+    const invite = await redeemInvite(req, p.inviteToken, { id: data.user.id, email });
+    if (invite.ok) joinedVault = { vaultId: invite.vaultId, ownerEmail: invite.ownerEmail };
+    else inviteMessage = invite.message;
+  }
+  const activeNow = !needsApproval || Boolean(claimedPlan) || Boolean(joinedVault);
+
   if (ADMIN_EMAIL) {
     await sendEmail(
       ADMIN_EMAIL,
@@ -187,7 +181,9 @@ async function registerUser(req: Request, p: any) {
        <p><b>Phone:</b> ${escapeHtml(phone ?? "-")}</p>
        <p><b>Location:</b> ${escapeHtml(location ?? "-")}</p>
        <p><b>User ID:</b> ${data.user?.id ?? "-"}</p>
-       ${needsApproval
+       ${joinedVault
+         ? `<p>Joined the team of ${escapeHtml(joinedVault.ownerEmail)} by invitation, which activated the account.</p>`
+         : needsApproval && !claimedPlan
          ? "<p>Activate them in the admin panel, or set profiles.status = 'active'.</p>"
          : "<p>The account is active (approval is switched off in the admin panel).</p>"}`,
     );
@@ -199,7 +195,7 @@ async function registerUser(req: Request, p: any) {
   await sendEmail(
     email,
     "Welcome to Domain Vault!",
-    needsApproval
+    !activeNow
       ? `<h3>Welcome to Domain Vault!</h3>
          <p>Your account has been created and is pending activation by our team.
          We'll email you as soon as it is live.</p>`
@@ -207,7 +203,7 @@ async function registerUser(req: Request, p: any) {
          <p>Your account is ready. Log in to start tracking your domains.</p>
          ${SITE_URL ? `<p><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}`,
   );
-  await sendWhatsApp(phone, needsApproval
+  await sendWhatsApp(phone, !activeNow
     ? "Welcome to Domain Vault! Your account is pending activation."
     : "Welcome to Domain Vault! Your account is ready.");
 
@@ -218,11 +214,19 @@ async function registerUser(req: Request, p: any) {
       message: `Account created and your ${claimedPlan} plan is active. You can log in now.`,
     };
   }
+  if (joinedVault) {
+    return {
+      success: true,
+      joinedVault,
+      message: `Account created and you joined the team of ${joinedVault.ownerEmail}. You can log in now.`,
+    };
+  }
   return {
     success: true,
     message: [
       needsApproval ? "Account created! Pending admin activation." : "Account created! You can log in now.",
       claimMessage,
+      inviteMessage,
     ].filter(Boolean).join(" "),
   };
 }
@@ -253,6 +257,15 @@ async function loginUser(req: Request, p: any) {
     else claimMessage = claim.message;
   }
 
+  // Logging in through a team invitation: join first, for the same reason.
+  let joinedVault: { vaultId: string; ownerEmail: string } | null = null;
+  let inviteMessage: string | null = null;
+  if (p?.inviteToken) {
+    const invite = await redeemInvite(req, p.inviteToken, { id: data.user.id, email });
+    if (invite.ok) joinedVault = { vaultId: invite.vaultId, ownerEmail: invite.ownerEmail };
+    else inviteMessage = invite.message;
+  }
+
   const { data: profile } = await serviceClient()
     .from("profiles")
     .select("id, email, phone, plan, status, is_admin")
@@ -264,13 +277,21 @@ async function loginUser(req: Request, p: any) {
     return { success: false, message: "This account has been suspended." };
   }
   if (profile.status !== "active") {
-    return { success: false, message: "Account pending activation by Admin." };
+    // Say why a link that should have activated the account did not.
+    return {
+      success: false,
+      message: "Account pending activation by Admin.",
+      ...(claimMessage ? { claimMessage } : {}),
+      ...(inviteMessage ? { inviteMessage } : {}),
+    };
   }
 
   return {
     success: true,
     ...(claimedPlan ? { claimedPlan } : {}),
     ...(claimMessage ? { claimMessage } : {}),
+    ...(joinedVault ? { joinedVault } : {}),
+    ...(inviteMessage ? { inviteMessage } : {}),
     user: {
       id: profile.id,
       email: profile.email,
@@ -410,13 +431,22 @@ async function resetCalendarFeed(caller: Caller) {
   return { success: true, token };
 }
 
-async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
-  const [domains, providers, settings, secrets, purchases, subscriptions] = await Promise.all([
-    db.from("domains").select("*").order("renewal_date", { nullsFirst: false }),
-    db.from("providers").select("*").order("name"),
-    db.from("settings").select("*").maybeSingle(),
+/**
+ * The caller's account, and one vault: their own, or a team's (vaultId).
+ * Settings, plan and billing are always the caller's own.
+ */
+// deno-lint-ignore no-explicit-any
+async function getUserData(caller: Caller, db: ReturnType<typeof userClient>, p: any) {
+  const vault = await resolveVault(caller, p?.vaultId);
+  const [domains, providers, settings, secrets, purchases, subscriptions, vaults] = await Promise.all([
+    // Filtered by vault: row level security alone would also return the
+    // rows of every other team the caller belongs to.
+    db.from("domains").select("*").eq("user_id", vault.ownerId).order("renewal_date", { nullsFirst: false }),
+    db.from("providers").select("*").eq("user_id", vault.ownerId).order("name"),
+    db.from("settings").select("*").eq("user_id", caller.id).maybeSingle(),
     // Which providers have a stored password — ids only, never the ciphertext.
-    serviceClient().from("provider_secrets").select("provider_id").eq("user_id", caller.id),
+    // (resolveVault has checked the caller may see this vault.)
+    serviceClient().from("provider_secrets").select("provider_id").eq("user_id", vault.ownerId),
     db.from("purchases")
       .select("txn_id, plan, amount, currency, status, kind, subscr_id, paid_until, created_at")
       .order("created_at", { ascending: false }),
@@ -424,6 +454,7 @@ async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
       .select("subscr_id, plan, amount, currency, period, status, started_at, cancelled_at, ended_at")
       .in("status", ["active", "cancelled", "ended"])
       .order("started_at", { ascending: false }),
+    listVaults(caller),
   ]);
 
   if (domains.error) throw new HttpError(500, domains.error.message);
@@ -432,6 +463,8 @@ async function getUserData(caller: Caller, db: ReturnType<typeof userClient>) {
   const withSecret = new Set((secrets.data ?? []).map((r) => r.provider_id));
 
   return {
+    vault: vaultInfo(vault),
+    vaults,
     domains: (domains.data ?? []).map(toClientDomain),
     providers: (providers.data ?? []).map((r) => toClientProvider(r, withSecret.has(r.id))),
     settings: settings.data
@@ -549,38 +582,6 @@ async function saveProviders(caller: Caller, db: ReturnType<typeof userClient>, 
 }
 
 // deno-lint-ignore no-explicit-any
-async function revealCredential(req: Request, caller: Caller, p: any) {
-  if (!isUuid(p?.providerId)) throw new BadRequest("providerId must be a uuid");
-
-  // Deliberately tight: revealing stored passwords is the single most
-  // sensitive operation in the product.
-  await rateLimit(`reveal:${caller.id}`, 10, 3600);
-
-  const admin = serviceClient();
-
-  // Ownership is checked explicitly because this query uses the service role,
-  // which bypasses RLS.
-  const { data: row } = await admin
-    .from("provider_secrets")
-    .select("ciphertext, iv")
-    .eq("provider_id", p.providerId)
-    .eq("user_id", caller.id)
-    .maybeSingle();
-
-  await admin.from("credential_access_log").insert({
-    user_id: caller.id,
-    provider_id: p.providerId,
-    action: row ? "reveal" : "reveal_miss",
-    ip: clientIp(req),
-    user_agent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
-  });
-
-  if (!row) return { success: false, message: "No stored password for that provider." };
-
-  return { success: true, password: await decryptSecret(row.ciphertext, row.iv) };
-}
-
-// deno-lint-ignore no-explicit-any
 async function saveSettings(caller: Caller, db: ReturnType<typeof userClient>, p: any) {
   const s = p?.settings ?? {};
   let pictureUrl = str(s.profilePicture, 2000);
@@ -619,7 +620,7 @@ async function saveSettings(caller: Caller, db: ReturnType<typeof userClient>, p
     if (Array.isArray(prefs.leadDays)) {
       // Must match settings_lead_days_valid in the database.
       const allowed = [0, 1, 3, 7, 14, 30, 60, 90];
-      const days = [...new Set(prefs.leadDays.map(Number))]
+      const days = [...new Set<number>(prefs.leadDays.map(Number))]
         .filter((d) => allowed.includes(d))
         .sort((a, b) => b - a);
       if (days.length === 0) throw new BadRequest("Choose at least one reminder time.");
@@ -766,7 +767,17 @@ Deno.serve(async (req: Request) => {
 
     switch (action) {
       case "getUserData":
-        return json(req, await getUserData(caller, db));
+        return json(req, await getUserData(caller, db, body));
+      // One item at a time, in any vault the caller may edit.
+      case "saveDomain":
+        return json(req, await saveDomain(caller, db, body));
+      case "deleteDomain":
+        return json(req, await deleteDomain(caller, db, body));
+      case "saveProvider":
+        return json(req, await saveProvider(caller, db, body));
+      case "deleteProvider":
+        return json(req, await deleteProvider(caller, db, body));
+      // Whole-list saves of the caller's own vault, for clients from before teams.
       case "saveDomains":
         return json(req, await saveDomains(caller, db, body));
       case "saveProviders":
@@ -781,6 +792,29 @@ Deno.serve(async (req: Request) => {
         return json(req, await getCalendarFeed(caller));
       case "resetCalendarFeed":
         return json(req, await resetCalendarFeed(caller));
+      case "getTeam":
+        return json(req, await getTeam(caller, body));
+      case "inviteMember":
+        return json(req, await inviteMember(caller, body));
+      case "updateMember":
+        return json(req, await updateMember(caller, body));
+      case "removeMember":
+        return json(req, await removeMember(caller, body));
+      case "cancelInvitation":
+        return json(req, await cancelInvitation(caller, body));
+      case "leaveTeam":
+        return json(req, await leaveTeam(caller, body));
+      case "acceptInvitation": {
+        const invite = await redeemInvite(req, body?.token, caller);
+        return json(req, invite.ok
+          ? {
+            success: true,
+            vaultId: invite.vaultId,
+            ownerEmail: invite.ownerEmail,
+            message: `You joined the team of ${invite.ownerEmail}.`,
+          }
+          : { success: false, message: invite.message });
+      }
       case "claimPurchase": {
         const claim = await redeemClaim(req, body?.token, caller.id);
         return json(req, claim.ok

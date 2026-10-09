@@ -621,3 +621,151 @@ begin
   begin insert into public.catalog_items (name, url, icon) values ('X', 'https://ok.example', '"><img'); exception when check_violation then icon := true; end;
   raise notice '%', case when js and icon then 'PASS t39 (javascript: URL and bad icon refused)' else 'FAIL t39 js=' || js || ' icon=' || icon end;
 end $$;
+
+-- ===========================================================================
+-- Team accounts (20261009000100)
+-- ===========================================================================
+\set QUIET on
+insert into auth.users (id, email) values
+  ('a1a1a1a1-0000-4000-8000-00000000000a', 'owner@team.example'),
+  ('b2b2b2b2-0000-4000-8000-00000000000b', 'member@team.example'),
+  ('c3c3c3c3-0000-4000-8000-00000000000c', 'second@team.example'),
+  ('d4d4d4d4-0000-4000-8000-00000000000d', 'owner2@team.example');
+update public.profiles set status = 'active' where email in ('owner@team.example', 'owner2@team.example', 'second@team.example');
+update public.profiles set plan = 'Start-up' where email = 'owner@team.example';
+update public.profiles set plan = 'Business' where email = 'owner2@team.example';
+-- member@team.example stays pending: accepting an invitation must activate it.
+insert into public.domains (user_id, name, renewal_date) values
+  ('a1a1a1a1-0000-4000-8000-00000000000a', 'team-one.com', '2027-01-01'),
+  ('d4d4d4d4-0000-4000-8000-00000000000d', 'other-team.com', '2027-02-01');
+\set QUIET off
+
+\echo '--- T40: an invitation is accepted once, activates the account, and gives view-only access'
+do $$
+declare o uuid := 'a1a1a1a1-0000-4000-8000-00000000000a'; m uuid := 'b2b2b2b2-0000-4000-8000-00000000000b';
+        seen int; reuse boolean := false; added boolean := true; changed int; st text;
+begin
+  perform public.team_invite(o, o, 'Member@Team.example', 'inviteTokenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', '{}'::jsonb);
+  perform public.team_accept('inviteTokenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', m);
+  begin perform public.team_accept('inviteTokenAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', m); exception when others then reuse := true; end;
+  select status into st from public.profiles where id = m;
+
+  perform set_config('request.jwt.claim.sub', m::text, true);
+  execute 'set local role authenticated';
+  select count(*) into seen from public.domains where user_id = o;
+  begin
+    insert into public.domains (user_id, name) values (o, 'sneaky.com');
+  exception when insufficient_privilege then added := false;
+  end;
+  update public.domains set name = 'renamed.com' where user_id = o;
+  get diagnostics changed = row_count;
+  execute 'reset role';
+
+  raise notice '%', case when seen = 1 and reuse and st = 'active' and not added and changed = 0
+    then 'PASS t40 (accepted once, account active, sees 1 domain, cannot add or edit)'
+    else 'FAIL t40 seen=' || seen || ' reuse=' || reuse || ' status=' || st || ' added=' || added || ' changed=' || changed end;
+end $$;
+
+\echo '--- T41: each permission unlocks only its own action'
+do $$
+declare o uuid := 'a1a1a1a1-0000-4000-8000-00000000000a'; m uuid := 'b2b2b2b2-0000-4000-8000-00000000000b';
+        changed int; deleted int; prov_added boolean := true;
+begin
+  update public.team_members set can_edit_domains = true where owner_id = o and member_id = m;
+  perform set_config('request.jwt.claim.sub', m::text, true);
+  execute 'set local role authenticated';
+  insert into public.domains (user_id, name, renewal_date) values (o, 'added-by-member.com', '2027-03-01');
+  update public.domains set renewal_price = 9 where user_id = o and name = 'team-one.com';
+  get diagnostics changed = row_count;
+  delete from public.domains where user_id = o and name = 'added-by-member.com';
+  get diagnostics deleted = row_count;
+  begin
+    insert into public.providers (user_id, name) values (o, 'Sneaky Registrar');
+  exception when insufficient_privilege then prov_added := false;
+  end;
+  execute 'reset role';
+  delete from public.domains where user_id = o and name = 'added-by-member.com';   -- tidy up for T43
+  raise notice '%', case when changed = 1 and deleted = 0 and not prov_added
+    then 'PASS t41 (edit domains: add + change yes; delete and providers no)'
+    else 'FAIL t41 changed=' || changed || ' deleted=' || deleted || ' providerAdded=' || prov_added end;
+end $$;
+
+\echo '--- T42: invitations stop at the seat limit (Start-up: 2 people)'
+do $$
+declare o uuid := 'a1a1a1a1-0000-4000-8000-00000000000a'; refused boolean := false; i int; biz int := 0;
+begin
+  begin
+    perform public.team_invite(o, o, 'third@team.example', 'inviteTokenBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB', '{}'::jsonb);
+  exception when others then refused := sqlerrm like '%seat limit%';
+  end;
+  -- Business holds 5: the owner and four invitations.
+  for i in 1..5 loop
+    begin
+      perform public.team_invite('d4d4d4d4-0000-4000-8000-00000000000d', 'd4d4d4d4-0000-4000-8000-00000000000d',
+        'biz' || i || '@team.example', 'inviteTokenBiz' || i || repeat('C', 28), '{}'::jsonb);
+      biz := biz + 1;
+    exception when others then null;
+    end;
+  end loop;
+  raise notice '%', case when refused and biz = 4
+    then 'PASS t42 (Start-up refuses a 3rd person; Business takes 4 invitations, not 5)'
+    else 'FAIL t42 startupRefused=' || refused || ' businessInvites=' || biz end;
+end $$;
+
+\echo '--- T43: one person in two teams sees both, and nothing else'
+do $$
+declare m uuid := 'b2b2b2b2-0000-4000-8000-00000000000b'; seen int;
+begin
+  perform public.team_accept('inviteTokenBiz1' || repeat('C', 28), 'c3c3c3c3-0000-4000-8000-00000000000c');
+  -- second@ joined a day earlier than member@ (seat order is by join date).
+  update public.team_members set created_at = now() - interval '1 day'
+   where owner_id = 'd4d4d4d4-0000-4000-8000-00000000000d' and member_id = 'c3c3c3c3-0000-4000-8000-00000000000c';
+  insert into public.team_members (owner_id, member_id) values ('d4d4d4d4-0000-4000-8000-00000000000d', m);
+  perform set_config('request.jwt.claim.sub', m::text, true);
+  execute 'set local role authenticated';
+  select count(*) into seen from public.domains;   -- their own (none) + both teams
+  execute 'reset role';
+  raise notice '%', case when seen = 2
+    then 'PASS t43 (member sees both teams'' domains: 2)'
+    else 'FAIL t43 seen=' || seen end;
+end $$;
+
+\echo '--- T44: when the owner''s plan shrinks, members beyond the seats lose access; removal is immediate'
+do $$
+declare o uuid := 'd4d4d4d4-0000-4000-8000-00000000000d'; m uuid := 'b2b2b2b2-0000-4000-8000-00000000000b';
+        first_ok boolean; second_ok boolean; after_upgrade boolean; after_remove boolean;
+begin
+  -- second@ joined Business first, member@ second. Personal holds the owner only.
+  update public.profiles set plan = 'Start-up' where id = o;   -- 2 seats: owner + the oldest member
+  first_ok  := public.member_can(o, 'c3c3c3c3-0000-4000-8000-00000000000c', 'view');
+  second_ok := public.member_can(o, m, 'view');
+  update public.profiles set plan = 'Business' where id = o;
+  after_upgrade := public.member_can(o, m, 'view');
+  delete from public.team_members where owner_id = o and member_id = m;
+  after_remove := public.member_can(o, m, 'view');
+  raise notice '%', case when first_ok and not second_ok and after_upgrade and not after_remove
+    then 'PASS t44 (oldest member keeps the seat, the newer one waits; upgrade restores; removal locks out)'
+    else 'FAIL t44 first=' || first_ok || ' second=' || second_ok || ' upgrade=' || after_upgrade || ' removed=' || after_remove end;
+end $$;
+
+\echo '--- T45: members cannot write team tables or read invitations; reminders go to opted-in members only'
+do $$
+declare o uuid := 'a1a1a1a1-0000-4000-8000-00000000000a'; m uuid := 'b2b2b2b2-0000-4000-8000-00000000000b';
+        self_grant boolean := false; inv_read boolean := false; n_before int; n_after int;
+begin
+  select count(*) into n_before from public.team_reminder_recipients(o);
+  update public.team_members set gets_reminders = true where owner_id = o and member_id = m;
+  select count(*) into n_after from public.team_reminder_recipients(o);
+
+  perform set_config('request.jwt.claim.sub', m::text, true);
+  execute 'set local role authenticated';
+  begin
+    update public.team_members set can_manage_team = true where owner_id = o and member_id = m;
+  exception when insufficient_privilege then self_grant := true;
+  end;
+  begin perform 1 from public.team_invitations; exception when insufficient_privilege then inv_read := true; end;
+  execute 'reset role';
+  raise notice '%', case when self_grant and inv_read and n_before = 0 and n_after = 1
+    then 'PASS t45 (no self-promotion, invitations private, reminders opt-in)'
+    else 'FAIL t45 selfGrantBlocked=' || self_grant || ' invBlocked=' || inv_read || ' recipients=' || n_before || '->' || n_after end;
+end $$;

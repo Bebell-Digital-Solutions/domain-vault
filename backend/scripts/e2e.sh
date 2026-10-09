@@ -86,6 +86,7 @@ docker exec -i supabase_db_backend psql -U postgres -qtA \
   -c "delete from auth.users where email like 'ui-%@example.com';" >/dev/null
 
 echo; echo "=== client + admin ==="; node scripts/smoke-test.mjs
+echo; echo "=== teams ===";          node scripts/team-test.mjs
 echo; echo "=== payments ===";       node scripts/webhook-test.mjs
 echo; echo "=== browser ===";        node scripts/ui-test.mjs
 echo; echo "=== reminders ==="
