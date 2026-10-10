@@ -600,10 +600,33 @@
             statusDomainName.textContent = domain;
             statusMessage.textContent = 'Consultando registro RDAP autoritativo...';
 
-            // Simulate Network Latency
-            await new Promise(r => setTimeout(r, 800));
+// Real ICANN RDAP / WHOIS Check
+let isAvailable = false;
 
-            const isAvailable = Math.random() < 0.8;
+try {
+    // We use rdap.org which routes to the correct authoritative ICANN registry for the TLD
+    const response = await fetch(`https://rdap.org/domain/${domain}`);
+    
+    if (response.status === 404) {
+        // 404 Not Found means the domain is not registered - It is Available!
+        isAvailable = true;
+    } else if (response.status === 200) {
+        // 200 OK means the domain data exists - It is Taken!
+        isAvailable = false;
+    } else {
+        throw new Error(`Unexpected status code: ${response.status}`);
+    }
+} catch (error) {
+    console.error("RDAP Lookup failed:", error);
+    // Handle rate limits or unsupported TLDs gracefully
+    statusCard.classList.replace('bg-brand-card', 'bg-[#1a1a0a]');
+    statusIconWrapper.classList.replace('bg-brand-bgDarker', 'bg-brand-warning/20');
+    statusIconWrapper.classList.replace('text-brand-textMain', 'text-brand-warning');
+    statusIcon.className = 'fa-solid fa-triangle-exclamation';
+    statusMessage.innerHTML = '<span class="text-brand-warning font-medium">Lookup Error.</span> Could not connect to the ICANN registry. Please try again.';
+    resetSearchState();
+    return;
+}
 
             if (!isAvailable) {
                 statusCard.classList.replace('bg-brand-card', 'bg-[#1a0a0a]');
