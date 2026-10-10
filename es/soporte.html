@@ -197,12 +197,21 @@
                 </div>            
                 <script>
                 document.getElementById('translateBtn').addEventListener('click', function() {
-                    window.location.href = '/'; // Changed back to /en for English toggle
+                    window.location.href = '/support'; // Changed back to /en for English toggle
                 });
-                </script>        
-                <a href="/app" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow flex items-center gap-2">
+                </script>  
+
+                   
+            <!-- Log in: hidden on small mobile -->
+                <a href="/app" class="hidden sm:block bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow flex items-center gap-2">
                     Iniciar Sesión<i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </a>
+            <!-- Get Started: hidden on small mobile -->
+            <a href="#pricing" class="hidden sm:block bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow">
+                Comenzar
+            </a>
+
+                
             </div>
         </div>
     </nav>
