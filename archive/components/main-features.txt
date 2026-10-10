@@ -1,0 +1,44 @@
+            <!-- Left Text -->
+            <div class="flex-1 lg:pr-12">
+                <div class="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-bgDark/50 px-3 py-1 mb-6">
+                    <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+                    <span class="text-xs font-medium text-brand-muted uppercase tracking-wider font-tech">Zero-Config Workflow</span>
+                </div>
+
+                <h2 class="text-3xl md:text-4xl font-semibold tracking-tight text-brand-textMain mb-4">
+                    No API keys. No OAuth.<br>
+                    <span class="text-brand-primary drop-shadow-[0_0_15px_rgba(255,80,17,0.3)]">Just your data.</span>
+                </h2>
+                <p class="text-brand-muted leading-relaxed mb-8 text-lg">
+               Domain Vault never asks for registrar credentials and never scrapes your accounts. Add a domain, hit the WHOIS button to pull the creation and expiry dates, set your costs, and it's tracked. Your vault lives in a Supabase Postgres database with Row-Level Security, designed so only you can read your rows.
+
+                </p>
+                
+                <ul class="space-y-4 mb-8">
+
+                    <li class="flex items-start gap-3 text-sm text-brand-muted">
+                        <i data-lucide="check" class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5"></i>
+                        <span><strong class="text-brand-textMain">Provider credential vault:</strong> Store usernames, passwords, and account IDs for every registrar.</span>
+                    </li>
+
+
+        <li class="flex items-start gap-3 text-sm text-brand-muted">
+          <i data-lucide="check" class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5"></i>
+          <span><strong class="text-brand-textMain">Manual prices, your control:</strong> You decide what counts as purchase and renewal cost.</span>
+        </li>
+ 
+                    <li class="flex items-start gap-3 text-sm text-brand-muted">
+                        <i data-lucide="check" class="w-5 h-5 text-brand-primary flex-shrink-0 mt-0.5"></i>
+                        <span><strong class="text-brand-textMain">Full CSV export:</strong> take your portfolio anywhere, any time.</span>
+                    </li>
+
+                </ul>
+                
+
+
+ <a href="https://help.getdomainvault.com" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto bg-brand-card border border-brand-border text-brand-textMain hover:border-brand-muted rounded-md px-5 py-2.5 font-medium transition-colors inline-flex items-center justify-center gap-2">
+    <i data-lucide="book-open" class="w-4 h-4"></i>    
+    Read the Setup Guide
+</a>
+      
+            </div>
