@@ -460,6 +460,15 @@
 
         .section-divider { margin: 30px 0 15px; padding-top: 20px; border-top: 1px dashed var(--border); }
 
+		
+
+#feedbackModal .modal-content { max-width: 720px; height: 85vh; }
+#feedbackModal .modal-body { padding: 0; flex: 1; display: flex; }
+#feedbackModal iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+
+
+		
+
         @media (max-width: 992px) { .sidebar { display: none; } .menu-toggle { display: block; } .charts-container { grid-template-columns: 1fr; } }
         @media (max-width: 576px) { .search-box { display: none; } .stats-grid { grid-template-columns: 1fr; } .user-profile .user-name { display: none; } .page-title { flex-direction: column; align-items: flex-start; } .gallery-grid { grid-template-columns: 1fr; } .input-group.responsive-group { flex-direction: column; } .input-group.responsive-group .btn { width: 100%; } }
         @media (min-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -1013,7 +1022,7 @@
         <!-- Footer -->
         <footer class="main-footer">
             <p data-translate-key="footer">Powered with 🧡 by Bebell Digital Solutions.</p>
-            <p style="margin-top:6px; font-size:12px;"><a href="../p/privacy" target="_blank">Privacy</a>·<a href="../p/terms" target="_blank">Terms</a><a href="../p/refund" target="_blank">Refund</a>.<a href="../p/terms" target="_blank">Feedback</a></p>
+            <p style="margin-top:6px; font-size:12px;"><a href="../p/privacy" target="_blank">Privacy</a>·<a href="../p/terms" target="_blank">Terms</a><a href="../p/refund" target="_blank">Refund</a>.<a href="#" id="feedbackLink">Feedback</a></p>
         </footer>
     </div>
 
@@ -1029,6 +1038,12 @@
     </div>
     
     <div id="toast" class="toast"></div>
+
+
+
+
+
+	
 
     <!-- Upgrade Modal -->
     <div class="modal" id="upgradeModal">
@@ -1266,6 +1281,41 @@
     </div>
 
 
+
+<!-- Feedback Modal -->
+<div class="modal" id="feedbackModal">
+    <div class="modal-content" style="max-width: 720px; height: 85vh;">
+        <div class="modal-header">
+            <h3>Send Feedback</h3>
+            <div class="modal-close" id="feedbackModalClose">
+                <i data-lucide="x"></i>
+            </div>
+        </div>
+        <div class="modal-body" style="padding: 0; flex: 1; display: flex;">
+            <iframe
+                id="feedbackIframe"
+                data-src="https://api.helpdesk.icu/form/1ef95e77-d966-3ff4-a79a-bbd08b5e4fae"
+                src=""
+                frameborder="0"
+                title="Feedback Form"
+                style="width:100%; height:100%; border:0; display:block; background:#fff;">
+            </iframe>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+	
 	
 
     <!-- Backend configuration, API client and the application, shared with
@@ -1304,7 +1354,45 @@
 	setInterval(draw, 33);
 </script>
 
+<script>
+(function () {
+    const feedbackModal = document.getElementById('feedbackModal');
+    const feedbackLink  = document.getElementById('feedbackLink');
+    const feedbackClose = document.getElementById('feedbackModalClose');
+    const feedbackFrame = document.getElementById('feedbackIframe');
 
+    function openFeedback(e) {
+        if (e) e.preventDefault();
+        // Lazy-load the iframe only the first time
+        if (feedbackFrame && !feedbackFrame.src) {
+            feedbackFrame.src = feedbackFrame.dataset.src;
+        }
+        feedbackModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (window.lucide) lucide.createIcons(); // re-render icon inside modal if needed
+    }
+
+    function closeFeedback() {
+        feedbackModal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    feedbackLink.addEventListener('click', openFeedback);
+    feedbackClose.addEventListener('click', closeFeedback);
+
+    // Click outside the .modal-content to close
+    feedbackModal.addEventListener('click', function (e) {
+        if (e.target === feedbackModal) closeFeedback();
+    });
+
+    // ESC to close
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && feedbackModal.style.display === 'flex') {
+            closeFeedback();
+        }
+    });
+})();
+</script>
 
 
 
