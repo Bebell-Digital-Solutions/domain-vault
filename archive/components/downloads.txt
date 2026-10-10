@@ -1,0 +1,59 @@
+    <!-- === MAIN DOWNLOADS SECTION === -->
+    <!-- Wrapped main container directly dictating full width and hiding overflow -->
+    <main class="relative flex-1 w-full overflow-hidden bg-brand-bgDarker">
+        
+        <!-- Animated Matrix Background Canvas -->
+        <canvas id="matrix-canvas" class="absolute inset-0 w-full h-full z-0 opacity-80 pointer-events-none"></canvas>
+        
+        <!-- Gradient overlay to smoothly blend the canvas with the footer -->
+        <div class="absolute inset-0 z-[1] bg-gradient-to-b from-black/10 via-black/50 to-black/90 pointer-events-none"></div>
+
+        <!-- The actual text and buttons wrapped in relative z-10 so they sit on top of the canvas -->
+        <div class="downloads relative z-10 w-full">
+            <span class="eyebrow">Downloads</span>
+            <h1>Up and running in a minute.</h1>
+            <p class="lede" id="lede">
+                Deploy the Vault locally or use our secure cloud. Desktop clients are
+                available for all major platforms.
+            </p>
+
+            <div class="platforms">
+                <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-apple" aria-hidden="true"></i></span>
+                    <h2>macOS</h2>
+                </div>
+                <p>Requires macOS 11.0 or later. Apple Silicon (M1/M2/M3) natively supported.</p>
+                <a class="btn-download" data-platform="macos" href="#">Download for Mac</a>
+            </section>
+            
+            <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-windows" aria-hidden="true"></i></span>
+                    <h2>Windows</h2>
+                </div>
+                <p>Requires Windows 10 or 11. 64-bit architecture required.</p>
+                <a class="btn-download" data-platform="windows" href="#">Download for Windows</a>
+            </section>
+
+            <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-linux" aria-hidden="true"></i></span>
+                    <h2>Linux</h2>
+                </div>
+                <p>Available as AppImage, Snap, or Debian package (.deb) for Ubuntu/Debian.</p>
+                <a class="btn-download" data-platform="linux" href="#">Download for Linux</a>
+            </section>
+                
+          </div>
+
+            <p class="web-app">Prefer the browser? <a href="app.getdomainvault.com">Open Domain Vault in the cloud</a>.</p>
+        </div>
+    </main>
+    
