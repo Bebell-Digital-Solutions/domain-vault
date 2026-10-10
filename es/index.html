@@ -1488,83 +1488,137 @@ document.getElementById('translateBtn').addEventListener('click', function() {
             <!-- Right Accordion Column (70%) -->
             <div class="w-full md:w-2/3 flex flex-col">
 
-                <!-- FAQ Item 1 -->
-                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
-                        ¿Qué tan seguras están mis claves API?
-                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
-                    </div>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
-                            Usamos cifrado AES-256 en reposo y TLS 1.3 en tránsito. Tus claves API se cifran en el lado del cliente antes de tocar nuestros servidores. Solo tu sesión autenticada puede descifrarlas.
-                        </div>
-                    </div>
-                </div>
+                
+<!-- FAQ Item 1 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Cómo gestiona Domain Vault mis datos?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Domain Vault te ayuda a organizar la información de tus dominios en un solo lugar. Para información sensible relacionada con la seguridad, consulta nuestra documentación de seguridad antes de almacenar credenciales. En esta sección no hacemos afirmaciones específicas sobre métodos de cifrado ni sobre el cifrado del lado del cliente.
+        </div>
+    </div>
+</div>
 
-                <!-- FAQ Item 2 -->
-                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
-                        ¿Necesito un plan pago para usar la aplicación?
-                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
-                    </div>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
-                            No, la funcionalidad principal, que incluye rastrear hasta 20 dominios y sincronizar con 3 proveedores, es completamente gratis para siempre. Los niveles pagos solo son necesarios para la escala a nivel de agencia y herramientas avanzadas de automatización de DNS.
-                        </div>
-                    </div>
-                </div>
+<!-- FAQ Item 2 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Necesito un plan de pago para utilizar Domain Vault?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Las funciones disponibles y los límites de uso dependen de tu plan. Visita nuestra página de precios para comparar los planes actuales y elegir la opción que mejor se adapte a tu cartera de dominios.
+        </div>
+    </div>
+</div>
 
-                <!-- FAQ Item 3 -->
-                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
-                        ¿Puedo exportar mis datos si decido irme?
-                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
-                    </div>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
-                            Absolutamente. No estás atrapado. Puedes exportar todo tu portafolio, completo con notas personalizadas y datos históricos, como un archivo CSV o JSON en cualquier momento directamente desde el menú de configuración.
-                        </div>
-                    </div>
-                </div>
+<!-- FAQ Item 3 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Puedo gestionar dominios de diferentes registradores?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Sí. Puedes añadir manualmente dominios de diferentes registradores y mantener su información organizada en un solo lugar. No necesitas una integración nativa con cada registrador para llevar un control manual de tus dominios.
+        </div>
+    </div>
+</div>
 
-                <!-- FAQ Item 4 -->
-                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
-                        ¿Qué registradores de dominios son compatibles actualmente?
-                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
-                    </div>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
-                            Actualmente ofrecemos integración nativa API de 1 clic para Cloudflare, GoDaddy, Namecheap, AWS Route 53, IONOS, Porkbun y Google Domains. Para registradores no compatibles, puedes agregar dominios manualmente y rastrearlos mediante consultas WHOIS.
-                        </div>
-                    </div>
-                </div>
+<!-- FAQ Item 4 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿WHOIS completa automáticamente los datos de mis dominios?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Actualmente, la consulta WHOIS identifica el registrador del dominio. No recupera automáticamente las fechas de vencimiento, los precios de compra, los costos de renovación ni otros datos del dominio. Puedes introducir y actualizar esta información manualmente.
+        </div>
+    </div>
+</div>
 
-                <!-- FAQ Item 5 -->
-                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
-                        ¿Con qué frecuencia sincroniza Domain Vault mi portafolio?
-                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
-                    </div>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
-                            Por defecto, la Bóveda ejecuta una sincronización segura en segundo plano cada 24 horas para verificar cambios de estado, próximas renovaciones y modificaciones de DNS. Los niveles pagos permiten forzar sincronizaciones manuales en cualquier momento directamente desde el panel.
-                        </div>
-                    </div>
-                </div>
+<!-- FAQ Item 5 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Domain Vault sincroniza automáticamente mi cartera de dominios?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            La información que introduces manualmente debe ser mantenida actualizada por ti. No debes asumir que Domain Vault actualizará automáticamente las fechas de vencimiento, los precios de renovación o los registros DNS, a menos que una función compatible lo permita expresamente.
+        </div>
+    </div>
+</div>
 
-                <!-- FAQ Item 6 -->
-                <div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
-                    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
-                        ¿Ofrecen reembolso si no estoy satisfecho?
-                        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
-                    </div>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
-                            Sí, todos nuestros planes anuales vienen con una garantía de devolución de dinero de 14 días. Si te das cuenta de que Domain Vault no es adecuado para tu flujo de trabajo en tus primeras dos semanas, solo comunícate con soporte y emitiremos un reembolso completo, sin hacer preguntas.
-                        </div>
-                    </div>
-                </div>
+<!-- FAQ Item 6 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Puedo exportar mis datos si decido dejar de usar Domain Vault?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Sí. Puedes descargar todos tus datos de Domain Vault en formato CSV o JSON para conservar una copia de tu información o utilizarla en otras herramientas.
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Item 7 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Para quién está diseñado Domain Vault?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Domain Vault está diseñado para cualquier persona que necesite mantener organizada la información de sus dominios en un solo lugar. Tanto si tienes unos pocos dominios, como si gestionas una cartera amplia como inversionista o desarrollador, o administras dominios de varias marcas, clientes y proyectos, Domain Vault te ayuda a controlar tus dominios, fechas de renovación y costos asociados.
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Item 8 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Puedo sincronizar los recordatorios con mi calendario?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Sí. Puedes conectar los recordatorios de renovación de tus dominios con Google Calendar mediante la opción de calendario disponible, o descargar un archivo de calendario en formato .ics para importarlo en aplicaciones compatibles, como Apple Calendar y Microsoft Outlook. Los archivos de calendario se pueden descargar e importar manualmente.
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Item 9 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Tienen ofertas o promociones disponibles?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Las ofertas y promociones pueden cambiar con el tiempo. Consulta nuestra página de precios para conocer los planes, las promociones y las opciones de compra disponibles actualmente.
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Item 10 -->
+<div class="border-b border-brand-border py-6 group cursor-pointer" onclick="toggleFaq(this)">
+    <div class="flex justify-between items-center text-brand-textMain font-medium pr-2">
+        ¿Ofrecen reembolsos?
+        <i data-lucide="plus" class="w-5 h-5 text-brand-muted transition-transform duration-300 transform group-hover:text-brand-primary"></i>
+    </div>
+    <div class="faq-answer">
+        <div class="faq-answer-inner text-brand-muted text-sm leading-relaxed pt-3 pr-8">
+            Los reembolsos están disponibles únicamente para las compras de licencias de por vida (LTD) y deben solicitarse dentro de los 14 días posteriores a la compra. Este plazo de reembolso no se aplica a las suscripciones anuales. Consulta las condiciones de compra aplicables para obtener más detalles.
+        </div>
+    </div>
+</div>
+
 
             </div>
         </div>
