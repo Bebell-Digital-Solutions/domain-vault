@@ -1022,11 +1022,15 @@
         <!-- Footer -->
         <footer class="main-footer">
             <p data-translate-key="footer">Powered with 🧡 by Bebell Digital Solutions.</p>
-            <p style="margin-top:6px; font-size:12px;"><a href="../p/privacy" target="_blank">Privacy</a>·<a href="../p/terms" target="_blank">Terms</a><a href="../p/refund" target="_blank">Refund</a>.<a href="#" id="feedbackLink">Feedback</a></p>
+            <p style="margin-top:6px; font-size:12px;"><a href="../p/privacy" target="_blank">Privacy</a>·<a href="../p/terms" target="_blank">Terms</a><a href="../p/refund" target="_blank">Refund</a>.<a href="https://api.helpdesk.icu/form/1ef95e77-d966-3ff4-a79a-bbd08b5e4fae" id="feedbackLink">Feedback</a></p>
         </footer>
     </div>
 
     <div id="persistent-notifications-container"></div>
+
+
+
+	
 
     <!-- Mobile Navigation -->
     <div class="nav-overlay" id="navOverlay"></div>
@@ -1355,6 +1359,7 @@
 </script>
 
 <script>
+
 (function () {
     const feedbackModal = document.getElementById('feedbackModal');
     const feedbackLink  = document.getElementById('feedbackLink');
@@ -1379,6 +1384,13 @@
 
     feedbackLink.addEventListener('click', openFeedback);
     feedbackClose.addEventListener('click', closeFeedback);
+
+	
+		feedbackFrame.addEventListener('load', () => {
+    console.log('iframe loaded:', feedbackFrame.contentWindow?.location?.href);
+});
+
+	
 
     // Click outside the .modal-content to close
     feedbackModal.addEventListener('click', function (e) {
