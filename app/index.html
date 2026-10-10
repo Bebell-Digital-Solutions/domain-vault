@@ -1368,10 +1368,7 @@
 
     function openFeedback(e) {
         if (e) e.preventDefault();
-        // Lazy-load the iframe only the first time
-        if (feedbackFrame && !feedbackFrame.src) {
-            feedbackFrame.src = feedbackFrame.dataset.src;
-        }
+       
         feedbackModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         if (window.lucide) lucide.createIcons(); // re-render icon inside modal if needed
