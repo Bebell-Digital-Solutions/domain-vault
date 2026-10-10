@@ -1,0 +1,33 @@
+                <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-apple" aria-hidden="true"></i></span>
+                    <h2>macOS</h2>
+                </div>
+                <p>Requiere macOS 11.0 o posterior. Apple Silicon (M1/M2/M3) compatible de forma nativa.</p>
+                <a class="btn-download" data-platform="macos" href="#">Descargar para Mac</a>
+            </section>
+            
+            <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-windows" aria-hidden="true"></i></span>
+                    <h2>Windows</h2>
+                </div>
+                <p>Requiere Windows 10 u 11. Se requiere arquitectura de 64 bits.</p>
+                <a class="btn-download" data-platform="windows" href="#">Descargar para Windows</a>
+            </section>
+
+            <section class="platform">
+                <!-- Top glowing line -->
+                <div class="glow-line"></div>
+                <div class="platform-head">
+                    <span class="platform-icon"><i class="fa-brands fa-linux" aria-hidden="true"></i></span>
+                    <h2>Linux</h2>
+                </div>
+                <p>Disponible como AppImage, Snap o paquete Debian (.deb) para Ubuntu/Debian.</p>
+                <a class="btn-download" data-platform="linux" href="#">Descargar para Linux</a>
+            </section>
+                
