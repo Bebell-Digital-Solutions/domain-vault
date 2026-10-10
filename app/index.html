@@ -463,7 +463,7 @@
 		
 
 #feedbackModal .modal-content { max-width: 720px; height: 85vh; }
-#feedbackModal .modal-body { padding: 0; flex: 1; display: flex; }
+#feedbackModal .modal-body { padding: 0; flex: 1; display: flex; min-height: 0;}   /* <-- important for flex children with overflow */
 #feedbackModal iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
 
 
@@ -1298,7 +1298,7 @@
                 src=""
                 frameborder="0"
                 title="Feedback Form"
-                style="width:100%; height:100%; border:0; display:block; background:#fff;">
+                style="width:100%; height:720px; border:0; display:block; background:#fff;">
             </iframe>
         </div>
     </div>
