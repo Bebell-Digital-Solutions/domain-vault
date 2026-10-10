@@ -1,0 +1,116 @@
+<!-- Simulator Main Content -->
+                <div class="flex-1 flex flex-col bg-brand-card overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-brand-bgDarker px-[25px] py-[15px] border-b border-brand-border flex items-center justify-between">
+                        <div class="bg-brand-hover border border-brand-border rounded-full py-2 px-[15px] flex items-center gap-2.5 w-[260px] text-[0.85rem] text-brand-muted">
+                            <i data-lucide="search" class="w-4 h-4"></i> Buscar dominios...
+                        </div>
+
+                        <div class="flex items-center gap-[15px]">
+                            <div class="text-[0.7rem] bg-brand-primary/15 text-brand-primary py-1 px-3 rounded-full border border-brand-primary/30 font-semibold uppercase flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-brand-success shadow-[0_0_5px_var(--success)]"></span> Personal
+                            </div>
+                            <i data-lucide="languages" class="text-brand-muted cursor-pointer w-[18px] h-[18px]"></i>
+                            <i data-lucide="bell" class="text-brand-muted cursor-pointer w-[18px] h-[18px]"></i>
+                            <div class="w-8 h-8 rounded-full bg-brand-primary flex items-center justify-center text-white text-[0.85rem] font-bold">U</div>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-[25px] overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-brand-border scrollbar-track-transparent">
+                        <div class="flex justify-between items-center mb-[25px]">
+                            <h3 class="text-[1.2rem] font-sans font-semibold text-brand-textMain">Resumen del Panel</h3>
+                            <button class="bg-brand-primary text-white border-none shadow-[0_0_10px_rgba(255,80,17,0.3)] py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:-translate-y-px flex items-center gap-1.5 font-medium">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Agregar Dominio
+                            </button>
+                        </div>
+
+                        <div class="mb-[20px] font-sans font-semibold text-brand-textMain text-[0.95rem]">Principales Renovaciones Urgentes</div>
+
+                        <table class="w-full border-collapse bg-brand-card border border-brand-border rounded-xl overflow-hidden shadow-[0_5px_25px_rgba(0,0,0,0.2)]">
+                            <thead>
+                                <tr class="bg-brand-bgDarker">
+                                    <th class="p-[15px] text-left text-brand-textMain font-semibold text-[0.8rem] border-b border-brand-border">NOMBRE DEL DOMINIO</th>
+                                    <th class="p-[15px] text-left text-brand-textMain font-semibold text-[0.8rem] border-b border-brand-border">PROVEEDOR</th>
+                                    <th class="p-[15px] text-left text-brand-textMain font-semibold text-[0.8rem] border-b border-brand-border">ESTADO</th>
+                                    <th class="p-[15px] text-left text-brand-textMain font-semibold text-[0.8rem] border-b border-brand-border">ACCIONES</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="hover:bg-brand-hover transition-colors group">
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem] text-brand-textMain font-semibold">startup-idea.io</td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="text-brand-muted flex items-center gap-2">
+                                            <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Namecheap-icon.png" class="w-[18px] h-[18px] rounded bg-white" onerror="this.style.display='none'">Namecheap
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="bg-brand-warning/10 text-brand-warning border border-brand-warning/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5">
+                                            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Expira Pronto
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <button class="bg-brand-primary/10 text-brand-primary border border-brand-primary/30 py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:bg-brand-primary hover:text-white hover:shadow-[0_0_10px_rgba(255,80,17,0.4)] hover:-translate-y-px inline-flex items-center gap-1.5 font-medium" onclick="this.innerHTML='<i data-lucide=\'check-circle-2\' class=\'w-4 h-4\'></i> Asegurado'; this.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-2 px-4 rounded-md text-[0.8rem] cursor-default inline-flex items-center gap-1.5 font-medium'; const statusSpan = this.closest('tr').querySelector('td:nth-child(3) span'); statusSpan.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5'; statusSpan.innerHTML='<i data-lucide=\'shield-check\' class=\'w-3.5 h-3.5\'></i> Activo'; setTimeout(() => lucide.createIcons(), 10);">
+                                            Renovar Dominio
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-brand-hover transition-colors group">
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem] text-brand-textMain font-semibold">mydomain.co</td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="text-brand-muted flex items-center gap-2">
+                                            <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/id0mqE95nF_1789710824150.jpeg" class="w-[18px] h-[18px] rounded bg-white" onerror="this.style.display='none'">Hostinger
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="bg-brand-warning/10 text-brand-warning border border-brand-warning/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5">
+                                            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Expira Pronto
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <button class="bg-brand-primary/10 text-brand-primary border border-brand-primary/30 py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:bg-brand-primary hover:text-white hover:shadow-[0_0_10px_rgba(255,80,17,0.4)] hover:-translate-y-px inline-flex items-center gap-1.5 font-medium" onclick="this.innerHTML='<i data-lucide=\'check-circle-2\' class=\'w-4 h-4\'></i> Propagado'; this.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-2 px-4 rounded-md text-[0.8rem] cursor-default inline-flex items-center gap-1.5 font-medium'; const statusSpan = this.closest('tr').querySelector('td:nth-child(3) span'); statusSpan.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5'; statusSpan.innerHTML='<i data-lucide=\'shield-check\' class=\'w-3.5 h-3.5\'></i> Saludable'; setTimeout(() => lucide.createIcons(), 10);">
+                                            Renovar Dominio
+                                        </button>
+                                    </td>
+                                </tr>                                               
+                                <tr class="hover:bg-brand-hover transition-colors group">
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem] text-brand-textMain font-semibold">nextbigthing.ai</td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="text-brand-muted flex items-center gap-2">
+                                            <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Cloudflare-icon.png" class="w-[18px] h-[18px] rounded bg-white" onerror="this.style.display='none'">Cloudflare
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <span class="bg-brand-warning/10 text-brand-warning border border-brand-warning/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5">
+                                            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Expira Pronto
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left border-b border-brand-border text-[0.85rem]">
+                                        <button class="bg-brand-primary/10 text-brand-primary border border-brand-primary/30 py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:bg-brand-primary hover:text-white hover:shadow-[0_0_10px_rgba(255,80,17,0.4)] hover:-translate-y-px inline-flex items-center gap-1.5 font-medium" onclick="this.innerHTML='<i data-lucide=\'check-circle-2\' class=\'w-4 h-4\'></i> Propagado'; this.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-2 px-4 rounded-md text-[0.8rem] cursor-default inline-flex items-center gap-1.5 font-medium'; const statusSpan = this.closest('tr').querySelector('td:nth-child(3) span'); statusSpan.className='bg-brand-success/10 text-brand-success border border-brand-success/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5'; statusSpan.innerHTML='<i data-lucide=\'shield-check\' class=\'w-3.5 h-3.5\'></i> Saludable'; setTimeout(() => lucide.createIcons(), 10);">
+                                            Renovar Dominio
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="hover:bg-brand-hover transition-colors group">
+                                    <td class="p-[15px] text-left text-[0.85rem] text-brand-textMain font-semibold">myportfolio.com</td>
+                                    <td class="p-[15px] text-left text-[0.85rem]">
+                                        <span class="text-brand-muted flex items-center gap-2">
+                                            <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/idz3wFn2qU_logos.jpeg" class="w-[18px] h-[18px] rounded bg-white" onerror="this.style.display='none'">Porkbun
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left text-[0.85rem]">
+                                        <span class="bg-brand-success/10 text-brand-success border border-brand-success/30 py-1 px-3 rounded-full text-[0.75rem] font-semibold inline-flex items-center gap-1.5">
+                                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Auto-Renovación
+                                        </span>
+                                    </td>
+                                    <td class="p-[15px] text-left text-[0.85rem]">
+                                        <button class="bg-transparent text-brand-muted border border-brand-border py-2 px-4 rounded-md text-[0.8rem] cursor-pointer transition-all hover:bg-brand-card hover:border-brand-primary hover:text-brand-primary inline-flex items-center gap-1.5 font-medium shadow-none">
+                                            Administrar
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
