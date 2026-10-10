@@ -400,9 +400,8 @@ document.getElementById('translateBtn').addEventListener('click', function() {
 
             </div>
 
-            <!-- Interactive Dashboard Simulation -->
-            <div class="mt-20 w-full max-w-[1050px] aspect-[5/3] bg-brand-card border border-brand-border rounded-xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(255,80,17,0.15)] relative z-20 text-left flex mx-auto animate-float">
-
+           <!-- ===== Simulator (tablet & desktop) ===== -->
+          <div class="hidden sm:flex mt-20 w-full max-w-[1050px] aspect-[5/3] bg-brand-card border border-brand-border rounded-xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(255,80,17,0.15)] relative z-20 text-left mx-auto animate-float">
                 <!-- Top glowing line -->
                 <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-30"></div>
 
@@ -559,7 +558,18 @@ document.getElementById('translateBtn').addEventListener('click', function() {
                 </div>
             </div>
 
+<!-- ===== Mobile screenshot (small screens only) ===== -->
+<div class="sm:hidden mt-20 w-full max-w-[1050px] relative z-20 mx-auto animate-float rounded-xl overflow-hidden border border-brand-border shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(255,80,17,0.15)]">
+    <!-- Top glowing line -->
+    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-30"></div>
 
+    <img
+        src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/Macbook-Air-app.getdomainvault.com.webp"
+        alt="Domain Vault dashboard preview"
+        class="w-full h-auto block"
+        loading="lazy"
+    />
+</div>
 
           
         </div>
