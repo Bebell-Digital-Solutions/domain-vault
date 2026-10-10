@@ -195,10 +195,17 @@
                 document.getElementById('translateBtn').addEventListener('click', function() {
                     window.location.href = '/es/soporte';
                 });
-                </script>        
-                <a href="/app" class="bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow flex items-center gap-2">
-                    Login<i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </a>
+                </script>    
+
+                
+            <!-- Log in: hidden on small mobile -->
+            <a href="/app" class="hidden sm:block text-sm font-medium text-brand-muted hover:text-brand-textMain transition-colors duration-300">Log in</a>
+
+            <!-- Get Started: hidden on small mobile -->
+            <a href="#pricing" class="hidden sm:block bg-brand-primary hover:bg-[#e6460f] text-white text-sm font-medium px-4 py-2 rounded-md transition-all duration-300 shadow-glow">
+                Get Started
+            </a>
+                
             </div>
         </div>
     </nav>
