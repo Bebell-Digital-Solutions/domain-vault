@@ -15,7 +15,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 
-
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
     <meta name="robots" content="noindex, nofollow">
 
@@ -143,6 +143,20 @@
             animation: waveRipple 2.5s infinite ease-out 1.85s;
         }
 
+
+/* Confetti canvas sits above everything, ignores clicks */
+#confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+        
+
         @keyframes popIn {
             0% { opacity: 0; transform: scale(0.5); }
             100% { opacity: 1; transform: scale(1); }
@@ -157,6 +171,13 @@
 
 <body class="font-sans antialiased selection:bg-brand-primary selection:text-white flex flex-col min-h-screen bg-brand-bgDark text-brand-muted">
 
+
+
+<canvas id="confetti-canvas"></canvas>
+
+
+
+    
     <nav class="sticky top-0 z-50 w-full backdrop-blur-md bg-brand-bgDark/80 border-b border-brand-border transition-all duration-300">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
             <!-- Left: Brand -->
@@ -263,7 +284,7 @@
                     
                     <div class="flex justify-between items-center mb-3">
                         <span class="text-brand-muted text-sm font-medium">Payment Method</span>
-                        <span class="text-brand-textMain text-sm font-tech">PayPal</span>
+                        <span class="text-brand-textMain text-sm font-tech">PayPal 💳</span>
                     </div>
 
                     
@@ -303,6 +324,14 @@
 
         </div>
     </main>
+
+
+
+
+
+
+
+    
 
     <footer class="relative z-10 py-12 px-6 mt-auto bg-brand-bgDarker">
         <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
@@ -430,6 +459,84 @@
 
         setInterval(draw, 33);
     </script>
+
+
+
+    
+<script>
+    // Center-burst confetti using canvas-confetti
+    (function () {
+        const myCanvas = document.getElementById('confetti-canvas');
+        const myConfetti = confetti.create(myCanvas, {
+            resize: true,
+            useWorker: true
+        });
+
+        // Brand colors
+        const colors = ['#ff5011', '#51cf66', '#ffffff', '#ffd43b'];
+
+        // Fire a center burst on load
+        function fireCenterBurst() {
+            // Big center pop
+            myConfetti({
+                particleCount: 150,
+                spread: 360,
+                startVelocity: 45,
+                origin: { x: 0.5, y: 0.5 },
+                colors: colors,
+                scalar: 1.1,
+                ticks: 200
+            });
+
+            // Side cannons for extra flair
+            setTimeout(() => {
+                myConfetti({
+                    particleCount: 80,
+                    angle: 60,
+                    spread: 70,
+                    origin: { x: 0, y: 0.7 },
+                    colors: colors
+                });
+                myConfetti({
+                    particleCount: 80,
+                    angle: 120,
+                    spread: 70,
+                    origin: { x: 1, y: 0.7 },
+                    colors: colors
+                });
+            }, 250);
+
+            // Gentle floating drizzle
+            setTimeout(() => {
+                myConfetti({
+                    particleCount: 60,
+                    spread: 100,
+                    startVelocity: 25,
+                    origin: { x: 0.5, y: 0.4 },
+                    colors: colors,
+                    gravity: 0.8,
+                    scalar: 0.9
+                });
+            }, 500);
+        }
+
+        // Trigger once page is ready
+        window.addEventListener('load', () => {
+            // Small delay so the success checkmark pop-in plays first
+            setTimeout(fireCenterBurst, 400);
+        });
+    })();
+</script>
+
+
+
+
+
+
+
+
+
+    
 
 </body>
 </html>
