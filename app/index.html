@@ -393,6 +393,7 @@
         .provider-header .actions { display: flex; gap: 5px; }
         .provider-name { font-weight: 600; font-size: 1.1rem; color: var(--text-main); }
         .provider-logo { width: 40px; height: 40px; border-radius: 8px; background-color: white; object-fit: contain; padding: 2px; }
+        .provider-logo-initials { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-hover); color: var(--primary); font-weight: 700; font-size: 14px; }
         .provider-stats { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
         .provider-stats p { font-size: 0.95rem; color: var(--text-muted); }
         .provider-stats span { font-weight: 600; color: var(--text-main); }
@@ -415,6 +416,10 @@
 
         /* Components that set their own display would otherwise ignore the hidden attribute. */
         [hidden] { display: none !important; }
+
+        /* Domain search, embedded */
+        .search-frame-box { height: calc(100vh - 240px); min-height: 560px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #000; }
+        .search-frame-box iframe { width: 100%; height: 100%; border: 0; display: block; }
 
         /* Team vaults */
         .vault-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 25px; background: var(--bg-hover); border-bottom: 1px solid var(--border); font-size: 0.9em; }
@@ -565,6 +570,7 @@
                 <div class="menu-item active" data-page="dashboard"><i data-lucide="layout-dashboard"></i><span data-translate-key="dashboard">Dashboard</span></div>
                 <div class="menu-item" data-page="domains"><i data-lucide="globe"></i><span data-translate-key="allDomains">All Domains</span></div>
                 <div class="menu-item" data-page="providers"><i data-lucide="server"></i><span data-translate-key="domainProviders">Providers</span></div>
+                <div class="menu-item" data-page="search"><i data-lucide="search-check"></i><span data-translate-key="domainSearch">Domain Search</span></div>
                 <div class="menu-item" data-page="tools"><i data-lucide="wrench"></i><span data-translate-key="toolsResources">Tools & Resources</span></div>
                 <div class="menu-item" data-page="calendar"><i data-lucide="calendar"></i><span data-translate-key="calendar">Calendar</span></div>
                 <div class="menu-item" data-page="reports"><i data-lucide="bar-chart-2"></i><span data-translate-key="reports">Reports</span></div>
@@ -861,6 +867,15 @@
                 <div class="downloads-grid" id="downloadCards"></div>
             </div>
 
+            <!-- Domain Search Page: the search tool from the website, loaded on first visit. -->
+            <div id="page-search" class="page">
+                <div class="page-title">
+                    <h2 data-translate-key="domainSearch">Domain Search</h2>
+                </div>
+                <p data-translate-key="domainSearchIntro" style="color: var(--text-muted); margin-bottom: 16px;">Is a name free, and where is it cheapest to own over 5 years? Already yours? Add it to your vault with its dates filled in.</p>
+                <div id="searchFrameBox" class="search-frame-box"></div>
+            </div>
+
             <!-- Team Page -->
             <div id="page-team" class="page">
                 <div class="page-title">
@@ -1025,7 +1040,7 @@
         <!-- Footer -->
         <footer class="main-footer">
             <p data-translate-key="footer">Powered with 🧡 by Bebell Digital Solutions.</p>
-            <p style="margin-top:6px; font-size:12px;"><a href="../p/privacy" target="_blank">Privacy</a>·<a href="../p/terms" target="_blank">Terms</a><a href="../p/refund" target="_blank">Refund</a>.<a href="https://api.helpdesk.icu/form/1ef95e77-d966-3ff4-a79a-bbd08b5e4fae" id="feedbackLink">Feedback</a></p>
+            <p style="margin-top:6px; font-size:12px;"><a href="../p/privacy" target="_blank">Privacy</a>·<a href="../p/terms" target="_blank">Terms</a>·<a href="../p/refund" target="_blank">Refund</a>·<a href="https://api.helpdesk.icu/form/1ef95e77-d966-3ff4-a79a-bbd08b5e4fae" id="feedbackLink">Feedback</a></p>
         </footer>
     </div>
 
@@ -1302,7 +1317,6 @@
             <iframe
                 id="feedbackIframe"
                 data-src="https://api.helpdesk.icu/form/1ef95e77-d966-3ff4-a79a-bbd08b5e4fae"
-                src="https://api.helpdesk.icu/form/1ef95e77-d966-3ff4-a79a-bbd08b5e4fae"
                 frameborder="0"
                 title="Feedback Form"
                 style="width:100%; height:100%; border:0; display:block; background:#fff;">
@@ -1327,9 +1341,9 @@
 
     <!-- Backend configuration, API client and the application, shared with
          the admin panel. Paths are relative: this page lives at /app/. -->
-    <script src="../config.js?v=20261009"></script>
-    <script src="../api.js?v=20261009"></script>
-    <script src="../script.js?v=20261009"></script>
+    <script src="../config.js?v=20261012"></script>
+    <script src="../api.js?v=20261012"></script>
+    <script src="../script.js?v=20261012"></script>
 
 
 
@@ -1372,6 +1386,8 @@
     function openFeedback(e) {
         if (e) e.preventDefault();
        
+        // The form loads on first open, not with every page.
+        if (!feedbackFrame.getAttribute('src')) feedbackFrame.src = feedbackFrame.dataset.src;
         feedbackModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         if (window.lucide) lucide.createIcons(); // re-render icon inside modal if needed
@@ -1385,10 +1401,6 @@
     feedbackLink.addEventListener('click', openFeedback);
     feedbackClose.addEventListener('click', closeFeedback);
 
-	
-		feedbackFrame.addEventListener('load', () => {
-    console.log('iframe loaded:', feedbackFrame.contentWindow?.location?.href);
-});
 
 	
 

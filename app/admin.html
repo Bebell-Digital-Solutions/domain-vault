@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Domain Vault | Admin Console</title>
-    <link rel="icon" href="https://bucket.mlcdn.com/a/3336/3336910/images/115f0fdbe1cc012228f0c234e8b4f909d2e7ab69.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Domain-vault-logo.webp">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Domain-vault-logo.webp">
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;700&family=Fira+Code&display=swap" rel="stylesheet">
@@ -212,6 +213,9 @@
             </button>
             <button class="tab tab-btn" data-tab="tools">
                 <i data-lucide="wrench" class="w-4 h-4"></i> Tools
+            </button>
+            <button class="tab tab-btn" data-tab="search">
+                <i data-lucide="search" class="w-4 h-4"></i> Domain search
             </button>
             <button class="tab tab-btn" data-tab="support">
                 <i data-lucide="message-circle" class="w-4 h-4"></i> Support
@@ -478,16 +482,113 @@
             </div>
         </section>
 
-        <section id="panel-support" data-panel="support" class="panel-section" hidden>
-            <div class="bg-surface-card border border-surface-border rounded-xl p-5 max-w-3xl">
-                <h2 class="text-lg font-semibold text-white mb-1">Live chat with users</h2>
-                <p class="text-sm text-slate-400 mb-5" id="supportStatus">Checking the chat connection…</p>
-                <div class="flex flex-wrap gap-3">
-                    <button type="button" id="supportOpen" class="btn-primary btn-base" disabled><i data-lucide="message-circle" class="w-4 h-4"></i> Open the chat</button>
-                    <a id="supportConsole" href="https://app.helpdesk.icu/app" target="_blank" rel="noopener" class="btn-secondary btn-base"><i data-lucide="external-link" class="w-4 h-4"></i> Helpdesk console</a>
+        <section id="panel-search" data-panel="search" class="panel-section" hidden>
+            <p class="text-sm text-slate-400 mb-4 max-w-3xl">The <b class="text-white">domain search</b> tool (website and app) compares these registrars. Each one's <b class="text-white">buy link</b> is where a visitor goes after a search: put your affiliate link here, with <code class="text-brand">{domain}</code> where the searched name goes. Porkbun's prices update by themselves every day; the others are the prices you enter below.</p>
+            <div class="grid gap-6 xl:grid-cols-[1fr_380px] items-start mb-8">
+                <div class="overflow-x-auto border border-surface-border rounded-lg">
+                    <table class="w-full border-collapse min-w-[760px]">
+                        <thead>
+                            <tr>
+                                <th>Registrar</th>
+                                <th>Buy link</th>
+                                <th>Prices</th>
+                                <th>Order</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registrarRows"></tbody>
+                    </table>
                 </div>
-                <p class="text-xs text-slate-500 mt-5">The chat's operator key is kept on the server and only sent to signed-in admins; it never appears in this page's source.</p>
+
+                <form id="registrarForm" class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-4" novalidate>
+                    <h2 class="text-lg font-semibold text-white" id="registrarFormTitle">Add a registrar</h2>
+                    <input type="hidden" id="registrarId">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="registrarName" class="text-xs text-slate-400 font-medium">Name</label>
+                            <input id="registrarName" class="input-base" maxlength="60" required placeholder="e.g. Porkbun">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="registrarWebsite" class="text-xs text-slate-400 font-medium">Website</label>
+                            <input id="registrarWebsite" class="input-base" maxlength="100" required placeholder="porkbun.com">
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="registrarUrl" class="text-xs text-slate-400 font-medium">Buy link — <code>{domain}</code> = the searched name</label>
+                        <input id="registrarUrl" class="input-base" maxlength="600" required placeholder="https://porkbun.com/checkout/search?q={domain}&amp;affid=…">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="registrarWhois" class="text-xs text-slate-400 font-medium">WHOIS privacy</label>
+                            <input id="registrarWhois" class="input-base" maxlength="60" placeholder="Free forever">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="registrarSsl" class="text-xs text-slate-400 font-medium">SSL</label>
+                            <input id="registrarSsl" class="input-base" maxlength="60" placeholder="Paid add-on">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-[1fr_96px] gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="registrarNotes" class="text-xs text-slate-400 font-medium">Note shown as a tooltip</label>
+                            <input id="registrarNotes" class="input-base" maxlength="200" placeholder="e.g. Must use their nameservers">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="registrarSort" class="text-xs text-slate-400 font-medium">Order</label>
+                            <input id="registrarSort" class="input-base" type="number" step="1" placeholder="100">
+                        </div>
+                    </div>
+                    <label for="registrarActive" class="flex items-center gap-3 text-sm text-slate-200 cursor-pointer">
+                        <input id="registrarActive" type="checkbox" class="w-4 h-4 accent-brand" checked> Shown in searches
+                    </label>
+                    <div class="pt-3 border-t border-surface-border flex gap-3 justify-end">
+                        <button type="button" id="registrarReset" class="btn-secondary btn-base">New</button>
+                        <button type="submit" id="registrarSave" class="btn-primary btn-base"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
+                    </div>
+                </form>
             </div>
+
+            <div class="bg-surface-card border border-surface-border rounded-xl p-5 max-w-4xl">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">Prices per extension (USD)</h2>
+                        <p class="text-xs text-slate-400">First year and renewal. Leave both empty to stop showing a registrar for this extension.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 items-end">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="priceTld" class="text-xs text-slate-400 font-medium">Extension</label>
+                            <input id="priceTld" class="input-base !w-36" list="priceTldList" maxlength="40" value="com">
+                            <datalist id="priceTldList"></datalist>
+                        </div>
+                        <button type="button" id="priceTldLoad" class="btn-secondary btn-base">Show</button>
+                        <button type="button" id="pricesRefresh" class="btn-secondary btn-base" title="Reload Porkbun's prices now"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Porkbun now</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto border border-surface-border rounded-lg">
+                    <table class="w-full border-collapse min-w-[620px]">
+                        <thead>
+                            <tr><th>Registrar</th><th>First year</th><th>Renewal</th><th>5-year cost</th><th>Source</th></tr>
+                        </thead>
+                        <tbody id="tldPriceRows"></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button type="button" id="tldPricesSave" class="btn-primary btn-base"><i data-lucide="save" class="w-4 h-4"></i> Save prices</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="panel-support" data-panel="support" class="panel-section" hidden>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div>
+                    <h2 class="text-lg font-semibold text-white">Support desk</h2>
+                    <p class="text-sm text-slate-400" id="supportStatus">Live chat and tickets, in the helpdesk console. Sign in to it once; it remembers you.</p>
+                </div>
+                <a id="supportConsole" href="#" target="_blank" rel="noopener" class="btn-secondary btn-base"><i data-lucide="external-link" class="w-4 h-4"></i> Open in a new tab</a>
+            </div>
+            <!-- Loaded only when this tab is opened by a signed-in admin. -->
+            <div id="supportFrameBox" class="bg-surface-card border border-surface-border rounded-xl overflow-hidden" style="height: calc(100vh - 230px); min-height: 520px;"></div>
+            <p class="text-xs text-slate-500 mt-3">Blank? The helpdesk must allow this page to show it: in its settings, add <code>https://app.getdomainvault.com</code> to the sites allowed to embed it. Until then, use "Open in a new tab".</p>
         </section>
 
         <section id="panel-audit" data-panel="audit" class="panel-section" hidden>
@@ -578,8 +679,8 @@
 
 
 
-    <script src="../config.js?v=20261009"></script>
-    <script src="../api.js?v=20261009"></script>
-    <script src="admin.js?v=20261009"></script>
+    <script src="../config.js?v=20261012"></script>
+    <script src="../api.js?v=20261012"></script>
+    <script src="admin.js?v=20261012"></script>
 </body>
 </html>

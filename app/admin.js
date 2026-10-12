@@ -129,7 +129,6 @@
     selectTab("overview");
     renderOverview(overview);
     loadPending();
-    loadSupportWidget();
   }
 
   $("loginForm").addEventListener("submit", async (e) => {
@@ -156,7 +155,9 @@
   $("signOutBtn").addEventListener("click", () => {
     API.signOut();
     state.admin = null;
-    showLogin();
+    // A fresh page: nothing from the signed-in session (the support console
+    // included) may stay on screen.
+    location.reload();
   });
 
   /* ---------------------------------------------------------------- tabs */
@@ -167,6 +168,7 @@
     sales: () => loadSales(),
     prices: () => loadPrices(),
     tools: () => loadCatalog(),
+    search: () => loadRegistrars(),
     support: () => loadSupport(),
     audit: () => loadAudit(),
   };
@@ -364,6 +366,17 @@
         case "edit-tool":
           editCatalogItem(id);
           break;
+        case "edit-registrar":
+          editRegistrar(id);
+          break;
+        case "delete-registrar": {
+          const r = (state.registrars || []).find((x) => x.id === id);
+          if (r && confirm(`Delete ${r.name} and all its prices? Searches will no longer show it.`)) {
+            const res = await call("adminDeleteRegistrar", { id });
+            if (res) { renderRegistrars(res); resetRegistrarForm(); toast(`${r.name} deleted.`); loadTldPrices(); }
+          }
+          break;
+        }
         case "delete-tool": {
           const item = state.catalog.find((i) => i.id === id);
           if (item && confirm(`Delete "${item.name}"? Users will no longer see it.`)) {
@@ -653,45 +666,152 @@
     }
   });
 
+  /* ------------------------------------------------------- domain search */
+
+  async function loadRegistrars() {
+    const res = await call("adminListRegistrars");
+    if (res) renderRegistrars(res);
+    loadTldPrices();
+  }
+
+  function renderRegistrars(res) {
+    state.registrars = res.registrars || [];
+    $("priceTldList").innerHTML = (res.tlds || []).map((t) => `<option value="${h(t)}">`).join("");
+    $("registrarRows").innerHTML = state.registrars.length ? state.registrars.map((r) => {
+      // Placeholder affiliate ids (YOUR_…) would send buyers to a dead link.
+      const unfinished = /YOUR_|\{affid\}|xxx/i.test(r.urlTemplate);
+      return `<tr>
+        <td><div class="font-medium text-white">${h(r.name)}</div><div class="text-xs text-slate-400">${h(r.website)}</div></td>
+        <td class="text-xs"><div class="max-w-[300px] break-all ${unfinished ? "text-red-400" : "text-slate-300"}">${h(r.urlTemplate)}</div>
+          ${unfinished ? '<div class="text-red-400 mt-1">Placeholder id: replace it with your real affiliate id.</div>' : ""}
+          ${r.urlTemplate.includes("{domain}") ? "" : '<div class="text-amber-400 mt-1">No {domain}: buyers land on the homepage.</div>'}</td>
+        <td class="text-xs whitespace-nowrap">${h(r.priceCount)} extensions</td>
+        <td class="text-xs">${h(r.sort)}</td>
+        <td>${r.active ? '<span class="badge badge-success">Shown</span>' : '<span class="badge badge-info">Hidden</span>'}</td>
+        <td><div class="flex gap-2">
+          <button class="${SMALL_BTN} btn-secondary" data-act="edit-registrar" data-id="${h(r.id)}">Edit</button>
+          <button class="${BAD_BTN}" data-act="delete-registrar" data-id="${h(r.id)}">Delete</button>
+        </div></td>
+      </tr>`;
+    }).join("") : emptyRow(6, "No registrars yet. Add one with the form.");
+    icons();
+  }
+
+  function resetRegistrarForm() {
+    $("registrarForm").reset();
+    $("registrarId").value = "";
+    $("registrarActive").checked = true;
+    $("registrarFormTitle").textContent = "Add a registrar";
+  }
+
+  function editRegistrar(id) {
+    const r = (state.registrars || []).find((x) => x.id === id);
+    if (!r) return;
+    $("registrarId").value = r.id;
+    $("registrarName").value = r.name;
+    $("registrarWebsite").value = r.website;
+    $("registrarUrl").value = r.urlTemplate;
+    $("registrarWhois").value = r.whois || "";
+    $("registrarSsl").value = r.ssl || "";
+    $("registrarNotes").value = r.notes || "";
+    $("registrarSort").value = r.sort;
+    $("registrarActive").checked = r.active;
+    $("registrarFormTitle").textContent = `Edit ${r.name}`;
+    $("registrarForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  $("registrarReset").addEventListener("click", resetRegistrarForm);
+  $("registrarForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const registrar = {
+      id: $("registrarId").value || undefined,
+      name: $("registrarName").value,
+      website: $("registrarWebsite").value,
+      urlTemplate: $("registrarUrl").value.trim(),
+      whois: $("registrarWhois").value,
+      ssl: $("registrarSsl").value,
+      notes: $("registrarNotes").value,
+      sort: $("registrarSort").value,
+      active: $("registrarActive").checked,
+    };
+    $("registrarSave").disabled = true;
+    try {
+      const res = await call("adminSaveRegistrar", { registrar });
+      if (res) {
+        renderRegistrars(res);
+        toast(registrar.id ? `${registrar.name} updated.` : `${registrar.name} added.`);
+        resetRegistrarForm();
+        loadTldPrices();
+      }
+    } finally {
+      $("registrarSave").disabled = false;
+    }
+  });
+
+  async function loadTldPrices() {
+    const tld = $("priceTld").value.trim().toLowerCase().replace(/^\./, "") || "com";
+    const res = await call("adminGetTldPrices", { tld });
+    if (res) renderTldPrices(res);
+  }
+
+  function renderTldPrices(res) {
+    state.tldPrices = res;
+    $("priceTld").value = res.tld;
+    const val = (n) => (n === null || n === undefined ? "" : Number(n).toFixed(2));
+    $("tldPriceRows").innerHTML = res.rows.length ? res.rows.map((r) => `<tr data-registrar="${h(r.registrarId)}">
+        <td><span class="${r.active ? "text-white" : "text-slate-500"}">${h(r.name)}</span>${r.active ? "" : ' <span class="text-xs text-slate-500">(hidden)</span>'}</td>
+        <td><input class="input-base !h-8 !w-28 text-xs" type="number" min="0" step="0.01" data-field="register" value="${val(r.register)}" aria-label="${h(r.name)} first year"></td>
+        <td><input class="input-base !h-8 !w-28 text-xs" type="number" min="0" step="0.01" data-field="renew" value="${val(r.renew)}" aria-label="${h(r.name)} renewal"></td>
+        <td class="text-xs font-mono text-slate-300">${r.register === null ? "—" : money(r.register + r.renew * 4, "USD")}</td>
+        <td class="text-xs text-slate-400">${r.source === "porkbun" ? `Porkbun, daily · ${h(day(r.updatedAt))}` : r.source ? `Entered · ${h(day(r.updatedAt))}` : "—"}</td>
+      </tr>`).join("") : emptyRow(5, "Add a registrar first.");
+  }
+
+  $("priceTldLoad").addEventListener("click", loadTldPrices);
+  $("priceTld").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); loadTldPrices(); } });
+  $("tldPricesSave").addEventListener("click", async () => {
+    const rows = [...$("tldPriceRows").querySelectorAll("tr[data-registrar]")].map((tr) => ({
+      registrarId: tr.dataset.registrar,
+      register: tr.querySelector('[data-field="register"]').value,
+      renew: tr.querySelector('[data-field="renew"]').value,
+    }));
+    $("tldPricesSave").disabled = true;
+    try {
+      const res = await call("adminSaveTldPrices", { tld: state.tldPrices ? state.tldPrices.tld : $("priceTld").value, rows });
+      if (res) { renderTldPrices(res); toast(`.${res.tld} prices saved.`); }
+    } finally {
+      $("tldPricesSave").disabled = false;
+    }
+  });
+  $("pricesRefresh").addEventListener("click", async () => {
+    $("pricesRefresh").disabled = true;
+    try {
+      const res = await call("adminRefreshDomainPrices");
+      if (res) { toast(`Porkbun prices updated for ${res.updated} extensions.`); loadRegistrars(); }
+    } finally {
+      $("pricesRefresh").disabled = false;
+    }
+  });
+
   /* ------------------------------------------------------------- support */
 
-  // The helpdesk's operator widget. Its key comes from the server, after the
-  // admin check, so it never sits in this public page.
-  let supportLoaded = false;
+  // The helpdesk console, embedded. It has its own login, so nothing secret
+  // passes through this page, and it is created only when a signed-in admin
+  // opens the tab: it never shows on the login screen.
+  const SUPPORT_URL = (window.DOMAIN_VAULT_CONFIG && window.DOMAIN_VAULT_CONFIG.supportConsoleUrl) ||
+    "https://helpdesk.getdomainvault.com/app";
+  $("supportConsole").href = SUPPORT_URL;
 
-  async function loadSupportWidget() {
-    if (supportLoaded) return true;
-    const res = await API.call("adminSupportWidget", {}).catch(() => null);
-    if (!res || !res.success || !res.configured || !/^[0-9a-f-]{36}$/i.test(res.widgetID || "")) return false;
-    window.anw = {
-      mainButton: true,
-      widgetID: res.widgetID,
-      apiKey: res.apiKey,
-      showNewMessagePopup: true,
-      moduleConfigUrl: res.moduleConfigUrl,
-    };
-    const js = document.createElement("script");
-    js.id = "contactus-jssdk";
-    js.src = `https://api.helpdesk.icu/widget/${res.widgetID}/admin-livechat-js?r=${encodeURIComponent(location.href)}`;
-    document.head.appendChild(js);
-    supportLoaded = true;
-    return true;
+  function loadSupport() {
+    const box = $("supportFrameBox");
+    if (!state.admin || box.querySelector("iframe")) return;
+    const frame = document.createElement("iframe");
+    frame.src = SUPPORT_URL;
+    frame.title = "Support desk";
+    frame.className = "w-full h-full block bg-white";
+    frame.setAttribute("allow", "clipboard-write; microphone; notifications");
+    box.appendChild(frame);
   }
-
-  async function loadSupport() {
-    const ready = await loadSupportWidget();
-    $("supportStatus").textContent = ready
-      ? "Connected. New messages pop up here; the chat button sits at the bottom right of every tab."
-      : "Not connected yet: the chat's widget ID and operator key need to be added to the backend settings (HELPDESK_WIDGET_ID, HELPDESK_ADMIN_API_KEY).";
-    $("supportOpen").disabled = !ready;
-  }
-
-  $("supportOpen").addEventListener("click", () => {
-    // The widget exposes no documented "open" call; clicking its button is the reliable way.
-    const button = document.querySelector('[id*="contactus"] button, [class*="contactus"] button, [id*="anw"] button');
-    if (button) button.click();
-    else toast("Use the chat button at the bottom right.");
-  });
 
   /* ---------------------------------------------------------------- boot */
 

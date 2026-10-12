@@ -113,7 +113,7 @@
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Secure Domain Manager",
                 dashboard: "Dashboard", allDomains: "All Domains", domainProviders: "Domain Providers", toolsResources: "Tools & Resources",
                 calendar: "Calendar", notifications: "Notifications", settings: "Settings", downloads: "Downloads", searchPlaceholder: "Search domains...",
-                team: "Team", vaultLabel: "Vault", inviteIntro: "You've been invited to a team vault. Create your account below, or switch to Log In if you already have one.",
+                team: "Team", vaultLabel: "Vault", domainSearch: "Domain Search", domainSearchIntro: "Is a name free, and where is it cheapest to own over 5 years? Already yours? Add it to your vault with its dates filled in.", inviteIntro: "You've been invited to a team vault. Create your account below, or switch to Log In if you already have one.",
                 dashboardOverview: "Dashboard Overview", addNewDomain: "Add New Domain", totalDomains: "Total Domains",
                 annualCost: "Annual Cost", expiringSoon: "Expiring Soon", renewalCostsByMonth: "Renewal Costs by Month",
                 providersDistribution: "Providers Distribution", domainName: "Domain Name", provider: "Provider",
@@ -163,7 +163,7 @@
                 domainManager: "Domain Vault", brandName: "DOMAIN VAULT", brandSlogan: "Gestor Seguro de Dominios",
                 dashboard: "Tablero", allDomains: "Todos los Dominios", domainProviders: "Proveedores", toolsResources: "Herramientas",
                 calendar: "Calendario", notifications: "Notificaciones", settings: "Configuración", downloads: "Descargas", searchPlaceholder: "Buscar dominios...",
-                team: "Equipo", vaultLabel: "Bóveda", inviteIntro: "Te invitaron a la bóveda de un equipo. Crea tu cuenta abajo, o cambia a Iniciar sesión si ya tienes una.",
+                team: "Equipo", vaultLabel: "Bóveda", domainSearch: "Buscar dominios", domainSearchIntro: "¿Está libre un nombre y dónde sale más barato tenerlo 5 años? ¿Ya es tuyo? Añádelo a tu bóveda con sus fechas.", inviteIntro: "Te invitaron a la bóveda de un equipo. Crea tu cuenta abajo, o cambia a Iniciar sesión si ya tienes una.",
                 dashboardOverview: "Resumen del Tablero", addNewDomain: "Añadir Dominio", totalDomains: "Dominios Totales",
                 annualCost: "Costo Anual", expiringSoon: "Próximos a Vencer", renewalCostsByMonth: "Costos de Renovación por Mes",
                 providersDistribution: "Distribución de Proveedores", domainName: "Nombre de Dominio", provider: "Proveedor",
@@ -1191,6 +1191,7 @@
             if(pageId === 'reports') renderReportsPage();
             if(pageId === 'downloads') renderDownloads();
             if(pageId === 'team') loadTeam();
+            if(pageId === 'search') openSearchTool();
             lucide.createIcons();
             document.getElementById('mobileNav').classList.remove('open');
             document.getElementById('navOverlay').classList.remove('open');
@@ -1355,6 +1356,45 @@
             });
         }
 
+        // Logos: known companies by name, otherwise the site's own icon. Login
+        // pages and affiliate links often sit on other hosts (sjv.io, …),
+        // whose icon would be a blank globe.
+        const KNOWN_PROVIDERS = {
+            namecheap: 'namecheap.com', porkbun: 'porkbun.com', godaddy: 'godaddy.com', cloudflare: 'cloudflare.com',
+            ionos: 'ionos.com', '1&1': 'ionos.com', hostinger: 'hostinger.com', bluehost: 'bluehost.com',
+            spaceship: 'spaceship.com', namesilo: 'namesilo.com', dynadot: 'dynadot.com', squarespace: 'squarespace.com',
+            'google domains': 'squarespace.com', hover: 'hover.com', gandi: 'gandi.net', 'name.com': 'name.com',
+            'network solutions': 'networksolutions.com', networksolutions: 'networksolutions.com', siteground: 'siteground.com',
+            dreamhost: 'dreamhost.com', hostgator: 'hostgator.com', 'a2 hosting': 'a2hosting.com', inmotion: 'inmotionhosting.com',
+            wix: 'wix.com', ovh: 'ovhcloud.com', ovhcloud: 'ovhcloud.com', 'domain.com': 'domain.com', enom: 'enom.com',
+            '123-reg': '123-reg.co.uk', 'one.com': 'one.com', strato: 'strato.com', epik: 'epik.com', sav: 'sav.com',
+            digitalocean: 'digitalocean.com', vercel: 'vercel.com', netlify: 'netlify.com', 'amazon route 53': 'aws.amazon.com',
+            'route 53': 'aws.amazon.com', aws: 'aws.amazon.com', 'web.com': 'web.com', ipage: 'ipage.com', greengeeks: 'greengeeks.com',
+            'cosmotown': 'cosmotown.com', 'internet.bs': 'internet.bs', 'regery': 'regery.com', 'dondominio': 'dondominio.com'
+        };
+        const TRACKING_HOSTS = /(^|\.)(sjv\.io|pxf\.io|tkqlhce\.com|anrdoezrs\.net|dpbolvw\.net|jdoqocy\.com|kqzyfj\.com|shareasale\.com|awin1\.com|partnerstack\.com|impact\.com|bit\.ly|tinyurl\.com|linksynergy\.com|go2cloud\.org|prf\.hn|t\.co|lnkd\.in)$/i;
+
+        function providerLogoDomain(p) {
+            const name = (p.name || '').toLowerCase();
+            const known = Object.keys(KNOWN_PROVIDERS).sort((a, b) => b.length - a.length)
+                .find(k => new RegExp(`(^|[^a-z0-9])${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`).test(name));
+            if (known) return KNOWN_PROVIDERS[known];
+            try {
+                const host = new URL(/^https?:\/\//i.test(p.url || '') ? p.url : 'https://' + p.url).hostname.replace(/^(www|login|account|my|dashboard|panel|admin|manage)\./, '');
+                if (host.includes('.') && !TRACKING_HOSTS.test(host)) return host;
+            } catch (e) { /* no usable address */ }
+            return null;
+        }
+
+        function providerLogo(p) {
+            const initials = escapeHTML((p.name || '?').replace(/[^A-Za-z0-9]/g, '').substring(0, 2).toUpperCase() || '?');
+            const domain = providerLogoDomain(p);
+            const fallback = `<span class="provider-logo provider-logo-initials">${initials}</span>`;
+            if (!domain) return fallback;
+            return `<img src="https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}" alt="" class="provider-logo"
+                        onerror="this.outerHTML='<span class=&quot;provider-logo provider-logo-initials&quot;>${initials}</span>'">`;
+        }
+
         /** Edit and delete buttons for a provider, as far as this vault allows. */
         function providerActions(p) {
             return (can('editProviders') ? `<span class="action-btn" data-id="${p.id}" title="Edit Provider"><i data-lucide="pencil"></i></span>` : '') +
@@ -1389,7 +1429,7 @@
                         <div class="provider-card">
                             <div class="provider-header">
                                 <div class="provider-info">
-                                    <img src="https://www.google.com/s2/favicons?sz=64&domain_url=${escapeHTML(p.url)}" onerror="this.onerror=null;this.src='https://placehold.co/64x64/333/999?text=${escapeHTML(p.name).substring(0,2)}';" class="provider-logo">
+                                    ${providerLogo(p)}
                                     <h3 class="provider-name">${escapeHTML(p.name)}</h3>
                                 </div>
                                 <div class="actions">
@@ -1623,6 +1663,41 @@
         // WHOIS and DNS go through our lookup function, which validates the
         // name, caches answers and rate limits per user, instead of every
         // browser calling the upstream services directly.
+        /** Ask the registry (RDAP, through our domain-search function) about a name. */
+        async function registryLookup(domain) {
+            const cfg = window.DOMAIN_VAULT_CONFIG || {};
+            const res = await fetch(`${cfg.functionsUrl}/domain-search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', apikey: cfg.anonKey || '' },
+                body: JSON.stringify({ action: 'search', domain })
+            });
+            return res.json();
+        }
+
+        /** Fill the domain form from registration data: dates, and the registrar as provider. */
+        function applyRegistration(reg) {
+            if (reg.created) document.getElementById('purchaseDate').value = reg.created;
+            if (reg.expires) document.getElementById('renewalDate').value = reg.expires;
+            if (!reg.registrar) return;
+            const sel = document.getElementById('domainProvider');
+            const rName = String(reg.registrar).toLowerCase();
+            const firstWord = (rName.match(/[a-z0-9]{4,}/) || [''])[0];
+            const match = Array.from(sel.options).find(o => {
+                const v = (o.value || '').toLowerCase();
+                return v && v !== 'other' && (rName.includes(v) || (firstWord && v.includes(firstWord)));
+            });
+            if (match) {
+                sel.value = match.value;
+                document.getElementById('otherProviderGroup').style.display = 'none';
+            } else {
+                sel.value = 'other';
+                document.getElementById('otherProviderGroup').style.display = 'block';
+                document.getElementById('otherProvider').value = reg.registrar;
+            }
+        }
+
+        // Registration dates: the registry's own answer (RDAP) first; WHOIS for
+        // extensions whose registry has no RDAP (.io, .co, many country codes).
         async function fetchWhoisData() {
             const domain = normalizeDomain(document.getElementById('domainName').value);
             const status = document.getElementById('whoisStatus');
@@ -1631,27 +1706,30 @@
 
             status.style.display = 'block'; status.style.color = 'var(--text-muted)';
             status.textContent = translations[lang].fetching;
+            document.getElementById('domainName').value = domain;
 
             try {
+                const rdap = await registryLookup(domain).catch(() => null);
+                const reg = rdap && rdap.registration;
+                if (reg && (reg.expires || reg.created)) {
+                    applyRegistration(reg);
+                    status.style.color = 'var(--success)'; status.textContent = translations[lang].whoisSuccess;
+                    return;
+                }
+                if (rdap && (rdap.status === 'available' || rdap.status === 'likely_available')) {
+                    status.style.color = 'var(--warning)';
+                    status.textContent = 'This domain is not registered yet. Enter the dates once you have bought it.';
+                    return;
+                }
+
                 const res = await window.DomainVaultAPI.lookup(domain, 'whois');
                 const data = res && res.success ? res.data : null;
                 if (data && data.status === 'OK' && data.whois && Object.keys(data.whois).length > 0) {
-                    document.getElementById('domainName').value = domain;
-                    const created = isoDay(data.whois.creation_date);
-                    const expires = isoDay(data.whois.expiry_date);
-                    if (created) document.getElementById('purchaseDate').value = created;
-                    if (expires) document.getElementById('renewalDate').value = expires;
-                    if (data.whois.registrar) {
-                        const sel = document.getElementById('domainProvider');
-                        const rName = String(data.whois.registrar).toLowerCase();
-                        let match = Array.from(sel.options).find(o => o.value && o.value !== 'other' && rName.includes(o.value.toLowerCase()));
-                        if(match) sel.value = match.value;
-                        else {
-                            sel.value = 'other';
-                            document.getElementById('otherProviderGroup').style.display = 'block';
-                            document.getElementById('otherProvider').value = data.whois.registrar;
-                        }
-                    }
+                    applyRegistration({
+                        created: isoDay(data.whois.creation_date),
+                        expires: isoDay(data.whois.expiry_date),
+                        registrar: data.whois.registrar || null
+                    });
                     status.style.color = 'var(--success)'; status.textContent = translations[lang].whoisSuccess;
                 } else {
                     status.style.color = 'var(--danger)';
@@ -2124,6 +2202,34 @@
                 showToast(res.message || 'Your plan is active.', 'success');
             }
         }
+
+        // --- DOMAIN SEARCH (the website's tool, in a frame) ---
+
+        function openSearchTool() {
+            const box = document.getElementById('searchFrameBox');
+            if (box.querySelector('iframe')) return;
+            const frame = document.createElement('iframe');
+            frame.id = 'searchFrame';
+            frame.title = 'Domain search';
+            frame.src = (window.DOMAIN_VAULT_CONFIG || {}).searchToolUrl || '../tools/domain-lookup-app.html';
+            box.appendChild(frame);
+        }
+
+        // "Add to my vault" in the tool: a domain the user already owns, with
+        // the registry's dates. Only messages from our own frame count.
+        window.addEventListener('message', (e) => {
+            const frame = document.getElementById('searchFrame');
+            const m = e.data;
+            if (!frame || e.source !== frame.contentWindow || !m || m.type !== 'dv:track-domain' || !currentUser) return;
+            if (typeof m.domain !== 'string' || !/^[a-z0-9.-]{3,253}$/.test(m.domain)) return;
+            if (!can('editDomains')) return showToast("You cannot add domains to this vault.", "warning");
+            if (domains.some(d => d.name.toLowerCase() === m.domain)) return showToast(`${m.domain} is already in this vault.`, "warning");
+            document.getElementById('addDomainBtn').click();   // plan limit check included
+            if (document.getElementById('domainModal').style.display !== 'flex') return;
+            document.getElementById('domainName').value = m.domain;
+            const day = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+            applyRegistration({ created: day(m.created), expires: day(m.expires), registrar: typeof m.registrar === 'string' ? m.registrar.slice(0, 120) : null });
+        });
 
         // --- TEAM VAULTS ---
         // A vault is one account's domains and providers. Its owner can invite
