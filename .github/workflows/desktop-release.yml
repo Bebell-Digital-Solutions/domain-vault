@@ -18,7 +18,10 @@
 #   Windows — add:
 #     WINDOWS_CERT_PFX (base64 of the .pfx), WINDOWS_CERT_PASSWORD
 #
-# Without them the build still succeeds; it just ships unsigned.
+# Without them the build still succeeds. Windows ships unsigned; the macOS
+# app gets an ad-hoc signature (desktop/build/adhoc-sign.js), so Macs show
+# the "unidentified developer" prompt (Privacy & Security → Open Anyway)
+# instead of calling the app damaged.
 # ============================================================================
 name: Desktop release
 

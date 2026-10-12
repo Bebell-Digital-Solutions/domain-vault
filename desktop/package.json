@@ -1,7 +1,7 @@
 {
   "name": "domain-vault-desktop",
   "productName": "Domain Vault",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Domain Vault desktop client",
   "author": "Bebell Digital Solutions <hello@bebelldigitalsolutions.com>",
@@ -26,7 +26,7 @@
   "build": {
     "appId": "digital.elnegocio.domainvault",
     "productName": "Domain Vault",
-    "copyright": "Copyright \u00a9 Bebell Digital Solutions",
+    "copyright": "Copyright © Bebell Digital Solutions",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -36,7 +36,8 @@
       "preload.js",
       "lib.js",
       "build/icon.png",
-      "build/tray.png"
+      "build/tray.png",
+      "build/tray@2x.png"
     ],
     "publish": null,
     "mac": {
@@ -91,6 +92,7 @@
     "deb": {
       "afterInstall": "build/linux/after-install.sh",
       "afterRemove": "build/linux/after-remove.sh"
-    }
+    },
+    "afterPack": "build/adhoc-sign.js"
   }
 }
