@@ -481,23 +481,180 @@ export async function adminDeleteCatalogItem(admin: Caller, p: any) {
 }
 
 // ---------------------------------------------------------------------------
-// Live-chat operator widget
-//
-// The helpdesk's operator widget needs an API key that must not appear in a
-// public file (admin.html is downloadable by anyone, logged in or not). It
-// lives in the function environment and is handed out only to admins.
+// Domain search: registrars (with their affiliate links) and prices
 // ---------------------------------------------------------------------------
 
-export function adminSupportWidget() {
-  const widgetID = Deno.env.get("HELPDESK_WIDGET_ID") ?? "";
-  const apiKey = Deno.env.get("HELPDESK_ADMIN_API_KEY") ?? "";
-  if (!widgetID || !apiKey) return { success: true, configured: false };
+const TLD_RE = /^[a-z0-9-]{2,63}(\.[a-z0-9-]{2,63})?$/;
+// Extensions offered in the price editor even before they have prices.
+const COMMON_TLDS = ["com", "net", "org", "io", "co", "ai", "app", "dev", "xyz", "online", "tech", "store", "site", "me", "us", "uk", "co.uk", "de", "es", "ca"];
+
+function clientRegistrar(r: Record<string, unknown>) {
+  return {
+    id: r.id,
+    name: r.name,
+    website: r.website,
+    urlTemplate: r.url_template,
+    whois: r.whois,
+    ssl: r.ssl,
+    notes: r.notes,
+    active: r.active,
+    sort: r.sort,
+  };
+}
+
+export async function adminListRegistrars() {
+  const db = serviceClient();
+  const [{ data: regs, error }, { data: prices }] = await Promise.all([
+    db.from("registrars").select("*").order("sort").order("name"),
+    db.from("registrar_prices").select("tld, registrar_id, source"),
+  ]);
+  if (error) throw new HttpError(500, error.message);
+  const counts = new Map<string, number>();
+  const manualTlds = new Set<string>();
+  for (const p of prices ?? []) {
+    counts.set(p.registrar_id, (counts.get(p.registrar_id) ?? 0) + 1);
+    if (p.source === "manual") manualTlds.add(p.tld);
+  }
   return {
     success: true,
-    configured: true,
-    widgetID,
-    apiKey,
-    moduleConfigUrl: Deno.env.get("HELPDESK_MODULE_URL") ?? "https://app.helpdesk.icu/app",
-    consoleUrl: "https://app.helpdesk.icu/app",
+    registrars: (regs ?? []).map((r) => ({ ...clientRegistrar(r), priceCount: counts.get(r.id) ?? 0 })),
+    // Extensions with prices entered by hand first, then common ones.
+    tlds: [...new Set([...[...manualTlds].sort(), ...COMMON_TLDS])],
   };
+}
+
+// deno-lint-ignore no-explicit-any
+export async function adminSaveRegistrar(admin: Caller, p: any) {
+  const r = p?.registrar ?? {};
+  const name = str(r.name, 60);
+  if (!name) throw new BadRequest("Name is required.");
+  const website = (str(r.website, 100) ?? "").toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  if (!/^[a-z0-9.-]{3,100}$/.test(website) || !website.includes(".")) throw new BadRequest("Website must be a domain, e.g. porkbun.com.");
+  const urlTemplate = str(r.urlTemplate, 600);
+  if (!urlTemplate || !/^https:\/\/[^\s"<>]+$/.test(urlTemplate)) {
+    throw new BadRequest("The buy link must start with https://. Put {domain} where the searched name goes.");
+  }
+  const sort = r.sort === undefined || r.sort === "" ? 100 : Math.round(Number(r.sort));
+  if (!Number.isFinite(sort)) throw new BadRequest("Order must be a number.");
+  const row = {
+    name,
+    website,
+    url_template: urlTemplate,
+    whois: str(r.whois, 60) ?? "",
+    ssl: str(r.ssl, 60) ?? "",
+    notes: str(r.notes, 200) ?? "",
+    active: r.active !== false,
+    sort,
+  };
+
+  const db = serviceClient();
+  const id = typeof r.id === "string" && r.id ? r.id : name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+  if (!/^[a-z0-9-]{2,40}$/.test(id)) throw new BadRequest("Name must contain letters or digits.");
+  const { data: before } = await db.from("registrars").select("*").eq("id", id).maybeSingle();
+  if (!r.id && before) throw new HttpError(409, `A registrar called ${before.name} already exists.`);
+  if (r.id && !before) throw new HttpError(404, "Registrar not found.");
+
+  const { data: saved, error } = before
+    ? await db.from("registrars").update(row).eq("id", id).select().single()
+    : await db.from("registrars").insert({ id, ...row }).select().single();
+  if (error) throw new HttpError(400, error.message);
+  await audit(admin, before ? "update_registrar" : "add_registrar", null, { before, after: saved });
+  return adminListRegistrars();
+}
+
+// deno-lint-ignore no-explicit-any
+export async function adminDeleteRegistrar(admin: Caller, p: any) {
+  if (typeof p?.id !== "string" || !/^[a-z0-9-]{2,40}$/.test(p.id)) throw new BadRequest("id is required");
+  const db = serviceClient();
+  const { data: before } = await db.from("registrars").select("*").eq("id", p.id).maybeSingle();
+  if (!before) throw new HttpError(404, "Registrar not found.");
+  const { error } = await db.from("registrars").delete().eq("id", p.id);
+  if (error) throw new HttpError(500, error.message);
+  await audit(admin, "delete_registrar", null, { before });
+  return adminListRegistrars();
+}
+
+// deno-lint-ignore no-explicit-any
+export async function adminGetTldPrices(p: any) {
+  const tld = String(p?.tld ?? "").trim().toLowerCase().replace(/^\./, "");
+  if (!TLD_RE.test(tld)) throw new BadRequest("Enter an extension like com or co.uk.");
+  const db = serviceClient();
+  const [{ data: regs }, { data: prices }] = await Promise.all([
+    db.from("registrars").select("id, name, active").order("sort").order("name"),
+    db.from("registrar_prices").select("*").eq("tld", tld),
+  ]);
+  const byReg = new Map((prices ?? []).map((r) => [r.registrar_id, r]));
+  return {
+    success: true,
+    tld,
+    rows: (regs ?? []).map((r) => {
+      const price = byReg.get(r.id);
+      return {
+        registrarId: r.id,
+        name: r.name,
+        active: r.active,
+        register: price ? Number(price.register) : null,
+        renew: price ? Number(price.renew) : null,
+        source: price?.source ?? null,
+        updatedAt: price?.updated_at ?? null,
+      };
+    }),
+  };
+}
+
+/** Prices for one extension. A row with both prices blank is removed. */
+// deno-lint-ignore no-explicit-any
+export async function adminSaveTldPrices(admin: Caller, p: any) {
+  const tld = String(p?.tld ?? "").trim().toLowerCase().replace(/^\./, "");
+  if (!TLD_RE.test(tld)) throw new BadRequest("Enter an extension like com or co.uk.");
+  if (!Array.isArray(p?.rows) || p.rows.length > 100) throw new BadRequest("rows must be a list");
+
+  const amount = (v: unknown, label: string) => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0 || n >= 100000) throw new BadRequest(`${label} must be a price in USD.`);
+    return Math.round(n * 100) / 100;
+  };
+  const db = serviceClient();
+  const { data: before } = await db.from("registrar_prices").select("*").eq("tld", tld);
+  const upserts: Record<string, unknown>[] = [];
+  const removals: string[] = [];
+  for (const row of p.rows) {
+    if (typeof row?.registrarId !== "string" || !/^[a-z0-9-]{2,40}$/.test(row.registrarId)) continue;
+    const register = amount(row.register, `.${tld} first-year price`);
+    const renew = amount(row.renew, `.${tld} renewal price`);
+    if (register === null && renew === null) {
+      removals.push(row.registrarId);
+    } else {
+      if (register === null || renew === null) throw new BadRequest("Enter both the first-year and the renewal price, or neither.");
+      const old = (before ?? []).find((b) => b.registrar_id === row.registrarId);
+      if (old && Number(old.register) === register && Number(old.renew) === renew) continue;   // unchanged
+      upserts.push({ tld, registrar_id: row.registrarId, register, renew, source: "manual" });
+    }
+  }
+  if (upserts.length) {
+    const { error } = await db.from("registrar_prices").upsert(upserts, { onConflict: "tld,registrar_id" });
+    if (error) throw new HttpError(400, error.message);
+  }
+  if (removals.length) await db.from("registrar_prices").delete().eq("tld", tld).in("registrar_id", removals);
+  if (upserts.length || removals.length) {
+    await audit(admin, "set_domain_prices", null, { tld, before, changed: upserts, removed: removals });
+  }
+  return adminGetTldPrices({ tld });
+}
+
+/** Reload Porkbun's prices now (the domain-search function does the work). */
+export async function adminRefreshDomainPrices(admin: Caller) {
+  const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/domain-search`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    },
+    body: JSON.stringify({ action: "refreshPrices" }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.success) throw new HttpError(502, body.message || "The price refresh failed.");
+  await audit(admin, "refresh_domain_prices", null, { updated: body.updated });
+  return { success: true, updated: body.updated };
 }

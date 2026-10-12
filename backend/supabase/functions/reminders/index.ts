@@ -144,6 +144,15 @@ async function copyToTeam(admin: ReturnType<typeof serviceClient>, owner: Due, r
   return sent;
 }
 
+/** For the status page: when the sweep last ran, and whether it worked. */
+async function heartbeat(admin: ReturnType<typeof serviceClient>, ok: boolean, summary: Record<string, number>) {
+  await admin.from("lookup_cache").upsert({
+    key: "heartbeat:reminders",
+    payload: { at: new Date().toISOString(), ok, ...summary },
+    expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+  }, { onConflict: "key" });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response("POST only", { status: 405 });
   if (!authorized(req)) return new Response("forbidden", { status: 403 });
@@ -155,6 +164,7 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await admin.rpc("due_reminders", { p_channel: channel });
     if (error) {
       console.error(`due_reminders(${channel}) failed`, error.message);
+      await heartbeat(admin, false, summary);
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
@@ -216,6 +226,7 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  await heartbeat(admin, true, summary);
   return new Response(JSON.stringify(summary), {
     headers: { "Content-Type": "application/json" },
   });

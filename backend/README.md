@@ -24,8 +24,10 @@ has to provide and the deployment steps in order.
 | Payments | PayPal IPN, verified with PayPal, checked against our receiver account and **against the price list for that kind of payment** (yearly or lifetime; amount and currency), deduplicated, and recorded, including the ones refused. Subscription signups, cancellations, failed renewals and ends of term are tracked. |
 | Owner settings | From the admin panel: what accounts without a paid plan get (Personal for free, or Free with no domains), and whether new sign-ups wait for approval. |
 | Pay first, sign up after | A payment nobody's account matches (e.g. from the lifetime-deal page) emails the payer a one-time **activation link**; signing up or logging in through it attaches the purchase. |
+| Domain search | `/tools/domain-lookup` (EN), `/es/recursos/buscador-de-dominio` (ES) and the app's Domain Search page. Availability from the registry itself (RDAP via IANA's bootstrap; a DNS check where a registry has no RDAP), prices per registrar and extension from `registrar_prices`: Porkbun's refreshed daily from its public price list, the rest entered in Admin → Domain search, where each registrar's buy link (affiliate link, `{domain}` filled in) is set. Sorted by 5-year cost (first year + 4 renewals). |
+| Status page | `/status` and `/es/estado`. The `status` function probes each part every 5 minutes (pg_cron) and serves 90 days of history. |
 | Tools & recommendations | Managed in Admin → Tools (`catalog_items`); the app's Tools page and "Recommended providers" read them through `getCatalog`. |
-| Live chat | The helpdesk operator widget loads in the admin panel after login; its key comes from the server (`adminSupportWidget`), never from the page source. |
+| Live chat | Admin → Support embeds the helpdesk console (`supportConsoleUrl` in config.js), only for signed-in admins. It has its own login; no helpdesk key passes through our pages. |
 | Admin | `app/admin.html`: activate and suspend users, override plans, set prices, sales report with CSV export, audit log. |
 | Reminders | Daily pg_cron job. Fires on the most urgent milestone a domain has *crossed* (default 30/7/1/0 days), so a domain added late or a missed run still produces exactly one reminder. One digest per user, not one email per domain. Per-user opt-out, channels and lead days. |
 | Lookups | WHOIS / DNS proxied, validated, cached and rate limited. The app calls only this proxy. |
@@ -66,13 +68,17 @@ domain-vault/                    (repo root = the website, served by GitHub Page
     │   │   ├── …1006000200_subscriptions.sql  yearly subscriptions, owner settings
     │   │   ├── …1008000100_purchase_claims.sql activation links (pay first)
     │   │   ├── …1008000200_catalog.sql        tools & recommendations
-    │   │   └── …1009000100_teams.sql          team vaults: members, permissions, seats
+    │   │   ├── …1009000100_teams.sql          team vaults: members, permissions, seats
+    │   │   ├── …1012000100_domain_search.sql  registrars, prices, daily Porkbun refresh
+    │   │   └── …1012000200_status.sql         status checks, 5-minute probe
     │   ├── functions/
     │   │   ├── _shared/         cors, crypto, validation, db/auth, email + WhatsApp
     │   │   ├── api/             user, team + admin actions (index.ts, vault.ts, admin.ts)
     │   │   ├── lookup/          WHOIS + DNS proxy
     │   │   ├── billing-webhook/ PayPal IPN
     │   │   ├── reminders/       daily renewal sweep
+    │   │   ├── domain-search/   availability (RDAP) + price comparison, public
+    │   │   ├── status/          status probe and the status page's data, public
     │   │   └── calendar/        private .ics subscription feed
     │   └── tests/               SQL security tests + test function environment
     └── scripts/
@@ -347,20 +353,22 @@ The full sequence, including what to verify afterwards, is in
 supabase link --project-ref <project-ref>
 supabase db push
 supabase secrets set --env-file .env.production
-supabase functions deploy api lookup billing-webhook reminders calendar
+supabase functions deploy api lookup billing-webhook reminders calendar domain-search status
 ```
 
 `supabase/config.toml` turns gateway JWT verification off for `api`,
-`billing-webhook`, `reminders` and `calendar`. Each authenticates callers
-itself:
+`billing-webhook`, `reminders`, `calendar`, `domain-search` and `status`.
+Each authenticates callers itself:
 
 - `api` authenticates per action; register, login and prices are public
   because the caller has no token yet.
 - `billing-webhook` verifies with PayPal.
 - `reminders` checks the cron secret.
 - `calendar` checks the feed token in the URL (calendar apps send no headers).
+- `domain-search` and `status` are public pages' data, rate limited per IP;
+  their write actions (price refresh, probe) check the cron secret.
 
-With gateway verification on, all four are rejected before our code runs. If
+With gateway verification on, they are rejected before our code runs. If
 your CLI version ignores `config.toml`, add `--no-verify-jwt` when deploying
 those four.
 
@@ -437,8 +445,10 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `adminSales` | admin | `from?`, `to?`, `status?` | Ledger plus totals per currency. |
 | `adminGetPrices` / `adminSetPrice` | admin | `plan`, `amount`, `lifetimeAmount`, `currency` | Returns prices and the owner settings (`config`). `null` takes a price off sale; an omitted field is left alone. Audited. |
 | `adminListCatalog` / `adminSaveCatalogItem` / `adminDeleteCatalogItem` | admin | `item{ id?, kind, name, url, description, icon, rating, tags, sort, active }` / `id` | Tools & recommendations. Audited. |
-| `adminSupportWidget` | admin | — | Helpdesk widget id and operator key from `HELPDESK_WIDGET_ID` / `HELPDESK_ADMIN_API_KEY`. |
 | `adminSetBillingConfig` | admin | `unpaidPlan` (`Free`/`Personal`), `requireApproval` | Owner settings. Changing `unpaidPlan` re-derives every plan. Audited. |
+| `adminListRegistrars` / `adminSaveRegistrar` / `adminDeleteRegistrar` | admin | `registrar{ id?, name, website, urlTemplate, whois, ssl, notes, sort, active }` / `id` | Domain search registrars; the buy link must be https, `{domain}` / `{tld}` are filled in. Audited. |
+| `adminGetTldPrices` / `adminSaveTldPrices` | admin | `tld`, `rows[{ registrarId, register, renew }]` | Prices for one extension; both blank removes the row. Audited. |
+| `adminRefreshDomainPrices` | admin | — | Reload Porkbun's prices now. Audited. |
 | `adminAudit` | admin | `limit?` | Recent admin changes, before and after. |
 
 Other endpoints:
@@ -446,5 +456,11 @@ Other endpoints:
 - `POST /functions/v1/lookup` with `domain`, `kind`, `types[]` (signed-in users)
 - `POST /functions/v1/billing-webhook` (PayPal IPN)
 - `POST /functions/v1/reminders` (`x-cron-secret`)
+- `POST /functions/v1/domain-search` with `{ action: "search", domain }` (public, 30 per 10 min per IP):
+  `status` (`available` / `likely_available` / `registered` / `unknown`), `source` (`rdap` / `dns`),
+  `registration` (registrar, created, expires), `prices[]` (cheapest 5-year cost first, with buy links),
+  `alternatives[]` (the name free under other extensions). `{ action: "refreshPrices" }` needs the cron
+  secret, the service key or an admin.
+- `GET /functions/v1/status` (public): current state and 90 days per part; `POST { action: "probe" }` with the cron secret records a check.
 - `GET /functions/v1/calendar?token=…` (public; `text/calendar`, 404 for unknown
   tokens and suspended accounts)

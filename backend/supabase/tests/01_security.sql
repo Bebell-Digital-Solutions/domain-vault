@@ -769,3 +769,28 @@ begin
     then 'PASS t45 (no self-promotion, invitations private, reminders opt-in)'
     else 'FAIL t45 selfGrantBlocked=' || self_grant || ' invBlocked=' || inv_read || ' recipients=' || n_before || '->' || n_after end;
 end $$;
+
+\echo '--- T46: domain search tables: seeded, consistent, and closed to clients (affiliate links are edited by admins only)'
+do $$
+declare anon_read boolean := false; user_write boolean := false; n_reg int; n_price int; bad_link boolean := false;
+begin
+  select count(*) into n_reg from public.registrars;
+  select count(*) into n_price from public.registrar_prices;
+  begin
+    insert into public.registrars (id, name, website, url_template) values ('evil', 'Evil', 'evil.com', 'javascript:alert(1)');
+  exception when check_violation then bad_link := true;
+  end;
+  execute 'set local role anon';
+  begin perform 1 from public.registrar_prices; exception when insufficient_privilege then anon_read := true; end;
+  execute 'reset role';
+  execute 'set local role authenticated';
+  begin
+    update public.registrars set url_template = 'https://evil.example/{domain}';
+  exception when insufficient_privilege then user_write := true;
+  end;
+  execute 'reset role';
+  raise notice '%', case when anon_read and user_write and bad_link and n_reg = 9 and n_price > 50
+    then 'PASS t46 (seeded, no client access, only https links)'
+    else 'FAIL t46 anonBlocked=' || anon_read || ' userBlocked=' || user_write || ' badLinkRefused=' || bad_link
+         || ' registrars=' || n_reg || ' prices=' || n_price end;
+end $$;

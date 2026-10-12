@@ -302,9 +302,6 @@ ok("admin deletes it", r.success && !r.items.some((i) => i.id === added.id));
 r = await walkInApi.call("adminSaveCatalogItem", { item: { name: "Nope", url: "https://x.example", kind: "tool" } });
 ok("customers cannot manage the catalog", r.success === false && /administrators only/i.test(r.message), r.message);
 
-r = await ADMIN.call("adminSupportWidget", {});
-ok("chat widget config is admin-only and reports when unset", r.success && r.configured === false);
-
 r = await walkInApi.call("claimPurchase", { token: "x".repeat(43) });
 ok("an unknown activation link is refused clearly", r.success === false && /invalid|used|expired/i.test(r.message), r.message);
 
@@ -317,6 +314,41 @@ ok("every admin change is audited", actions.filter((a) => a === "update_user").l
   actions.filter((a) => a === "set_price").length === 4 &&
   actions.filter((a) => a === "set_billing_config").length === 3 &&
   ["add_catalog_item", "update_catalog_item", "delete_catalog_item"].every((a) => actions.includes(a)), actions.join(","));
+
+// ======================================================== domain search
+console.log("--- domain search ---");
+const DS = `${CONFIG.functionsUrl}/domain-search`;
+const ds = (body, headers = {}) => fetch(DS, { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) })
+  .then(async (res) => ({ status: res.status, body: await res.json() }));
+let d = await ds({ action: "search", domain: "not a domain" });
+ok("search refuses what is not a domain name", d.status === 400 && /domain name/i.test(d.body.message), d.body.message);
+d = await ds({ action: "search", domain: "whitehouse.gov" });
+ok("search explains restricted extensions", d.status === 400 && /eligible/i.test(d.body.message), d.body.message);
+d = await ds({ action: "refreshPrices" });
+ok("price refresh needs the cron secret or an admin", d.status === 401 || d.status === 403, String(d.status));
+d = await ds({ action: "search", domain: `smoke-${stamp}-free.com` });
+ok("search: a free .com is available, with prices and buy links",
+  d.body.status === "available" && d.body.source === "rdap" && d.body.prices.length >= 5 &&
+  d.body.prices.every((p, i, a) => i === 0 || a[i - 1].total5 <= p.total5) &&
+  d.body.prices.every((p) => p.url.startsWith("https://") && p.total5 === Math.round((p.register + 4 * p.renew) * 100) / 100),
+  `${d.body.status} ${d.body.prices?.length}`);
+
+r = await ADMIN.call("adminListRegistrars", {});
+ok("admin lists registrars and extensions", r.success && r.registrars.length >= 9 && r.tlds.includes("com"));
+r = await ADMIN.call("adminSaveRegistrar", { registrar: { name: `Smoke Reg ${stamp}`, website: "smoke.example", urlTemplate: "javascript:alert(1)" } });
+ok("a buy link must be https", r.success === false && /https/.test(r.message), r.message);
+r = await ADMIN.call("adminSaveRegistrar", { registrar: { name: `Smoke Reg ${stamp}`, website: "smoke.example", urlTemplate: "https://smoke.example/?d={domain}&aff=1" } });
+const smokeReg = r.registrars?.find((x) => x.name === `Smoke Reg ${stamp}`);
+ok("admin adds a registrar", Boolean(smokeReg));
+r = await ADMIN.call("adminSaveTldPrices", { tld: "com", rows: [{ registrarId: smokeReg?.id, register: 0.5, renew: 1 }] });
+d = await ds({ action: "search", domain: `smoke-${stamp}-again.com` });
+const mine = d.body.prices?.find((p) => p.id === smokeReg?.id);
+ok("its prices and affiliate link show up in searches",
+  mine && mine.total5 === 4.5 && mine.url === `https://smoke.example/?d=smoke-${stamp}-again.com&aff=1` && d.body.prices[0].id === smokeReg.id);
+r = await walkInApi.call("adminSaveTldPrices", { tld: "com", rows: [] });
+ok("customers cannot change prices", r.success === false && /administrators only/i.test(r.message));
+r = await ADMIN.call("adminDeleteRegistrar", { id: smokeReg?.id });
+ok("admin deletes the registrar and its prices", r.success && sql(`select count(*) from registrar_prices where registrar_id = '${smokeReg?.id}'`) === "0");
 
 // ============================================================== cleanup
 sql(`delete from admin_audit_log where admin_email = '${adminEmail}';

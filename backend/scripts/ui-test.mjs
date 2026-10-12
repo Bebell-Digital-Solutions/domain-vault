@@ -47,8 +47,11 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH 
     check our pages, and the widget's own scripts throw into the console. */
 async function newContext(options) {
   const ctx = await browser.newContext(options);
-  await ctx.route(/helpdesk\.icu|chatconnect\.cloud/, (route) =>
+  await ctx.route(/helpdesk\.icu|chatconnect\.cloud|anychat\.one/, (route) =>
     route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  // The helpdesk console embedded in Admin → Support.
+  await ctx.route(/helpdesk\.getdomainvault\.com/, (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>console</title><p>Support console</p>' }));
   return ctx;
 }
 
@@ -157,13 +160,88 @@ async function reload(page) {
   await page.click('.menu-toggle');
   await page.waitForSelector('#mobileNav.open');
   const items = await page.locator('#mobileNav .menu-item[data-page]').count();
-  ok('mobile drawer now contains the menu', items === 10, `${items} items`);
+  ok('mobile drawer now contains the menu', items === 11, `${items} items`);
   await page.waitForTimeout(700);   // let the slide-in transition finish
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/mobile-nav.png` });
   await page.click('#mobileNav .menu-item[data-page="providers"]');
   ok('mobile menu navigates', await page.locator('#page-providers').evaluate(el => el.classList.contains('active')));
   ok('drawer closes after navigating', !(await page.locator('#mobileNav').evaluate(el => el.classList.contains('open'))));
   ok('no JavaScript errors (mobile)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+// ----------------------------------------------------------- domain search
+{
+  const errors = [];
+  const ctx = await newContext({ viewport: { width: 1400, height: 900 } });
+  const page = await ctx.newPage(); watch(page, errors);
+  const free = `zz-ui-${t}-free.com`;
+  await page.goto(SITE + '/tools/domain-lookup.html');
+  await page.fill('#domain-input', free);
+  await page.click('#search-btn');
+  await page.waitForFunction(() => /Available/.test(document.getElementById('status-message').textContent), null, { timeout: 30000 });
+  await page.waitForFunction(() => document.querySelectorAll('#table-body tr').length >= 5 && !document.querySelector('#table-body .skeleton'));
+  const totals = await page.locator('#table-body tr td:nth-child(4)').allTextContents();
+  const nums = totals.map((x) => Number(x.replace(/[^0-9.]/g, '')));
+  ok('public search: a free name lists registrars, cheapest 5-year cost first',
+    nums.length >= 5 && nums.every((n, i) => i === 0 || nums[i - 1] <= n), totals.join(' '));
+  ok('public search: buy links carry the searched name',
+    (await page.locator('#table-body tr a').first().getAttribute('href')).includes(free));
+  ok('public search: Porkbun shows its live price', sql(`select source from registrar_prices where tld='com' and registrar_id='porkbun'`) !== '' );
+  await page.click('th:has(#sort-icon-purchasing)');
+  const firsts = (await page.locator('#table-body tr td:nth-child(2)').allTextContents()).map((x) => Number(x.replace(/[^0-9.]/g, '')));
+  ok('public search: sorting by first-year price works', firsts.every((n, i) => i === 0 || firsts[i - 1] <= n), firsts.join(' '));
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/search-public.png`, fullPage: true });
+
+  await page.fill('#domain-input', 'google.com');
+  await page.click('#search-btn');
+  await page.waitForFunction(() => /Unavailable/.test(document.getElementById('status-message').textContent), null, { timeout: 30000 });
+  ok('public search: a taken name shows its registrar and expiry',
+    await page.locator('text=MarkMonitor').count() > 0 && await page.locator('#results-container').isHidden());
+
+  await page.goto(SITE + '/es/recursos/buscador-de-dominio.html');
+  await page.fill('#domain-input', free);
+  await page.click('#search-btn');
+  await page.waitForFunction(() => /Disponible/.test(document.getElementById('status-message').textContent), null, { timeout: 30000 });
+  ok('Spanish search page works and speaks Spanish', true);
+
+  // Status pages: real checks recorded by the status function.
+  sql(`insert into status_checks (component, ok, latency_ms) select c, true, 50
+       from unnest(array['app','website','api','lookups','dns','reminders','email']) c;
+       delete from lookup_cache where key = 'status:page';`);
+  await page.goto(SITE + '/status.html');
+  await page.waitForFunction(() => document.querySelectorAll('#status-page-root .animate-blink').length >= 7 * 90, null, { timeout: 20000 });
+  ok('status page shows live components', /fully operational/.test(await page.textContent('#status-page-root')) &&
+    (await page.textContent('#status-page-root')).includes('Domain Lookup (RDAP)'));
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/status.png`, fullPage: true });
+  await page.goto(SITE + '/es/estado.html');
+  await page.waitForFunction(() => /totalmente operativos/.test(document.getElementById('status-page-root').textContent), null, { timeout: 20000 });
+  ok('Spanish status page translates the live data', (await page.textContent('#status-page-root')).includes('Envío de correos'));
+
+  // In the app: Domain Search page, and "Add to my vault" for a name you own.
+  await login(page, customer);
+  await page.click('.sidebar .menu-item[data-page="search"]');
+  const frame = page.frameLocator('#searchFrame');
+  await frame.locator('#domain-input').fill('google.com');
+  await frame.locator('#search-btn').click();
+  await frame.locator('#ds-track').waitFor({ timeout: 30000 });
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/search-app.png` });
+  await frame.locator('#ds-track').click();
+  await page.waitForSelector('#domainModal', { state: 'visible' });
+  ok('app search: "Add to my vault" opens the form with the registry dates',
+    await page.inputValue('#domainName') === 'google.com' && /^\d{4}-\d{2}-\d{2}$/.test(await page.inputValue('#renewalDate')) &&
+    await page.inputValue('#purchaseDate') === '1997-09-15');
+  await page.click('#domainModal .modal-close');
+
+  // The WHOIS button in the form now asks the registry first.
+  await page.click('.sidebar .menu-item[data-page="domains"]');
+  await page.click('#addDomainBtnSecondary');
+  await page.fill('#domainName', 'google.com');
+  await page.click('#fetchWhoisBtn');
+  await page.waitForFunction(() => document.getElementById('renewalDate').value !== '', null, { timeout: 30000 });
+  ok('domain form fills dates from the registry', await page.inputValue('#purchaseDate') === '1997-09-15');
+  await page.click('#domainModal .modal-close');
+  ok('domain search: no JavaScript errors', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 
@@ -501,9 +579,37 @@ async function reload(page) {
   await page.waitForSelector(`#userRows >> text=${newcomer}`);
   ok('database content is escaped (no XSS)', !(await page.evaluate(() => window.__pwned)));
 
+  // Domain search tab: registrars with their buy links, prices per extension.
+  await page.click('.tab[data-tab="search"]');
+  await page.waitForFunction(() => document.querySelectorAll('#registrarRows tr').length >= 9, null, { timeout: 15000 });
+  ok('admin lists the registrars of the domain search', true);
+  await page.fill('#priceTld', 'uitest');
+  await page.click('#priceTldLoad');
+  await page.waitForFunction(() => document.getElementById('priceTld').value === 'uitest' && document.querySelectorAll('#tldPriceRows tr[data-registrar]').length >= 9);
+  const spaceship = page.locator('#tldPriceRows tr[data-registrar="spaceship"]');
+  await spaceship.locator('[data-field="register"]').fill('1.23');
+  await spaceship.locator('[data-field="renew"]').fill('4.56');
+  await page.click('#tldPricesSave');
+  await page.waitForFunction(() => /prices saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  ok('admin sets prices for an extension', sql(`select register || '/' || renew || '/' || source from registrar_prices where tld='uitest'`) === '1.23/4.56/manual');
+  await spaceship.locator('[data-field="register"]').fill('');
+  await spaceship.locator('[data-field="renew"]').fill('');
+  await page.click('#tldPricesSave');
+  await page.waitForFunction(() => document.querySelector('#tldPriceRows tr[data-registrar="spaceship"] td:nth-child(4)').textContent.trim() === '—', null, { timeout: 15000 });
+  ok('…and removes them', sql(`select count(*) from registrar_prices where tld='uitest'`) === '0');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/admin-search.png`, fullPage: true });
+
+  // Support tab: the helpdesk console, only for signed-in admins.
+  await page.click('.tab[data-tab="support"]');
+  await page.waitForSelector('#supportFrameBox iframe');
+  ok('support tab embeds the helpdesk console',
+    (await page.getAttribute('#supportFrameBox iframe', 'src')).startsWith('https://helpdesk.getdomainvault.com'));
+
   await page.click('#signOutBtn');
   await page.waitForSelector('#loginView:not([hidden])');
   ok('sign out returns to the login form', true);
+  ok('nothing from the session stays on the login screen (support console included)',
+    await page.locator('#supportFrameBox iframe').count() === 0);
   ok('no JavaScript errors (admin)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
@@ -531,13 +637,13 @@ async function reload(page) {
   await page.waitForSelector('.platform');
 
   ok('downloads: three platform cards', await page.locator('.platform').count() === 3);
-  ok('downloads: Linux card uses the Linux glyph', await page.locator('.platform:nth-child(3) .fa-linux').count() === 1);
+  ok('downloads: Linux card uses the Linux icon', await page.locator('.platform:nth-child(3) img[alt="Linux icon"]').count() === 1);
 
   // Font Awesome draws the glyph in ::before; if the stylesheet or webfont
   // failed, the icon box collapses.
-  const glyphs = await page.locator('.platform-icon i').evaluateAll(
+  const glyphs = await page.locator('.platform-icon img, .platform-icon i').evaluateAll(
     els => els.map(e => Math.round(e.getBoundingClientRect().width)));
-  ok('downloads: brand glyphs actually render', glyphs.every(w => w >= 10), glyphs.join('/'));
+  ok('downloads: platform icons actually render', glyphs.length === 3 && glyphs.every(w => w >= 10), glyphs.join('/'));
 
   // config.js now points at a published release, so the buttons are live.
   // (Both states matter: the block below re-tests the unconfigured one.)
@@ -605,6 +711,7 @@ await browser.close();
 sql(`delete from purchases where txn_id = 'UI-${t}';
      delete from admin_audit_log where admin_email = '${admin}';
      delete from auth.users where email in ('${customer}','${admin}','${newcomer}','${member}','${teamOwner}','${teammate}');
+     delete from status_checks; delete from lookup_cache where key = 'status:page';
      update plan_prices set amount = null, lifetime_amount = null;
      update billing_config set unpaid_plan = 'Personal', require_approval = true;
      delete from rate_limits;`);

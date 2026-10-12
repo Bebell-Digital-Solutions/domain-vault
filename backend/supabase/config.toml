@@ -447,3 +447,9 @@ verify_jwt = false
 # in the URL is the credential.
 [functions.calendar]
 verify_jwt = false
+
+[functions.domain-search]
+verify_jwt = false
+
+[functions.status]
+verify_jwt = false

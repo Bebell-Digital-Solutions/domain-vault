@@ -31,7 +31,7 @@ project, as of 2026-10-05:
 | Subscription billing (migrations `…1006000100/200`, `billing-webhook`, `api`) + yearly prices in `plan_prices` + `PAYPAL_RECEIVER_EMAIL` = `hello.bebelldesignstudio@gmail.com` | ⏳ deploy in this order: migrations, functions, receiver email, prices, then the site. Until the receiver is set the webhook answers 500 and PayPal retries, so no payment is lost meanwhile |
 | Owner decisions in **Admin → Prices → Plan settings**: Free tier for unpaid accounts? approval for new sign-ups? | ⏳ defaults keep the original behaviour (Personal free, approval on) |
 | Lifetime deals (pay first): owner's PayPal Pay Links on the lifetime pages; `lifetime_amount` per plan in Admin → Prices; activation links emailed to unmatched payers | ⏳ lifetime prices to confirm; one real test purchase |
-| Live chat in the admin panel: secrets `HELPDESK_WIDGET_ID`, `HELPDESK_ADMIN_API_KEY` | ⏳ the operator key that was committed and then removed (8bfbf0c) is public in git history — **regenerate it** in helpdesk.icu, then set the new one |
+| Admin → Support embeds the helpdesk console (`helpdesk.getdomainvault.com/app`); the floating operator widget and its key are gone (2026-10-12) | ⏳ the helpdesk must allow `https://app.getdomainvault.com` to embed it (now only `getdomainvault.com`). The old operator key is public in git history — regenerate it anyway; the secrets `HELPDESK_*` can be deleted |
 | `domain-vault.elnegocio.digital` (GitHub Pages) | ⏳ still serves the old single-site copy against the new backend; redirect it to the new domain, then desktop 1.0.2 |
 
 The PayPal `notify_url` in §3 now points at the new project.
@@ -123,7 +123,7 @@ supabase secrets set --env-file .env.production
 
 ```bash
 supabase db push
-supabase functions deploy api lookup billing-webhook reminders calendar
+supabase functions deploy api lookup billing-webhook reminders calendar domain-search status
 ```
 
 Then confirm that gateway JWT verification is **off** for `api`,

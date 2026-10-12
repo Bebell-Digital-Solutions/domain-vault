@@ -35,11 +35,16 @@ import {
   adminListUsers,
   adminOverview,
   adminDeleteCatalogItem,
+  adminDeleteRegistrar,
+  adminGetTldPrices,
+  adminListRegistrars,
+  adminRefreshDomainPrices,
+  adminSaveRegistrar,
+  adminSaveTldPrices,
   adminListCatalog,
   adminSales,
   adminSaveCatalogItem,
   adminSetBillingConfig,
-  adminSupportWidget,
   adminSetPrice,
   adminUpdateUser,
 } from "./admin.ts";
@@ -704,7 +709,9 @@ const PUBLIC_ACTIONS = new Set(["registerUser", "loginUser", "getPrices", "getCa
 const ADMIN_ACTIONS = new Set([
   "adminOverview", "adminListUsers", "adminUpdateUser",
   "adminSales", "adminGetPrices", "adminSetPrice", "adminSetBillingConfig", "adminAudit",
-  "adminListCatalog", "adminSaveCatalogItem", "adminDeleteCatalogItem", "adminSupportWidget",
+  "adminListCatalog", "adminSaveCatalogItem", "adminDeleteCatalogItem",
+  "adminListRegistrars", "adminSaveRegistrar", "adminDeleteRegistrar",
+  "adminGetTldPrices", "adminSaveTldPrices", "adminRefreshDomainPrices",
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -755,8 +762,18 @@ Deno.serve(async (req: Request) => {
           return json(req, await adminSaveCatalogItem(caller, body));
         case "adminDeleteCatalogItem":
           return json(req, await adminDeleteCatalogItem(caller, body));
-        case "adminSupportWidget":
-          return json(req, adminSupportWidget());
+        case "adminListRegistrars":
+          return json(req, await adminListRegistrars());
+        case "adminSaveRegistrar":
+          return json(req, await adminSaveRegistrar(caller, body));
+        case "adminDeleteRegistrar":
+          return json(req, await adminDeleteRegistrar(caller, body));
+        case "adminGetTldPrices":
+          return json(req, await adminGetTldPrices(body));
+        case "adminSaveTldPrices":
+          return json(req, await adminSaveTldPrices(caller, body));
+        case "adminRefreshDomainPrices":
+          return json(req, await adminRefreshDomainPrices(caller));
         case "adminAudit":
           return json(req, await adminAudit(body));
       }
