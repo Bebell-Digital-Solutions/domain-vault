@@ -50,6 +50,12 @@ window.DOMAIN_VAULT_CONFIG = (function () {
     lifetimeButtons: {}
   };
 
+  /* The domain search tool, shown inside the app (Domain Search page). */
+  backend.searchToolUrl = isLocal ? '/tools/domain-lookup-app.html' : 'https://getdomainvault.com/tools/domain-lookup-app';
+
+  /* The helpdesk console, embedded in Admin → Support. */
+  backend.supportConsoleUrl = 'https://helpdesk.getdomainvault.com/app';
+
   /* Desktop builds, from the GitHub release. `alt` adds a small secondary
      link under the main button — one button cannot serve two architectures.
      A platform with no `url` shows "Coming soon" instead of a dead button.

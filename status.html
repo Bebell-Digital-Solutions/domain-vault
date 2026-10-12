@@ -157,66 +157,40 @@
         </div>
     </div>
 
+    <script src="/config.js?v=20261012"></script>
     <script>
         /**
 - Mock data payload. 
 - REPLACE THIS with a `fetch('/api/status')` call to your backend.
          */
+        // Live data from the status function (checks run every 5 minutes).
         const fetchStatusData = async () => {
-            // Simulated network delay
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve({
-                        overall: {
-                            status: 'operational', // 'operational', 'degraded', 'outage'
-                            title: "We're fully operational",
-                            description: "We're not aware of any issues affecting our systems."
-                        },
-                        // Date range for the 90-day window
-                        dateRange: "Jul 12, 2026 - Oct 10, 2026", 
-                        components: [
-                            {
-                                name: "Dashboard App",
-                                uptime: "99.99%",
-                                // Array of 90 block states: 1=Success, 2=Warning, 3=Danger
-                                blocks: Array(90).fill(1).map((_, i) => i === 45 ? 2 : 1) 
-                            },
-                            {
-                                name: "Domain API",
-                                uptime: "99.92%",
-                                blocks: Array(90).fill(1).map((_, i) => [10, 11, 25].includes(i) ? 3 : (i === 12 ? 2 : 1))
-                            },
-                            {
-                                name: "WHOIS Lookup",
-                                uptime: "100%",
-                                blocks: Array(90).fill(1)
-                            },
-                            {
-                                name: "DNS Verification",
-                                uptime: "99.95%",
-                                blocks: Array(90).fill(1).map((_, i) => i === 80 ? 2 : (i === 81 ? 2 : 1))
-                            },
-                            {
-                                name: "Reminder Automations",
-                                uptime: "100%",
-                                blocks: Array(90).fill(1)
-                            }
-                        ]
-                    });
-                }, 100);
-            });
+            const cfg = window.DOMAIN_VAULT_CONFIG || {};
+            const res = await fetch(`${cfg.functionsUrl}/status`);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            return data;
         };
+
+        const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 
         /**
 - Generates the HTML for the 90-day uptime blocks.
          */
-        const renderBlocks = (blocks) => {
+        const renderBlocks = (blocks, from) => {
             let html = '';
             blocks.forEach((state, index) => {
                 let bgColor = 'bg-brand-success';
+                const date = from ? new Date(Date.parse(from + 'T00:00:00Z') + index * 86400000).toISOString().slice(0, 10) : '';
                 let tooltip = 'Operational';
                 
-                if (state === 2) {
+                if (state === 0) {
+                
+                    bgColor = 'bg-brand-border';
+                
+                    tooltip = 'No data';
+                
+                } else if (state === 2) {
                     bgColor = 'bg-brand-warning';
                     tooltip = 'Degraded Performance';
                 } else if (state === 3) {
@@ -231,7 +205,7 @@
                     <div 
                         class="flex-1 h-8 rounded-[1px] ${bgColor} hover:opacity-100 transition-all cursor-pointer animate-blink" 
                         style="animation-delay: ${delay}s;"
-                        title="Day ${index + 1}: ${tooltip}">
+                        title="${date || ('Day ' + (index + 1))}: ${tooltip}">
                     </div>
                 `;
             });
@@ -246,16 +220,16 @@
                 <div class="p-5 border-b border-brand-border last:border-b-0 hover:bg-brand-hover/50 transition-colors">
                     <div class="flex justify-between items-center mb-1">
                         <div class="flex items-center gap-2">
-                            <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-success"></i>
-                            <span class="text-base font-medium text-brand-textMain">${component.name}</span>
+                            <i data-lucide="${component.current === 'down' ? 'x-circle' : component.current === 'unknown' ? 'help-circle' : 'check-circle-2'}" class="w-4 h-4 ${component.current === 'down' ? 'text-brand-danger' : component.current === 'unknown' ? 'text-brand-textMuted' : 'text-brand-success'}"></i>
+                            <span class="text-base font-medium text-brand-textMain">${esc(component.name)}</span>
                             <div class="tooltip-container">
                                 <i data-lucide="info" class="w-4 h-4 text-brand-textMuted hover:text-brand-primary cursor-pointer transition-colors"></i>
                                 <span class="tooltip-text">View historical data for ${component.name}</span>
                             </div>
                         </div>
-                        <span class="text-sm font-code text-brand-textMuted">${component.uptime} uptime</span>
+                        <span class="text-sm font-code text-brand-textMuted">${component.uptime ? component.uptime + ' uptime' : 'No data yet'}</span>
                     </div>
-                    ${renderBlocks(component.blocks)}
+                    ${renderBlocks(component.blocks, window.__statusFrom)}
                 </div>
             `;
         };
@@ -267,10 +241,12 @@
             const root = document.getElementById('status-page-root');
             
             // Determine overall banner styles based on status
+            window.__statusFrom = data.days && data.days.from;
             const isOperational = data.overall.status === 'operational';
-            const bannerBg = isOperational ? 'bg-brand-success/10' : 'bg-brand-warning/10';
-            const bannerBorder = isOperational ? 'border-brand-success/30' : 'border-brand-warning/30';
-            const bannerTextColor = isOperational ? 'text-brand-success' : 'text-brand-warning';
+            const isOutage = data.overall.status === 'outage';
+            const bannerBg = isOperational ? 'bg-brand-success/10' : isOutage ? 'bg-brand-danger/10' : 'bg-brand-warning/10';
+            const bannerBorder = isOperational ? 'border-brand-success/30' : isOutage ? 'border-brand-danger/30' : 'border-brand-warning/30';
+            const bannerTextColor = isOperational ? 'text-brand-success' : isOutage ? 'text-brand-danger' : 'text-brand-warning';
             const bannerIcon = isOperational ? 'check-circle' : 'alert-triangle';
 
             const html = `
@@ -297,10 +273,10 @@
                     <div class="rounded-lg overflow-hidden mb-8 border ${bannerBorder}">
                         <div class="${bannerBg} p-5 flex items-center gap-3 border-b ${bannerBorder}">
                             <i data-lucide="${bannerIcon}" class="w-6 h-6 ${bannerTextColor}"></i>
-                            <span class="font-medium ${bannerTextColor} text-lg">${data.overall.title}</span>
+                            <span class="font-medium ${bannerTextColor} text-lg">${esc(data.overall.title)}</span>
                         </div>
                         <div class="bg-brand-bgDarker p-5 text-brand-textMuted text-sm border-t-0">
-                            ${data.overall.description}
+                            ${esc(data.overall.description)}
                         </div>
                     </div>
 
@@ -311,7 +287,7 @@
                             <h2 class="text-lg font-semibold text-brand-textMain">System status</h2>
                             <div class="flex items-center gap-2 text-xs text-brand-textMuted font-code">
                                 <i data-lucide="chevron-left" class="w-3 h-3 cursor-pointer hover:text-brand-primary transition-colors"></i>
-                                <span>${data.dateRange}</span>
+                                <span>${esc(data.dateRange)}</span>
                                 <i data-lucide="chevron-right" class="w-3 h-3 cursor-pointer hover:text-brand-primary transition-colors"></i>
                             </div>
                         </div>
