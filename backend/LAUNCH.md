@@ -32,7 +32,7 @@ project, as of 2026-10-05:
 | Owner decisions in **Admin → Prices → Plan settings**: Free tier for unpaid accounts? approval for new sign-ups? | ⏳ defaults keep the original behaviour (Personal free, approval on) |
 | Lifetime deals (pay first): owner's PayPal Pay Links on the lifetime pages; `lifetime_amount` per plan in Admin → Prices; activation links emailed to unmatched payers | ⏳ lifetime prices to confirm; one real test purchase |
 | Admin → Support embeds the helpdesk console (`helpdesk.getdomainvault.com/app`); the floating operator widget and its key are gone (2026-10-12) | ⏳ the helpdesk must allow `https://app.getdomainvault.com` to embed it (now only `getdomainvault.com`). The old operator key is public in git history — regenerate it anyway; the secrets `HELPDESK_*` can be deleted |
-| `domain-vault.elnegocio.digital` (GitHub Pages) | ⏳ still serves the old single-site copy against the new backend; redirect it to the new domain, then desktop 1.0.2 |
+| `domain-vault.elnegocio.digital` (GitHub Pages) | ⏳ still serves the old single-site copy against the new backend; redirect it to the new domain |
 
 The PayPal `notify_url` in §3 now points at the new project.
 
