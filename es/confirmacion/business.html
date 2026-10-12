@@ -301,72 +301,90 @@
 
 
     
-    <footer class="relative z-10 py-12 px-6 mt-auto bg-brand-bgDarker">
+      <footer class="py-12 px-6 mt-auto bg-brand-bgDarker">
+        <!-- Main Footer Content Wrapper -->
         <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
             
-            <!-- Left Info -->
+            <!-- Left Info (Brand & Copyright) - Takes up 3 cols on desktop -->
             <div class="flex flex-col gap-2 md:col-span-3">
-                <div class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight text-sm uppercase tracking-wider font-tech">
+                <div class="flex items-center gap-2 text-brand-textMain font-semibold tracking-tight text-sm font-semibold  group uppercase tracking-wider font-tech">
                     <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault Logo" class="w-8 h-8 object-contain">
                     Domain Vault
                 </div>
                 <div class="text-xs text-brand-muted">
                     &copy; 2026 Domain Vault. Todos los derechos reservados.
                 </div>
-                <img 
-                    src="https://bucket.mlcdn.com/a/3336/3336910/images/c6a6d752e1132502e3879b1b07d2ff66e3bb34d3.png" 
-                    alt="Métodos de pago aceptados" 
-                    class="mt-2 w-full max-w-[170px] object-contain object-left opacity-80 hover:opacity-100 transition-opacity"
-                >
+            
+            <!-- Payment Banner -->
+            <img 
+                src="https://bucket.mlcdn.com/a/3336/3336910/images/c6a6d752e1132502e3879b1b07d2ff66e3bb34d3.png" 
+                alt="Accepted payment methods" 
+                class="mt-2 w-full max-w-[170px] object-contain object-left opacity-80 hover:opacity-100 transition-opacity">
+                
             </div>
 
-            <!-- Center Links -->
+            <!-- Center Links - Takes up 5 cols on desktop -->
             <div class="flex flex-wrap gap-12 text-sm md:col-span-5 md:justify-center">
                 <div class="flex flex-col gap-3">
                     <div class="text-brand-textMain font-medium mb-1">Producto</div>
-                    <a href="/es/#features" class="text-brand-muted hover:text-brand-primary transition-colors">Características</a>
-                    <a href="/es/#download" class="text-brand-muted hover:text-brand-primary transition-colors">Descargar</a>
-                    <a href="/es/#pricing" class="text-brand-muted hover:text-brand-primary transition-colors">Precios</a>
-                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Registro de Cambios</a>
+                    <a href="#features" class="text-brand-muted hover:text-brand-primary transition-colors">Características</a>
+                    <a href="/es/descargas" class="text-brand-muted hover:text-brand-primary transition-colors">Descargar</a>
+                    <a href="#pricing" class="text-brand-muted hover:text-brand-primary transition-colors">Precios</a>
+                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Actualizaciones</a>
                 </div>
+
+
+
                 <div class="flex flex-col gap-3">
                     <div class="text-brand-textMain font-medium mb-1">Recursos</div>
-                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Documentación</a>
+                    <a href="https://ayuda.getdomainvault.com" class="text-brand-muted hover:text-brand-primary transition-colors">Documentación</a>
                     <a href="/es/recursos/buscador-de-dominio" class="text-brand-muted hover:text-brand-primary transition-colors">Buscador de Dominio</a>
-                    <a href="#" class="text-brand-muted hover:text-brand-primary transition-colors">Estado</a>
+                    <a href="/es/precio-oferta" class="text-brand-muted hover:text-brand-primary transition-colors">Promociones</a>
+                    <a href="/es/estado" target=_blank rel="noopener noreferrer" class="text-brand-muted hover:text-brand-primary transition-colors">Estado</a>  
                 </div>
+
+
+                
                 <div class="flex flex-col gap-3">
                     <div class="text-brand-textMain font-medium mb-1">Legal</div>
                     <a href="/es/p/privacidad" class="text-brand-muted hover:text-brand-primary transition-colors">Privacidad</a>
                     <a href="/es/p/terminos" class="text-brand-muted hover:text-brand-primary transition-colors">Términos</a>
+                    <a href="/es/p/devolucion" class="text-brand-muted hover:text-brand-primary transition-colors">Devolución</a>
+
                 </div>
             </div>
+            
 
-            <!-- Support Card -->
+            <!-- Right Column (Support Card) - Takes up 4 cols on desktop -->
             <div class="md:col-span-4 mt-6 md:mt-0 w-full flex justify-center md:justify-end">
+                <!-- Support Card using aspect-[3/2] for responsive full-width scaling on mobile while capping max-width on larger screens -->
                 <div class="w-full max-w-full sm:max-w-[360px] aspect-[3/2] bg-brand-card rounded-2xl p-5 sm:p-6 md:p-4 lg:p-6 relative overflow-hidden flex flex-col justify-center shadow-lg border border-brand-border hover:border-brand-primary/50 transition-colors group">
-                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-30"></div>                                                                        
+                
+                <!-- Top glowing line -->
+                <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent z-30"></div>              
+                                                           
                     <div class="relative z-10 w-[65%] sm:w-3/4 lg:w-2/3">
                         <div class="flex items-center gap-2 mb-2">
-                            <h4 class="text-brand-textMain font-bold text-lg sm:text-xl md:text-base lg:text-xl">Soporte en Línea</h4>
+                            <h4 class="text-brand-textMain font-bold text-lg sm:text-xl md:text-base lg:text-xl">Soporte Online</h4>
                             <span class="bg-brand-primary/20 text-brand-primary border border-brand-primary/30 text-[10px] md:text-[9px] lg:text-[10px] font-bold px-2 py-0.5 md:px-1.5 md:py-0 lg:px-2 lg:py-0.5 rounded-md uppercase tracking-wider">24/7</span>
                         </div>
-                        <p class="text-brand-muted text-xs sm:text-sm md:text-[10px] lg:text-sm mb-4 md:mb-2 lg:mb-4 leading-snug">Contáctanos si tienes alguna pregunta. Nuestro equipo está aquí para ayudarte.</p>
+                        <p class="text-brand-muted text-xs sm:text-sm md:text-[10px] lg:text-sm mb-4 md:mb-2 lg:mb-4 leading-snug">Contáctenos si tiene alguna pregunta. Nuestro equipo está aquí para atenderte.</p>
                         <button onclick="window.open('/es/soporte', '_blank')" class="bg-brand-bgDark hover:bg-brand-hover text-brand-textMain text-xs sm:text-sm md:text-[11px] lg:text-sm font-semibold py-2 px-3 md:py-1.5 md:px-2.5 lg:py-2 lg:px-3 rounded-lg flex items-center gap-2 transition-colors border border-brand-border shadow-sm w-fit">
                             <i data-lucide="headset" class="w-4 h-4 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 text-brand-primary"></i>
-                            Escríbenos
+                            Escríbanos
                         </button>
                     </div>
                     <img 
                         src="https://ik.imagekit.io/bebell/Banners%20&%20Backgrounds/assets/support-agent.webp" 
                         alt="Soporte 24/7" 
-                        class="absolute bottom-0 right-0 w-32 sm:w-36 md:w-36 lg:w-40 object-contain z-0 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" 
+                        class="absolute bottom-0 right-0 h-full w-auto pt-[1.5rem] object-contain z-0 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" 
+
                     />
                 </div>
             </div>
+
          </div>
     </footer>
-
 
 
 
