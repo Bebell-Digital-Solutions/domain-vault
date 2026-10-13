@@ -330,6 +330,33 @@
             color: var(--text-muted);
         }
 
+        /* Install guide, beneath the download cards */
+        .install-guide { margin-top: 80px; text-align: left; scroll-margin-top: 90px; }
+        .install-guide > h2 { text-align: center; font-size: clamp(1.6rem, 3.4vw, 2.3rem); font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+        .install-guide > .guide-lede { text-align: center; color: var(--text-muted); max-width: 720px; margin: 14px auto 0; line-height: 1.6; }
+        .guide-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; margin-top: 40px; }
+        .guide-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
+        .guide-card h3 { margin: 0 0 6px; font-size: 1.15rem; display: flex; align-items: center; gap: 10px; }
+        .guide-card h3 img { width: 26px; height: 26px; object-fit: contain; }
+        .guide-card .guide-note { color: var(--text-muted); font-size: 0.92rem; line-height: 1.55; margin: 0 0 16px; }
+        .guide-card ol { list-style: decimal; margin: 0; padding-left: 22px; color: var(--text-main); line-height: 1.6; font-size: 0.95rem; }
+        .guide-card li { margin-bottom: 10px; }
+        .guide-card li::marker { color: var(--primary); font-weight: 700; }
+        .guide-card b { color: #fff; }
+        .guide-card code { font-family: 'Fira Code', ui-monospace, monospace; font-size: 0.82rem; background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; color: #ffb08f; overflow-wrap: anywhere; }
+        .guide-card pre { margin: 10px 0 0; background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-x: auto; }
+        .guide-card pre code { border: 0; padding: 0; background: none; }
+        .guide-card details { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; color: var(--text-muted); font-size: 0.9rem; line-height: 1.55; }
+        .guide-card summary { cursor: pointer; color: var(--text-main); font-weight: 600; }
+        .guide-card summary:hover { color: var(--primary); }
+        .guide-help { text-align: center; color: var(--text-muted); margin-top: 28px; font-size: 0.95rem; }
+        .guide-help a, .first-launch a { color: var(--primary); }
+        .first-launch { font-size: 0.85em; color: var(--text-muted); margin-top: -6px; }
+        @media (max-width: 980px) {
+            .guide-grid { grid-template-columns: 1fr; gap: 20px; max-width: 520px; margin-inline: auto; }
+            .install-guide { margin-top: 56px; }
+        }
+
         @media (max-width: 980px) {
             .platforms { grid-template-columns: 1fr; gap: 20px; max-width: 520px; margin-inline: auto; }
             .downloads { padding: 76px 20px 84px; }
@@ -420,7 +447,7 @@
         <h2>macOS</h2>
     </div>
     <p>Requiere macOS 11.0 o posterior. Apple Silicon (M1/M2/M3) compatible de forma nativa.</p>
-    <p style="font-size:0.85em;opacity:0.75">Primer inicio: si macOS dice que no puede verificar la app, abre <b>Ajustes del Sistema → Privacidad y seguridad</b> y pulsa <b>Abrir igualmente</b>. Solo una vez.</p>
+        <p class="first-launch">¿Primera vez en Mac? Mira la <a href="#install-guide">guía de instalación</a> más abajo.</p>
     <a class="btn-download" data-platform="macos" href="#">Descargar para Mac</a>
 </section>
 
@@ -452,6 +479,63 @@
                 
                 
             </div>
+
+
+            <!-- Install guide: the first-launch questions every new user asks. -->
+            <section class="install-guide" id="install-guide">
+                <h2>Guía de instalación</h2>
+                <p class="guide-lede">Domain Vault es seguro de instalar. Como es una app nueva, tu computadora puede pedirte que lo confirmes la primera vez que la abras. Así se hace, paso a paso.</p>
+                <div class="guide-grid">
+                <div class="guide-card">
+                    <h3><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/mac.webp" alt="">macOS</h3>
+                    <p class="guide-note">La primera vez que abres la app, macOS muestra <b>“No se abrió Domain Vault”</b> porque Apple aún no la ha revisado. Solo tienes que permitirla una vez.</p>
+                    <ol>
+                        <li>Abre el archivo <b>.dmg</b> descargado y arrastra <b>Domain Vault</b> a <b>Aplicaciones</b>.</li>
+                        <li>Abre Domain Vault desde Aplicaciones. Cuando macOS muestre el aviso, pulsa <b>OK / Listo</b> (no “Trasladar a la papelera”).</li>
+                        <li>Abre <b>Ajustes del Sistema → Privacidad y seguridad</b> y baja hasta <b>Seguridad</b>.</li>
+                        <li>Junto a <i>“Se bloqueó Domain Vault…”</i>, pulsa <b>Abrir igualmente</b> y confirma con tu contraseña o Touch ID.</li>
+                        <li>Pulsa <b>Abrir igualmente</b> otra vez. Listo: desde ahora Domain Vault se abre normalmente.</li>
+                    </ol>
+                    <details>
+                        <summary>¿No ves “Abrir igualmente”?</summary>
+                        <p>El botón aparece durante una hora después de intentar abrir la app. Abre Domain Vault de nuevo y vuelve a Privacidad y seguridad. O, en la app <b>Terminal</b>, ejecuta:</p>
+                        <pre><code>xattr -dr com.apple.quarantine "/Applications/Domain Vault.app"</code></pre>
+                    </details>
+                    <details>
+                        <summary>Intel / Apple Silicon?</summary>
+                        <p>¿Qué archivo? Los Mac con <b>Apple Silicon</b> (M1, M2, M3, M4) usan el botón principal; los Mac con <b>Intel</b>, el enlace de debajo. ¿No estás seguro? Menú Apple → Acerca de este Mac.</p>
+                    </details>
+                </div>
+                <div class="guide-card">
+                    <h3><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/windows.webp" alt="">Windows</h3>
+                    <p class="guide-note">Windows puede mostrar <b>“Windows protegió su PC”</b> (SmartScreen) porque la app es nueva. Solo tienes que permitirla una vez.</p>
+                    <ol>
+                        <li>Abre el archivo <b>DomainVault-Setup</b> descargado.</li>
+                        <li>Si aparece la ventana azul de SmartScreen, pulsa <b>Más información</b>.</li>
+                        <li>Pulsa <b>Ejecutar de todas formas</b>.</li>
+                        <li>Sigue el instalador. Domain Vault se añade al menú Inicio y al escritorio.</li>
+                    </ol>
+                    <details>
+                        <summary>¿Tu antivirus lo bloquea?</summary>
+                        <p>Permite el archivo una vez en tu antivirus, o descárgalo de nuevo desde esta página: el instalador solo viene de nuestra publicación oficial en GitHub.</p>
+                    </details>
+                </div>
+                <div class="guide-card">
+                    <h3><img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/linux-button-orange.webp" alt="">Linux</h3>
+                    <p class="guide-note">Dos formatos: el paquete <b>.deb</b> para Ubuntu, Debian y Mint, y un <b>AppImage</b> para otras distribuciones.</p>
+                    <ol>
+                        <li><b>Ubuntu / Debian (.deb):</b> haz doble clic en el archivo para abrirlo en el instalador de software, o ejecuta <code>sudo apt install ./DomainVault-*.deb</code> en la carpeta donde lo descargaste.</li>
+                        <li>Abre Domain Vault desde el menú de aplicaciones.</li>
+                        <li><b>AppImage:</b> clic derecho en el archivo → <b>Propiedades → Permisos</b> → marca <b>Permitir ejecutar el archivo como programa</b> y haz doble clic. O ejecuta <code>chmod +x DomainVault-*.AppImage</code>.</li>
+                    </ol>
+                    <details>
+                        <summary>¿El AppImage no arranca en Ubuntu 24.04?</summary>
+                        <p>Ubuntu 24.04 restringe los AppImage. Usa el paquete <b>.deb</b>: configura los permisos que la app necesita.</p>
+                    </details>
+                </div>
+                </div>
+                <p class="guide-help">¿Sigues con problemas? <a href="/es/soporte">Contacta con soporte</a> y te ayudamos.</p>
+            </section>
 
             <p class="web-app">¿Prefieres el navegador? <a href="https://app.getdomainvault.com/">Abre Domain Vault en la nube</a>.</p>
         </div>
