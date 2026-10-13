@@ -26,6 +26,7 @@ has to provide and the deployment steps in order.
 | Pay first, sign up after | A payment nobody's account matches (e.g. from the lifetime-deal page) emails the payer a one-time **activation link**; signing up or logging in through it attaches the purchase. |
 | Domain search | `/tools/domain-lookup` (EN), `/es/recursos/buscador-de-dominio` (ES) and the app's Domain Search page. Availability from the registry itself (RDAP via IANA's bootstrap; a DNS check where a registry has no RDAP), prices per registrar and extension from `registrar_prices`: Porkbun's refreshed daily from its public price list, the rest entered in Admin → Domain search, where each registrar's buy link (affiliate link, `{domain}` filled in) is set. Sorted by 5-year cost (first year + 4 renewals). |
 | Status page | `/status` and `/es/estado`. The `status` function probes each part every 5 minutes (pg_cron) and serves 90 days of history. |
+| Customer emails | Every automated email (welcome, activation, team invitation, renewal reminder, purchases, subscriptions) is a template in `_shared/email.ts` with one branded layout. Texts, logo, colour and footer are edited in Admin → Emails (`email_templates`, `email_settings`), with preview and a test send. The password-reset email is Supabase Auth's: Dashboard → Authentication → Email Templates. |
 | Tools & recommendations | Managed in Admin → Tools (`catalog_items`); the app's Tools page and "Recommended providers" read them through `getCatalog`. |
 | Live chat | Admin → Support embeds the helpdesk console (`supportConsoleUrl` in config.js), only for signed-in admins. It has its own login; no helpdesk key passes through our pages. |
 | Admin | `app/admin.html`: activate and suspend users, override plans, set prices, sales report with CSV export, audit log. |
@@ -70,7 +71,8 @@ domain-vault/                    (repo root = the website, served by GitHub Page
     │   │   ├── …1008000200_catalog.sql        tools & recommendations
     │   │   ├── …1009000100_teams.sql          team vaults: members, permissions, seats
     │   │   ├── …1012000100_domain_search.sql  registrars, prices, daily Porkbun refresh
-    │   │   └── …1012000200_status.sql         status checks, 5-minute probe
+    │   │   ├── …1012000200_status.sql         status checks, 5-minute probe
+    │   │   └── …1013000100_email_templates.sql editable customer emails
     │   ├── functions/
     │   │   ├── _shared/         cors, crypto, validation, db/auth, email + WhatsApp
     │   │   ├── api/             user, team + admin actions (index.ts, vault.ts, admin.ts)
@@ -449,6 +451,8 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `adminListRegistrars` / `adminSaveRegistrar` / `adminDeleteRegistrar` | admin | `registrar{ id?, name, website, urlTemplate, whois, ssl, notes, sort, active }` / `id` | Domain search registrars; the buy link must be https, `{domain}` / `{tld}` are filled in. Audited. |
 | `adminGetTldPrices` / `adminSaveTldPrices` | admin | `tld`, `rows[{ registrarId, register, renew }]` | Prices for one extension; both blank removes the row. Audited. |
 | `adminRefreshDomainPrices` | admin | — | Reload Porkbun's prices now. Audited. |
+| `adminListEmails` / `adminSaveEmail` / `adminResetEmail` / `adminSaveEmailBrand` | admin | `key`, `template{ subject, heading, body, button }` / `brand{ logo_url, accent_color, footer_text }` | Customer email texts and brand. Audited. |
+| `adminPreviewEmail` / `adminSendTestEmail` | admin | as above | Render a draft with sample data; send it to yourself (20/hour). |
 | `adminAudit` | admin | `limit?` | Recent admin changes, before and after. |
 
 Other endpoints:

@@ -12,6 +12,15 @@
 
 import { type Caller, HttpError, serviceClient } from "../_shared/db.ts";
 import { BadRequest, isUuid, str } from "../_shared/validate.ts";
+import {
+  type Brand,
+  effectiveTemplate,
+  loadEmailSettings,
+  renderEmail,
+  sendTemplate,
+  type Template,
+  TEMPLATES,
+} from "../_shared/email.ts";
 import { sendEmail } from "../_shared/notify.ts";
 
 const PLANS = ["Free", "Personal", "Start-up", "Business", "Agency"] as const;
@@ -236,13 +245,7 @@ export async function adminUpdateUser(admin: Caller, p: any) {
 
   // The welcome email promised this message.
   if (before.status !== "active" && after?.status === "active") {
-    await sendEmail(
-      before.email,
-      "Your Domain Vault account is active",
-      `<h3>You're in!</h3>
-       <p>Your Domain Vault account has been activated. You can log in now.</p>
-       ${SITE_URL ? `<p><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}`,
-    );
+    await sendTemplate(before.email, "account_activated", { email: before.email });
   }
 
   return { success: true, user: after };
@@ -657,4 +660,114 @@ export async function adminRefreshDomainPrices(admin: Caller) {
   if (!res.ok || !body.success) throw new HttpError(502, body.message || "The price refresh failed.");
   await audit(admin, "refresh_domain_prices", null, { updated: body.updated });
   return { success: true, updated: body.updated };
+}
+
+// ---------------------------------------------------------------------------
+// Customer emails: texts and brand (see _shared/email.ts)
+// ---------------------------------------------------------------------------
+
+function emailEntry(key: string, edited: Partial<Template> | undefined) {
+  const def = TEMPLATES[key];
+  return {
+    key,
+    name: def.name,
+    when: def.when,
+    vars: def.vars,
+    hasButton: Boolean(def.buttonUrl),
+    edited: Boolean(edited),
+    template: effectiveTemplate(key, edited),
+    defaults: { subject: def.subject, heading: def.heading, body: def.body, button: def.button },
+  };
+}
+
+export async function adminListEmails() {
+  const settings = await loadEmailSettings(true);
+  return {
+    success: true,
+    brand: settings.brand,
+    templates: Object.keys(TEMPLATES).map((k) => emailEntry(k, settings.templates.get(k))),
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+function emailDraft(p: any): { key: string; template: Template } {
+  const key = String(p?.key ?? "");
+  if (!TEMPLATES[key]) throw new BadRequest("Unknown email.");
+  const t = p?.template ?? {};
+  const subject = String(t.subject ?? "").trim().slice(0, 200);
+  if (!subject) throw new BadRequest("The subject cannot be empty.");
+  return {
+    key,
+    template: {
+      subject,
+      heading: String(t.heading ?? "").trim().slice(0, 200),
+      body: String(t.body ?? "").replace(/\r\n/g, "\n").slice(0, 5000),
+      button: String(t.button ?? "").trim().slice(0, 60),
+    },
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+function brandDraft(p: any, current: Brand): Brand {
+  const b = p?.brand;
+  if (!b) return current;
+  const brand = {
+    logo_url: String(b.logo_url ?? "").trim(),
+    accent_color: String(b.accent_color ?? "").trim(),
+    footer_text: String(b.footer_text ?? "").trim().slice(0, 300),
+  };
+  if (brand.logo_url && !/^https:\/\/[^\s"<>]+$/.test(brand.logo_url)) throw new BadRequest("The logo must be an https:// image address.");
+  if (!/^#[0-9a-fA-F]{6}$/.test(brand.accent_color)) throw new BadRequest("The colour must look like #ff5011.");
+  return brand;
+}
+
+// deno-lint-ignore no-explicit-any
+export async function adminSaveEmail(admin: Caller, p: any) {
+  const { key, template } = emailDraft(p);
+  const db = serviceClient();
+  const { data: before } = await db.from("email_templates").select("*").eq("key", key).maybeSingle();
+  const { error } = await db.from("email_templates").upsert({ key, ...template, updated_by: admin.email }, { onConflict: "key" });
+  if (error) throw new HttpError(400, error.message);
+  await audit(admin, "update_email_template", null, { key, before, after: template });
+  return adminListEmails();
+}
+
+// deno-lint-ignore no-explicit-any
+export async function adminResetEmail(admin: Caller, p: any) {
+  const key = String(p?.key ?? "");
+  if (!TEMPLATES[key]) throw new BadRequest("Unknown email.");
+  const db = serviceClient();
+  const { data: before } = await db.from("email_templates").select("*").eq("key", key).maybeSingle();
+  await db.from("email_templates").delete().eq("key", key);
+  if (before) await audit(admin, "reset_email_template", null, { key, before });
+  return adminListEmails();
+}
+
+// deno-lint-ignore no-explicit-any
+export async function adminSaveEmailBrand(admin: Caller, p: any) {
+  const settings = await loadEmailSettings(true);
+  const brand = brandDraft(p, settings.brand);
+  const { error } = await serviceClient().from("email_settings").upsert({ id: true, ...brand }, { onConflict: "id" });
+  if (error) throw new HttpError(400, error.message);
+  await audit(admin, "update_email_brand", null, { before: settings.brand, after: brand });
+  return adminListEmails();
+}
+
+/** The draft as it would look, with sample data. Nothing is saved. */
+// deno-lint-ignore no-explicit-any
+export async function adminPreviewEmail(p: any) {
+  const { key, template } = emailDraft(p);
+  const settings = await loadEmailSettings(true);
+  const out = renderEmail(key, template, brandDraft(p, settings.brand), { ...TEMPLATES[key].sample, app_url: SITE_URL ? `${SITE_URL}/app/` : "#" });
+  return { success: true, ...out };
+}
+
+/** Send the draft, with sample data, to the admin's own address. */
+// deno-lint-ignore no-explicit-any
+export async function adminSendTestEmail(admin: Caller, p: any) {
+  const { subject, html } = await adminPreviewEmail(p);
+  const sent = await sendEmail(admin.email, `[Test] ${subject}`, html);
+  return sent
+    ? { success: true, message: `Test sent to ${admin.email}.` }
+    : { success: false, message: "The test email could not be sent (is email set up on the server?)." };
 }

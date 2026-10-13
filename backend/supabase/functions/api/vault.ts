@@ -21,7 +21,7 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4
 import { type Caller, clientIp, HttpError, rateLimit, serviceClient } from "../_shared/db.ts";
 import { decryptSecret, encryptSecret, KEY_VERSION } from "../_shared/crypto.ts";
 import { BadRequest, isUuid, isValidEmail, str } from "../_shared/validate.ts";
-import { sendEmail } from "../_shared/notify.ts";
+import { sendTemplate } from "../_shared/email.ts";
 
 const SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/+$/, "");
 
@@ -593,17 +593,12 @@ export async function inviteMember(caller: Caller, p: any) {
   const abilities = ["see the vault's domains and providers",
     ...PERMS.filter((k) => perms[k]).map((k) => PERM_LABELS[k])];
   const inviter = caller.email === vault.ownerEmail ? vault.ownerEmail : `${caller.email} (for ${vault.ownerEmail})`;
-  const emailed = await sendEmail(
-    email,
-    "You're invited to a Domain Vault team",
-    `<h3>You're invited to a Domain Vault team</h3>
-     <p><b>${escapeHtml(inviter)}</b> invited you into their domain vault.</p>
-     <p>You will be able to:</p>
-     <ul>${abilities.map((a) => `<li>${escapeHtml(a)}</li>`).join("")}</ul>
-     <p><a href="${url}">Accept the invitation</a></p>
-     <p style="color:#777">Log in, or create an account, from the link. It works once and expires in 7 days.
-     If you were not expecting this, ignore this email.</p>`,
-  );
+  const emailed = await sendTemplate(email, "team_invite", {
+    inviter,
+    abilities: `<ul style="margin:0 0 14px;padding-left:20px">${abilities.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`,
+    invite_url: url,
+  });
+
   await logActivity(vault.ownerId, caller, "team.invite", email, { permissions: perms });
 
   return {

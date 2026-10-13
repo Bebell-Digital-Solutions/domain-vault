@@ -169,6 +169,7 @@
     prices: () => loadPrices(),
     tools: () => loadCatalog(),
     search: () => loadRegistrars(),
+    emails: () => loadEmails(),
     support: () => loadSupport(),
     audit: () => loadAudit(),
   };
@@ -790,6 +791,142 @@
       if (res) { toast(`Porkbun prices updated for ${res.updated} extensions.`); loadRegistrars(); }
     } finally {
       $("pricesRefresh").disabled = false;
+    }
+  });
+
+  /* -------------------------------------------------------------- emails */
+
+  state.emailKey = null;
+
+  async function loadEmails() {
+    const res = await call("adminListEmails");
+    if (res) renderEmails(res);
+  }
+
+  function renderEmails(res) {
+    state.emails = res.templates || [];
+    state.brand = res.brand;
+    $("brandLogo").value = res.brand.logo_url || "";
+    $("brandColor").value = res.brand.accent_color || "#ff5011";
+    $("brandColorPick").value = res.brand.accent_color || "#ff5011";
+    $("brandFooter").value = res.brand.footer_text || "";
+    $("emailList").innerHTML = state.emails.map((e) => `
+      <button type="button" data-email-key="${h(e.key)}" class="w-full text-left px-4 py-3 border-b border-surface-border last:border-b-0 hover:bg-white/5 ${e.key === state.emailKey ? "bg-white/5 border-l-2 !border-l-brand" : ""}">
+        <div class="text-sm text-white flex items-center gap-2">${h(e.name)}${e.edited ? '<span class="badge badge-info">edited</span>' : ""}</div>
+        <div class="text-xs text-slate-400 mt-0.5">${h(e.when)}</div>
+      </button>`).join("");
+    selectEmail(state.emailKey && state.emails.some((e) => e.key === state.emailKey) ? state.emailKey : state.emails[0]?.key, true);
+  }
+
+  function selectEmail(key, keepDraft) {
+    const e = state.emails.find((x) => x.key === key);
+    if (!e) return;
+    const switching = state.emailKey !== key;
+    state.emailKey = key;
+    document.querySelectorAll("[data-email-key]").forEach((b) => {
+      const on = b.dataset.emailKey === key;
+      b.classList.toggle("bg-white/5", on);
+    });
+    $("emailName").textContent = e.name;
+    $("emailWhen").textContent = `Sent: ${e.when}`;
+    if (switching || !keepDraft) {
+      $("emailSubject").value = e.template.subject;
+      $("emailHeading").value = e.template.heading;
+      $("emailBody").value = e.template.body;
+      $("emailButton").value = e.template.button;
+    }
+    $("emailButtonGroup").hidden = !e.hasButton;
+    $("emailReset").disabled = !e.edited;
+    $("emailVars").innerHTML = Object.entries(e.vars).map(([k, label]) =>
+      `<button type="button" data-insert-var="${h(k)}" title="${h(label)}" class="text-xs font-mono px-2 py-1 rounded border border-surface-border text-brand hover:border-brand">{{${h(k)}}}</button>`).join("");
+    previewEmail();
+  }
+
+  function emailDraft() {
+    return {
+      key: state.emailKey,
+      template: {
+        subject: $("emailSubject").value,
+        heading: $("emailHeading").value,
+        body: $("emailBody").value,
+        button: $("emailButton").value,
+      },
+      brand: {
+        logo_url: $("brandLogo").value.trim(),
+        accent_color: $("brandColor").value.trim(),
+        footer_text: $("brandFooter").value,
+      },
+    };
+  }
+
+  let previewTimer;
+  async function previewEmail() {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(async () => {
+      if (!state.emailKey) return;
+      // Quiet: half-typed drafts may be invalid for a moment.
+      const res = await API.call("adminPreviewEmail", emailDraft()).catch(() => null);
+      if (!res || !res.success) return;
+      $("emailPreviewSubject").textContent = res.subject;
+      $("emailPreview").srcdoc = res.html;
+    }, 350);
+  }
+
+  $("emailList").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-email-key]");
+    if (b) selectEmail(b.dataset.emailKey);
+  });
+  $("emailVars").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-insert-var]");
+    if (!b) return;
+    const box = $("emailBody");
+    const text = `{{${b.dataset.insertVar}}}`;
+    const at = box.selectionStart ?? box.value.length;
+    box.value = box.value.slice(0, at) + text + box.value.slice(box.selectionEnd ?? at);
+    box.focus();
+    box.selectionStart = box.selectionEnd = at + text.length;
+    previewEmail();
+  });
+  ["emailSubject", "emailHeading", "emailBody", "emailButton", "brandLogo", "brandColor", "brandFooter"].forEach((id) =>
+    $(id).addEventListener("input", previewEmail));
+  $("brandColorPick").addEventListener("input", () => { $("brandColor").value = $("brandColorPick").value; previewEmail(); });
+  $("brandColor").addEventListener("change", () => {
+    if (/^#[0-9a-f]{6}$/i.test($("brandColor").value)) $("brandColorPick").value = $("brandColor").value;
+  });
+
+  $("emailForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("emailSave").disabled = true;
+    try {
+      const draft = emailDraft();
+      const res = await call("adminSaveEmail", { key: draft.key, template: draft.template });
+      if (res) { renderEmails(res); toast("Email saved. Customers get the new text from now on."); }
+    } finally {
+      $("emailSave").disabled = false;
+    }
+  });
+  $("emailReset").addEventListener("click", async () => {
+    if (!confirm("Go back to the original text of this email? Your edits are discarded.")) return;
+    const res = await call("adminResetEmail", { key: state.emailKey });
+    if (res) { renderEmails(res); selectEmail(state.emailKey); toast("Original text restored."); }
+  });
+  $("emailTest").addEventListener("click", async () => {
+    $("emailTest").disabled = true;
+    try {
+      const res = await call("adminSendTestEmail", emailDraft());
+      if (res) toast(res.message);
+    } finally {
+      $("emailTest").disabled = false;
+    }
+  });
+  $("emailBrandForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("brandSave").disabled = true;
+    try {
+      const res = await call("adminSaveEmailBrand", { brand: emailDraft().brand });
+      if (res) { renderEmails(res); toast("Brand saved for all emails."); }
+    } finally {
+      $("brandSave").disabled = false;
     }
   });
 

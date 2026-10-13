@@ -29,6 +29,7 @@ import {
 import { encryptSecret, KEY_VERSION } from "../_shared/crypto.ts";
 import { BadRequest, boundedArray, isUuid, isValidEmail, str } from "../_shared/validate.ts";
 import { sendEmail, sendWhatsApp } from "../_shared/notify.ts";
+import { sendTemplate } from "../_shared/email.ts";
 import {
   adminAudit,
   adminGetPrices,
@@ -36,6 +37,12 @@ import {
   adminOverview,
   adminDeleteCatalogItem,
   adminDeleteRegistrar,
+  adminListEmails,
+  adminPreviewEmail,
+  adminResetEmail,
+  adminSaveEmail,
+  adminSaveEmailBrand,
+  adminSendTestEmail,
   adminGetTldPrices,
   adminListRegistrars,
   adminRefreshDomainPrices,
@@ -197,17 +204,7 @@ async function registerUser(req: Request, p: any) {
     ADMIN_PHONE,
     `New Domain Vault registration: ${email} from ${location ?? "unknown"}.`,
   );
-  await sendEmail(
-    email,
-    "Welcome to Domain Vault!",
-    !activeNow
-      ? `<h3>Welcome to Domain Vault!</h3>
-         <p>Your account has been created and is pending activation by our team.
-         We'll email you as soon as it is live.</p>`
-      : `<h3>Welcome to Domain Vault!</h3>
-         <p>Your account is ready. Log in to start tracking your domains.</p>
-         ${SITE_URL ? `<p><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}`,
-  );
+  await sendTemplate(email, activeNow ? "welcome_active" : "welcome_pending", { email });
   await sendWhatsApp(phone, !activeNow
     ? "Welcome to Domain Vault! Your account is pending activation."
     : "Welcome to Domain Vault! Your account is ready.");
@@ -712,6 +709,7 @@ const ADMIN_ACTIONS = new Set([
   "adminListCatalog", "adminSaveCatalogItem", "adminDeleteCatalogItem",
   "adminListRegistrars", "adminSaveRegistrar", "adminDeleteRegistrar",
   "adminGetTldPrices", "adminSaveTldPrices", "adminRefreshDomainPrices",
+  "adminListEmails", "adminSaveEmail", "adminResetEmail", "adminSaveEmailBrand", "adminPreviewEmail", "adminSendTestEmail",
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -774,6 +772,19 @@ Deno.serve(async (req: Request) => {
           return json(req, await adminSaveTldPrices(caller, body));
         case "adminRefreshDomainPrices":
           return json(req, await adminRefreshDomainPrices(caller));
+        case "adminListEmails":
+          return json(req, await adminListEmails());
+        case "adminSaveEmail":
+          return json(req, await adminSaveEmail(caller, body));
+        case "adminResetEmail":
+          return json(req, await adminResetEmail(caller, body));
+        case "adminSaveEmailBrand":
+          return json(req, await adminSaveEmailBrand(caller, body));
+        case "adminPreviewEmail":
+          return json(req, await adminPreviewEmail(body));
+        case "adminSendTestEmail":
+          await rateLimit(`email-test:${caller.id}`, 20, 3600);
+          return json(req, await adminSendTestEmail(caller, body));
         case "adminAudit":
           return json(req, await adminAudit(body));
       }

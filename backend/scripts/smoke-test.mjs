@@ -350,6 +350,26 @@ ok("customers cannot change prices", r.success === false && /administrators only
 r = await ADMIN.call("adminDeleteRegistrar", { id: smokeReg?.id });
 ok("admin deletes the registrar and its prices", r.success && sql(`select count(*) from registrar_prices where registrar_id = '${smokeReg?.id}'`) === "0");
 
+// =============================================================== emails
+console.log("--- customer emails ---");
+r = await ADMIN.call("adminListEmails", {});
+ok("admin lists the customer emails with their defaults", r.success && r.templates.length >= 12 &&
+  r.templates.every((t) => t.template.subject && !t.edited) && r.brand.accent_color === "#ff5011");
+const invite = r.templates.find((t) => t.key === "team_invite");
+r = await ADMIN.call("adminPreviewEmail", { key: "team_invite", template: { ...invite.template, body: "Hello <script>x</script> {{inviter}} **bold** {{abilities}}" } });
+ok("the preview fills placeholders, escapes typed HTML and keeps built-in HTML",
+  r.success && r.html.includes("owner@example.com") && r.html.includes("&lt;script&gt;") && r.html.includes("<b>bold</b>") && r.html.includes("<li>"));
+r = await ADMIN.call("adminSaveEmail", { key: "welcome_active", template: { subject: `Hi from smoke ${stamp}`, heading: "Hey", body: "Custom text.", button: "Go" } });
+ok("admin saves an edited email", r.success && r.templates.find((t) => t.key === "welcome_active").edited === true);
+r = await ADMIN.call("adminSaveEmail", { key: "welcome_active", template: { subject: "", heading: "", body: "", button: "" } });
+ok("an empty subject is refused", r.success === false && /subject/i.test(r.message), r.message);
+r = await ADMIN.call("adminSaveEmailBrand", { brand: { logo_url: "javascript:alert(1)", accent_color: "#ff5011", footer_text: "x" } });
+ok("the logo must be an https image", r.success === false, r.message);
+r = await ADMIN.call("adminResetEmail", { key: "welcome_active" });
+ok("…and goes back to the original text", r.success && r.templates.find((t) => t.key === "welcome_active").edited === false);
+r = await walkInApi.call("adminSaveEmail", { key: "welcome_active", template: { subject: "x", heading: "", body: "", button: "" } });
+ok("customers cannot edit emails", r.success === false && /administrators only/i.test(r.message));
+
 // ============================================================== cleanup
 sql(`delete from admin_audit_log where admin_email = '${adminEmail}';
      delete from auth.users where email in ('${email}', '${adminEmail}', '${newcomer}', '${walkIn}');

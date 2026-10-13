@@ -217,6 +217,9 @@
             <button class="tab tab-btn" data-tab="search">
                 <i data-lucide="search" class="w-4 h-4"></i> Domain search
             </button>
+            <button class="tab tab-btn" data-tab="emails">
+                <i data-lucide="mail" class="w-4 h-4"></i> Emails
+            </button>
             <button class="tab tab-btn" data-tab="support">
                 <i data-lucide="message-circle" class="w-4 h-4"></i> Support
             </button>
@@ -578,6 +581,69 @@
             </div>
         </section>
 
+        <section id="panel-emails" data-panel="emails" class="panel-section" hidden>
+            <p class="text-sm text-slate-400 mb-4 max-w-3xl">The automated emails customers receive. Edit the words here; the layout, logo and colour apply to all of them. In the text, a blank line starts a new paragraph, <b class="text-white">**double asterisks**</b> make bold, and <code class="text-brand">{{placeholders}}</code> are filled in for each customer.</p>
+            <div class="grid gap-6 xl:grid-cols-[300px_1fr] items-start">
+                <div class="space-y-6">
+                    <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden" id="emailList"></div>
+                    <form id="emailBrandForm" class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-4" novalidate>
+                        <h2 class="text-base font-semibold text-white">Brand (all emails)</h2>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="brandLogo" class="text-xs text-slate-400 font-medium">Logo image (https://…)</label>
+                            <input id="brandLogo" class="input-base" maxlength="500">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="brandColor" class="text-xs text-slate-400 font-medium">Accent colour</label>
+                            <div class="flex gap-2"><input id="brandColorPick" type="color" class="h-10 w-12 rounded bg-transparent border border-surface-border" aria-label="Pick the accent colour"><input id="brandColor" class="input-base" maxlength="7" placeholder="#ff5011"></div>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="brandFooter" class="text-xs text-slate-400 font-medium">Footer line</label>
+                            <input id="brandFooter" class="input-base" maxlength="300">
+                        </div>
+                        <div class="flex justify-end"><button type="submit" id="brandSave" class="btn-primary btn-base"><i data-lucide="save" class="w-4 h-4"></i> Save brand</button></div>
+                    </form>
+                </div>
+
+                <div class="space-y-4">
+                    <form id="emailForm" class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-4" novalidate>
+                        <div>
+                            <h2 class="text-lg font-semibold text-white" id="emailName">Choose an email</h2>
+                            <p class="text-xs text-slate-400" id="emailWhen"></p>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="emailSubject" class="text-xs text-slate-400 font-medium">Subject</label>
+                            <input id="emailSubject" class="input-base" maxlength="200">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="emailHeading" class="text-xs text-slate-400 font-medium">Heading</label>
+                            <input id="emailHeading" class="input-base" maxlength="200">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="emailBody" class="text-xs text-slate-400 font-medium">Text</label>
+                            <textarea id="emailBody" class="input-base !h-auto min-h-[220px] py-2 font-mono text-sm leading-relaxed" maxlength="5000"></textarea>
+                        </div>
+                        <div class="flex flex-col gap-1.5" id="emailButtonGroup">
+                            <label for="emailButton" class="text-xs text-slate-400 font-medium">Button text (empty = no button)</label>
+                            <input id="emailButton" class="input-base" maxlength="60">
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-400 font-medium mb-2">Placeholders — click to insert into the text</p>
+                            <div class="flex flex-wrap gap-2" id="emailVars"></div>
+                        </div>
+                        <div class="pt-3 border-t border-surface-border flex flex-wrap gap-3 justify-end">
+                            <button type="button" id="emailReset" class="btn-secondary btn-base">Back to the original text</button>
+                            <button type="button" id="emailTest" class="btn-secondary btn-base"><i data-lucide="send" class="w-4 h-4"></i> Send me a test</button>
+                            <button type="submit" id="emailSave" class="btn-primary btn-base"><i data-lucide="save" class="w-4 h-4"></i> Save</button>
+                        </div>
+                    </form>
+                    <div class="bg-surface-card border border-surface-border rounded-xl overflow-hidden">
+                        <div class="px-5 py-3 border-b border-surface-border text-sm text-slate-300">Preview — <span id="emailPreviewSubject" class="text-white"></span></div>
+                        <iframe id="emailPreview" title="Email preview" sandbox="" class="w-full block bg-white" style="height: 620px; border: 0;"></iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section id="panel-support" data-panel="support" class="panel-section" hidden>
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div>
@@ -679,8 +745,8 @@
 
 
 
-    <script src="../config.js?v=20261012b"></script>
-    <script src="../api.js?v=20261012b"></script>
-    <script src="admin.js?v=20261012b"></script>
+    <script src="../config.js?v=20261013"></script>
+    <script src="../api.js?v=20261013"></script>
+    <script src="admin.js?v=20261013"></script>
 </body>
 </html>

@@ -14,9 +14,9 @@
 // ============================================================================
 
 import { serviceClient } from "../_shared/db.ts";
-import { sendEmail, sendWhatsApp } from "../_shared/notify.ts";
+import { sendWhatsApp } from "../_shared/notify.ts";
+import { sendTemplate } from "../_shared/email.ts";
 
-const SITE_URL = Deno.env.get("SITE_URL") ?? "";
 const CHANNELS = ["email", "whatsapp"] as const;
 
 interface Due {
@@ -78,48 +78,33 @@ function subjectFor(rows: Due[]): string {
   return `${rows.length} domains renewing soon — first ${whenText(soonest.days_left)}`;
 }
 
-/** The digest; `teamOf` is the owner's address when this is a team member's copy. */
-function emailBody(rows: Due[], teamOf: string | null = null): string {
+/** The digest's pieces for the renewal_reminder template; `teamOf` is the owner's address for a team member's copy. */
+function digestVars(rows: Due[], teamOf: string | null = null): Record<string, string> {
   const items = rows.map((r) => `
     <tr>
-      <td style="padding:10px 14px;border-bottom:1px solid #eee">
+      <td style="padding:10px 12px;border-bottom:1px solid #eee">
         <b>${escapeHtml(r.domain_name)}</b>${
     r.provider_name ? ` <span style="color:#777">· ${escapeHtml(r.provider_name)}</span>` : ""
   }
       </td>
-      <td style="padding:10px 14px;border-bottom:1px solid #eee;white-space:nowrap">
+      <td style="padding:10px 12px;border-bottom:1px solid #eee;white-space:nowrap">
         ${escapeHtml(r.renewal_date)} (${escapeHtml(whenText(r.days_left))})${escapeHtml(money(r.renewal_price))}
       </td>
-      <td style="padding:10px 14px;border-bottom:1px solid #eee;color:#777;white-space:nowrap">
+      <td style="padding:10px 12px;border-bottom:1px solid #eee;color:#777;white-space:nowrap">
         ${r.auto_renew ? "auto-renew on" : "manual"}
       </td>
     </tr>`).join("");
-
-  const anyManual = rows.some((r) => !r.auto_renew);
-
-  return `
-    <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#111">
-      <h2 style="margin:0 0 6px">Renewal reminder</h2>
-      <p style="margin:0 0 18px;color:#555">
-        ${rows.length === 1 ? "One domain is" : `${rows.length} domains are`} coming up for renewal.
-      </p>
-      <table style="border-collapse:collapse;width:100%;max-width:600px">${items}</table>
-      ${
-    anyManual
-      ? `<p style="margin:18px 0 0;color:#555">Domains marked <b>manual</b> will not renew by
-           themselves — renew them with your registrar before the date above.</p>`
-      : ""
-  }
-      ${SITE_URL ? `<p style="margin:18px 0 0"><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : ""}
-      <p style="margin:22px 0 0;font-size:12px;color:#999">
-        ${
-    teamOf
-      ? `You receive these as a member of the domain vault of ${escapeHtml(teamOf)}.
-         The vault owner can switch them off for you on the Team page.`
-      : "You can change or switch off these reminders in Domain Vault under Settings."
-  }
-      </p>
-    </div>`;
+  return {
+    summary: subjectFor(rows),
+    count_text: rows.length === 1 ? "One domain is" : `${rows.length} domains are`,
+    domains: `<table style="border-collapse:collapse;width:100%;margin:0 0 14px">${items}</table>`,
+    manual_note: rows.some((r) => !r.auto_renew)
+      ? "Domains marked <b>manual</b> will not renew by themselves — renew them with your registrar before the date above."
+      : "",
+    settings_note: teamOf
+      ? `You receive these as a member of the domain vault of ${teamOf}. The vault owner can switch them off for you on the Team page.`
+      : "You can change or switch off these reminders in Domain Vault under Settings.",
+  };
 }
 
 function whatsappBody(rows: Due[]): string {
@@ -139,7 +124,7 @@ async function copyToTeam(admin: ReturnType<typeof serviceClient>, owner: Due, r
   }
   let sent = 0;
   for (const member of (data ?? []) as { member_id: string; email: string }[]) {
-    if (await sendEmail(member.email, subjectFor(rows), emailBody(rows, owner.email))) sent++;
+    if (await sendTemplate(member.email, "renewal_reminder", digestVars(rows, owner.email))) sent++;
   }
   return sent;
 }
@@ -207,7 +192,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const ok = channel === "email"
-        ? await sendEmail(who.email, subjectFor(userRows), emailBody(userRows))
+        ? await sendTemplate(who.email, "renewal_reminder", digestVars(userRows))
         : await sendWhatsApp(who.phone, whatsappBody(userRows));
 
       if (ok) {

@@ -39,7 +39,16 @@ interface Probe {
   detail: string | null;
 }
 
+/** One attempt, then a second one: a single slow answer is not an outage. */
 async function timed(run: (signal: AbortSignal) => Promise<string | null>): Promise<Probe> {
+  const first = await attempt(run);
+  if (first.ok) return first;
+  await new Promise((r) => setTimeout(r, 2000));
+  const second = await attempt(run);
+  return second.ok ? second : { ...second, detail: `${second.detail} (twice)` };
+}
+
+async function attempt(run: (signal: AbortSignal) => Promise<string | null>): Promise<Probe> {
   const started = Date.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SLOW_MS);
@@ -99,23 +108,25 @@ async function emailHealthy(): Promise<Probe> {
 }
 
 async function probeAll() {
-  const results: Record<Key, Probe> = {
-    app: await expectStatus(`${APP_URL}/`, (s) => s === 200),
-    website: await expectStatus(`${SITE_URL}/`, (s) => s === 200),
-    api: await expectStatus(`${SUPABASE_URL}/functions/v1/api`, (s) => s === 200, {
+  const [app, website, api, lookups, dns, reminders, email] = await Promise.all([
+    expectStatus(`${APP_URL}/`, (s) => s === 200),
+    expectStatus(`${SITE_URL}/`, (s) => s === 200),
+    expectStatus(`${SUPABASE_URL}/functions/v1/api`, (s) => s === 200, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "getPrices" }),
     }),
-    lookups: await expectStatus("https://rdap.verisign.com/com/v1/domain/example.com", (s) => s === 200, {
+    expectStatus("https://rdap.verisign.com/com/v1/domain/example.com", (s) => s === 200, {
       headers: { accept: "application/rdap+json" },
     }),
-    dns: await expectStatus("https://cloudflare-dns.com/dns-query?name=example.com&type=A", (s) => s === 200, {
+    expectStatus("https://cloudflare-dns.com/dns-query?name=example.com&type=A", (s) => s === 200, {
       headers: { accept: "application/dns-json" },
     }),
-    reminders: await remindersHealthy(),
-    email: await emailHealthy(),
-  };
+    remindersHealthy(),
+    emailHealthy(),
+  ]);
+  const results: Record<Key, Probe> = { app, website, api, lookups, dns, reminders, email };
+
   const admin = serviceClient();
   const { error } = await admin.from("status_checks").insert(
     COMPONENTS.map((c) => ({ component: c.key, ...results[c.key] })),
@@ -150,6 +161,11 @@ async function pageData() {
   if (error) throw new HttpError(500, error.message);
 
   const days = Array.from({ length: DAYS }, (_, i) => utcDay(DAYS - 1 - i));   // oldest first
+  const { data: firstRow } = await admin.from("status_checks").select("checked_at")
+    .order("checked_at", { ascending: true }).limit(1).maybeSingle();
+  // Days before monitoring began have no data at all; the page leaves them out
+  // rather than showing them as either up or down.
+  const since = firstRow ? String(firstRow.checked_at).slice(0, 10) : days[days.length - 1];
   const components = COMPONENTS.map((c) => {
     // deno-lint-ignore no-explicit-any
     const byDay = new Map((daily ?? []).filter((d: any) => d.component === c.key).map((d: any) => [String(d.day), d]));
@@ -157,6 +173,7 @@ async function pageData() {
     const blocks = days.map((day) => {
       // deno-lint-ignore no-explicit-any
       const d = byDay.get(day) as any;
+      if (day < since) return -1;   // before monitoring began
       if (!d) return 0;   // no data that day
       total += d.total;
       ok += d.ok;
@@ -188,6 +205,7 @@ async function pageData() {
     downComponents: down.map((c) => c.key),
     dateRange: `${fmt(days[0])} - ${fmt(days[days.length - 1])}`,
     days: { from: days[0], to: days[days.length - 1] },
+    monitoringSince: since,
     components,
     updatedAt: new Date().toISOString(),
   };

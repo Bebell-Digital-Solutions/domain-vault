@@ -29,6 +29,7 @@
 
 import { serviceClient } from "../_shared/db.ts";
 import { sendEmail } from "../_shared/notify.ts";
+import { sendTemplate } from "../_shared/email.ts";
 
 type Plan = "Personal" | "Start-up" | "Business" | "Agency";
 type Kind = "subscription" | "lifetime";
@@ -147,7 +148,7 @@ async function alertAdmin(subject: string, lines: Record<string, unknown>) {
   );
 }
 
-const appLink = () => SITE_URL ? `<p><a href="${SITE_URL}/app/">Open Domain Vault</a></p>` : "";
+const manageLink = (label: string) => `<a href="${MANAGE_URL}">${escapeHtml(label)}</a>`;
 
 async function recompute(userId: string | null) {
   if (!userId) return null;
@@ -214,15 +215,7 @@ async function offerClaim(
     return false;
   }
   const link = `${SITE_URL}/app/?claim=${token}`;
-  return await sendEmail(
-    payer,
-    `Activate your Domain Vault ${plan ?? ""} plan`,
-    `<h3>Thank you for your purchase!</h3>
-     <p>To activate your <b>${escapeHtml(plan ?? "")}</b> ${escapeHtml(what)}, create your Domain Vault account
-     — or log in, if you already have one — with this link:</p>
-     <p><a href="${link}" style="display:inline-block;background:#ff5011;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Activate my plan</a></p>
-     <p style="color:#777">The link works once and stays valid for 30 days. If you did not make this purchase, you can ignore this email.</p>`,
-  );
+  return await sendTemplate(payer, "purchase_claim", { plan: plan ?? "", what, claim_url: link });
 }
 
 async function prices(plan: Plan) {
@@ -339,28 +332,15 @@ async function handleCompleted(p: URLSearchParams, txnId: string, kind: Kind): P
 
   await record("completed", null, profile.id, paidUntil);
   const effective = await recompute(profile.id);
-  const note = effective && effective !== plan ? ` (your current plan is <b>${effective}</b>)` : "";
+  const note = effective && effective !== plan ? ` (your current plan is <b>${escapeHtml(effective)}</b>)` : "";
 
   if (kind === "subscription") {
     const renews = addPeriod(paypalDate(p.get("payment_date")) ?? new Date(), "1 Y");
-    await sendEmail(
-      profile.email,
-      `Your Domain Vault ${plan} subscription is active`,
-      `<h3>Thank you for subscribing!</h3>
-       <p>Your <b>${plan}</b> plan is active${note}. PayPal renews it automatically each year;
-       the next renewal is due around <b>${day(renews)}</b>.</p>
-       <p>You can cancel any time in PayPal (<a href="${MANAGE_URL}">automatic payments</a>);
-       your plan then stays active until the end of the year you paid for.</p>
-       <p>Transaction: ${escapeHtml(txnId)}</p>${appLink()}`,
-    );
+    await sendTemplate(profile.email, "subscription_active", {
+      plan: plan ?? "", plan_note: note, renews: day(renews) ?? "", manage_link: manageLink("automatic payments"), txn: txnId,
+    });
   } else {
-    await sendEmail(
-      profile.email,
-      `Your Domain Vault ${plan} lifetime deal is active`,
-      `<h3>Thank you for your purchase!</h3>
-       <p>Your <b>${plan}</b> lifetime plan is now active on your account${note}.</p>
-       <p>Transaction: ${escapeHtml(txnId)}</p>${appLink()}`,
-    );
+    await sendTemplate(profile.email, "lifetime_active", { plan: plan ?? "", plan_note: note, txn: txnId });
   }
 
   return ok("applied");
@@ -520,14 +500,9 @@ async function handleSubscriptionEvent(p: URLSearchParams, event: string, subscr
     if (others && others.length > 0) {
       const list = others.map((o) => `${o.plan} (${o.subscr_id})`).join(", ");
       await alertAdmin("Customer now has more than one active subscription", { email, newPlan: plan, older: list });
-      await sendEmail(
-        profile!.email,
-        "You have more than one Domain Vault subscription",
-        `<p>Your new <b>${escapeHtml(plan!)}</b> subscription is set up. You also still have:
-         ${escapeHtml(list)}.</p>
-         <p>To avoid paying twice, cancel the one you no longer need in PayPal:
-         <a href="${MANAGE_URL}">automatic payments</a>. Your plan is always the highest one you pay for.</p>`,
-      );
+      await sendTemplate(profile!.email, "subscription_duplicate", {
+        plan: plan!, others: list, manage_link: manageLink("automatic payments"),
+      });
     }
     return ok("subscription recorded");
   }
@@ -551,12 +526,9 @@ async function handleSubscriptionEvent(p: URLSearchParams, event: string, subscr
         .eq("subscr_id", subscrId);
     }
     if (owner) {
-      await sendEmail(
-        owner.email,
-        `Your Domain Vault ${sub.plan} subscription was cancelled`,
-        `<p>Your <b>${escapeHtml(sub.plan ?? "")}</b> subscription has been cancelled, so it will not renew.</p>
-         ${until ? `<p>You keep your plan until <b>${day(until)}</b>.</p>` : ""}${appLink()}`,
-      );
+      await sendTemplate(owner.email, "subscription_cancelled", {
+        plan: sub.plan ?? "", until_text: until ? `You keep your plan until ${day(until)}.` : "",
+      });
     }
     await alertAdmin("Subscription cancelled", { subscrId, email: sub.email, plan: sub.plan, activeUntil: day(until) });
     return ok("cancellation recorded");
@@ -571,13 +543,7 @@ async function handleSubscriptionEvent(p: URLSearchParams, event: string, subscr
       .eq("subscr_id", subscrId).eq("status", "completed").gt("paid_until", new Date().toISOString());
     const effective = await recompute(sub.user_id);
     if (owner) {
-      await sendEmail(
-        owner.email,
-        `Your Domain Vault ${sub.plan} subscription has ended`,
-        `<p>Your <b>${escapeHtml(sub.plan ?? "")}</b> subscription has ended. Your plan is now
-         <b>${escapeHtml(effective ?? "")}</b>. Your domains are kept; you can subscribe again any time
-         from the app.</p>${appLink()}`,
-      );
+      await sendTemplate(owner.email, "subscription_ended", { plan: sub.plan ?? "", plan_now: effective ?? "" });
     }
     await alertAdmin("Subscription ended", { subscrId, email: sub.email, plan: sub.plan, planNow: effective });
     return ok("end of term applied");
@@ -585,14 +551,10 @@ async function handleSubscriptionEvent(p: URLSearchParams, event: string, subscr
 
   if (event === "subscr_failed") {
     if (owner) {
-      await sendEmail(
-        owner.email,
-        "Your Domain Vault renewal payment failed",
-        `<p>PayPal could not collect the renewal for your <b>${escapeHtml(sub.plan ?? "")}</b> plan.
-         PayPal will try again; please check your payment method in
-         <a href="${MANAGE_URL}">PayPal</a>.</p>
-         ${until ? `<p>Your plan stays active until <b>${day(until)}</b>.</p>` : ""}`,
-      );
+      await sendTemplate(owner.email, "payment_failed", {
+        plan: sub.plan ?? "", manage_link: manageLink("PayPal"),
+        until_text: until ? `Your plan stays active until ${day(until)}.` : "",
+      });
     }
     await alertAdmin("Subscription renewal failed", { subscrId, email: sub.email, plan: sub.plan, activeUntil: day(until) });
     return ok("failure noted");

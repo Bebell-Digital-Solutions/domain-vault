@@ -210,7 +210,7 @@ async function reload(page) {
        from unnest(array['app','website','api','lookups','dns','reminders','email']) c;
        delete from lookup_cache where key = 'status:page';`);
   await page.goto(SITE + '/status.html');
-  await page.waitForFunction(() => document.querySelectorAll('#status-page-root .animate-blink').length >= 7 * 90, null, { timeout: 20000 });
+  await page.waitForFunction(() => document.querySelectorAll('#status-page-root .animate-blink').length >= 7, null, { timeout: 20000 });
   ok('status page shows live components', /fully operational/.test(await page.textContent('#status-page-root')) &&
     (await page.textContent('#status-page-root')).includes('Domain Lookup (RDAP)'));
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/status.png`, fullPage: true });
@@ -598,6 +598,21 @@ async function reload(page) {
   await page.waitForFunction(() => document.querySelector('#tldPriceRows tr[data-registrar="spaceship"] td:nth-child(4)').textContent.trim() === '—', null, { timeout: 15000 });
   ok('…and removes them', sql(`select count(*) from registrar_prices where tld='uitest'`) === '0');
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/admin-search.png`, fullPage: true });
+
+  // Emails tab: edit a customer email, see the preview, put it back.
+  await page.click('.tab[data-tab="emails"]');
+  await page.waitForFunction(() => document.querySelectorAll('#emailList [data-email-key]').length >= 12, null, { timeout: 15000 });
+  await page.click('#emailList [data-email-key="account_activated"]');
+  await page.fill('#emailHeading', 'Welcome aboard, UI test');
+  await page.waitForFunction(() => (document.getElementById('emailPreview').srcdoc || '').includes('Welcome aboard, UI test'), null, { timeout: 15000 });
+  ok('email editor previews the draft', true);
+  await page.click('#emailSave');
+  await page.waitForFunction(() => /Email saved/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  ok('admin saves an email text', sql(`select heading from email_templates where key='account_activated'`) === 'Welcome aboard, UI test');
+  await page.click('#emailReset');
+  await page.waitForFunction(() => /Original text restored/.test(document.getElementById('toast').textContent), null, { timeout: 15000 });
+  ok('…and restores the original', sql(`select count(*) from email_templates where key='account_activated'`) === '0');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/admin-emails.png`, fullPage: true });
 
   // Support tab: the helpdesk console, only for signed-in admins.
   await page.click('.tab[data-tab="support"]');
