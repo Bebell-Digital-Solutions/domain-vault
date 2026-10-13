@@ -2157,7 +2157,7 @@
             const ua = navigator.userAgent;
             const mine = /Mac/i.test(ua) ? 'macos' : /Win/i.test(ua) ? 'windows' : /Linux|X11/i.test(ua) ? 'linux' : null;
             const platforms = [
-                { key: 'macos', name: 'macOS', icon: 'fa-apple', note: 'macOS 11 or later · Apple Silicon and Intel' },
+                { key: 'macos', name: 'macOS', icon: 'fa-apple', note: 'macOS 11 or later · Apple Silicon and Intel. First launch: System Settings → Privacy & Security → Open Anyway' },
                 { key: 'windows', name: 'Windows', icon: 'fa-windows', note: 'Windows 10 or later · 64-bit' },
                 { key: 'linux', name: 'Linux', icon: 'fa-linux', note: 'Ubuntu / Debian (.deb), or any distribution (.AppImage)' }
             ];

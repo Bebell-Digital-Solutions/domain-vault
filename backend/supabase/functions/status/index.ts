@@ -14,7 +14,8 @@
 import { json, preflight } from "../_shared/cors.ts";
 import { clientIp, HttpError, rateLimit, serviceClient } from "../_shared/db.ts";
 
-const DAYS = 90;
+const BARS = 90;
+const KEEP_DAYS = 95;
 const SLOW_MS = 10000;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -133,60 +134,58 @@ async function probeAll() {
   );
   if (error) throw new HttpError(500, error.message);
   // Keep a little more than the page shows.
-  await admin.from("status_checks").delete().lt("checked_at", new Date(Date.now() - (DAYS + 5) * 86400000).toISOString());
+  await admin.from("status_checks").delete().lt("checked_at", new Date(Date.now() - KEEP_DAYS * 86400000).toISOString());
   await admin.from("lookup_cache").delete().eq("key", "status:page");
   return { success: true, results };
 }
 
 // ---------------------------------------------------------------------------
 
-function utcDay(offset: number) {
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - offset);
-  return d.toISOString().slice(0, 10);
-}
-
 async function pageData() {
   const admin = serviceClient();
   const { data: hit } = await admin.from("lookup_cache").select("payload, expires_at").eq("key", "status:page").maybeSingle();
   if (hit && new Date(hit.expires_at) > new Date()) return hit.payload;
 
-  const [{ data: daily, error }, { data: latest }] = await Promise.all([
-    admin.rpc("status_daily", { p_days: DAYS }),
+  // 90 bars, always measured: each bar covers the largest slice for which
+  // 90 of them fit inside the monitored time (15 min, 1 h, 6 h, then a day).
+  const { data: firstRow } = await admin.from("status_checks").select("checked_at")
+    .order("checked_at", { ascending: true }).limit(1).maybeSingle();
+  const now = Date.now();
+  const first = firstRow ? new Date(firstRow.checked_at).getTime() : now;
+  const monitored = (now - first) / 1000;
+  const period = [86400, 21600, 3600, 900].find((p) => p * BARS <= monitored) ?? 900;
+  const stop = (Math.floor(now / 1000 / period) + 1) * period;   // end of the current slice
+  const start = stop - period * BARS;
+
+  const [{ data: buckets, error }, { data: latest }] = await Promise.all([
+    admin.rpc("status_buckets", { p_seconds: period, p_count: BARS }),
     admin.from("status_checks").select("component, ok, checked_at, detail")
-      .gte("checked_at", new Date(Date.now() - 20 * 60000).toISOString())
+      .gte("checked_at", new Date(now - 20 * 60000).toISOString())
       .order("checked_at", { ascending: false }),
   ]);
   if (error) throw new HttpError(500, error.message);
 
-  const days = Array.from({ length: DAYS }, (_, i) => utcDay(DAYS - 1 - i));   // oldest first
-  const { data: firstRow } = await admin.from("status_checks").select("checked_at")
-    .order("checked_at", { ascending: true }).limit(1).maybeSingle();
-  // Days before monitoring began have no data at all; the page leaves them out
-  // rather than showing them as either up or down.
-  const since = firstRow ? String(firstRow.checked_at).slice(0, 10) : days[days.length - 1];
   const components = COMPONENTS.map((c) => {
     // deno-lint-ignore no-explicit-any
-    const byDay = new Map((daily ?? []).filter((d: any) => d.component === c.key).map((d: any) => [String(d.day), d]));
+    const byBucket = new Map((buckets ?? []).filter((d: any) => d.component === c.key).map((d: any) => [d.bucket, d]));
     let total = 0, ok = 0;
-    const blocks = days.map((day) => {
+    const blocks = Array.from({ length: BARS }, (_, i) => {
       // deno-lint-ignore no-explicit-any
-      const d = byDay.get(day) as any;
-      if (day < since) return -1;   // before monitoring began
-      if (!d) return 0;   // no data that day
+      const d = byBucket.get(i) as any;
+      const sliceEnd = (start + (i + 1) * period) * 1000;
+      if (!d) return sliceEnd <= first ? -1 : 0;   // before monitoring began / a gap
       total += d.total;
       ok += d.ok;
       const failed = d.total - d.ok;
       return failed === 0 ? 1 : failed / d.total <= 0.1 ? 2 : 3;
     });
-    const now = (latest ?? []).find((l) => l.component === c.key);
+    const nowCheck = (latest ?? []).find((l) => l.component === c.key);
     return {
       key: c.key,
       name: c.name,
       // null: nothing measured yet
       uptime: total ? `${(Math.floor((ok / total) * 10000) / 100).toFixed(2).replace(/\.?0+$/, "")}%` : null,
-      current: now ? (now.ok ? "operational" : "down") : "unknown",
+      current: nowCheck ? (nowCheck.ok ? "operational" : "down") : "unknown",
       blocks,
     };
   });
@@ -198,14 +197,17 @@ async function pageData() {
     ? { status: "outage", title: "Major outage", description: `Affected: ${down.map((c) => c.name).join(", ")}. We are working on it.` }
     : { status: "degraded", title: "Some systems are affected", description: `Affected: ${down.map((c) => c.name).join(", ")}. Everything else is working.` };
 
-  const fmt = (d: string) => new Date(d + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const span = period * BARS;
+  const label = period === 86400 ? "Last 90 days"
+    : span >= 2 * 86400 ? `Last ${Math.round(span / 86400)} days`
+    : `Last ${Math.round(span / 3600)} hours`;
   const payload = {
     success: true,
     overall,
     downComponents: down.map((c) => c.key),
-    dateRange: `${fmt(days[0])} - ${fmt(days[days.length - 1])}`,
-    days: { from: days[0], to: days[days.length - 1] },
-    monitoringSince: since,
+    dateRange: label,
+    window: { from: new Date(start * 1000).toISOString(), periodSeconds: period, label, spanSeconds: span },
+    monitoringSince: new Date(first).toISOString().slice(0, 10),
     components,
     updatedAt: new Date().toISOString(),
   };

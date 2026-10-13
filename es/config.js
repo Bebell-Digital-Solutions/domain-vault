@@ -55,7 +55,7 @@ window.DOMAIN_VAULT_CONFIG = (function () {
     // which an AppImage cannot do for itself.
     linux: {
       url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.3/DomainVault-1.0.3-amd64.deb',
-      alt: { label: 'other distributions (.AppImage)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.3/DomainVault-1.0.3-x86_64.AppImage' }
+      alt: { label: 'otras distribuciones (.AppImage)', url: 'https://github.com/Bebell-Digital-Solutions/domain-vault/releases/download/desktop-v1.0.3/DomainVault-1.0.3-x86_64.AppImage' }
     }
   };
 

@@ -177,13 +177,17 @@
         /**
 - Generates the HTML for the 90-day uptime blocks.
          */
-        const renderBlocks = (blocks, from) => {
+        const renderBlocks = (blocks, win) => {
             let html = '';
             blocks.forEach((state, index) => {
                 // Before monitoring began: no bar at all (neither up nor down).
                 if (state === -1) { html += '<div class="flex-1 h-8"></div>'; return; }
                 let bgColor = 'bg-brand-success';
-                const date = from ? new Date(Date.parse(from + 'T00:00:00Z') + index * 86400000).toISOString().slice(0, 10) : '';
+                // Each bar is one slice of the window: a day, or a few hours while history is short.
+                const t0 = win ? Date.parse(win.from) + index * win.periodSeconds * 1000 : null;
+                const date = t0 === null ? '' : win.periodSeconds >= 86400
+                    ? new Date(t0).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+                    : new Date(t0).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                 let tooltip = 'Operational';
                 
                 if (state === 0) {
@@ -231,7 +235,7 @@
                         </div>
                         <span class="text-sm font-code text-brand-textMuted">${component.uptime ? component.uptime + ' uptime' : 'No data yet'}</span>
                     </div>
-                    ${renderBlocks(component.blocks, window.__statusFrom)}
+                    ${renderBlocks(component.blocks, window.__statusWindow)}
                 </div>
             `;
         };
@@ -243,7 +247,7 @@
             const root = document.getElementById('status-page-root');
             
             // Determine overall banner styles based on status
-            window.__statusFrom = data.days && data.days.from;
+            window.__statusWindow = data.window;
             const isOperational = data.overall.status === 'operational';
             const isOutage = data.overall.status === 'outage';
             const bannerBg = isOperational ? 'bg-brand-success/10' : isOutage ? 'bg-brand-danger/10' : 'bg-brand-warning/10';
@@ -289,7 +293,7 @@
                             <h2 class="text-lg font-semibold text-brand-textMain">System status</h2>
                             <div class="flex items-center gap-2 text-xs text-brand-textMuted font-code">
                                 <i data-lucide="chevron-left" class="w-3 h-3 cursor-pointer hover:text-brand-primary transition-colors"></i>
-                                <span>${data.monitoringSince && data.days && data.monitoringSince > data.days.from ? 'Monitoring since ' + new Date(data.monitoringSince + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : esc(data.dateRange)}</span>
+                                <span>${esc(data.dateRange)}</span>
                                 <i data-lucide="chevron-right" class="w-3 h-3 cursor-pointer hover:text-brand-primary transition-colors"></i>
                             </div>
                         </div>
