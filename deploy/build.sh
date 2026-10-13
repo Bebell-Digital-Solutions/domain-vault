@@ -46,7 +46,6 @@ case "$target" in
 /app/*    $APP_ORIGIN/:splat  301
 /app      $APP_ORIGIN/        301
 /pricing  /#pricing           301
-/p/refund /p/terms#refunds    302
 EOF
     ;;
   app)
