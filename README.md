@@ -108,7 +108,7 @@ No API keys. No OAuth. Just your data, securely in one place.
 **🕐 Response Time:** 
 Within 24 hours, Mon–Fri
 
-<a href="https://getdomainvault.com/download.html">
+<a href="https://getdomainvault.com/downloads.html">
   <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/domain-vualt-download-banner.png" alt="Download Domain Vault" width="100%" />
 </a>
 
