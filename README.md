@@ -42,6 +42,8 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 * **🔐 Zero-Knowledge Security:** Your vault lives in a Supabase Postgres database protected by Row-Level Security (RLS) hosted on AWS, meaning only you can read your rows. Credential storage uses zero-knowledge AES-256 client-side encryption.
 
+* **🌐 Domain Lookup:** Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.
+
 * **🌐 Live DNS Inspector:** Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.
 
 * **📈 Financial Reporting:** Track renewal costs by month, visualize your true domain investment, and export comprehensive CSV reports to hand off to your accounting team.
