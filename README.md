@@ -98,24 +98,24 @@ No API keys. No OAuth. Just your data, securely in one place.
 ## 📬 Contact Us
 
 **✉️ Email**
-[hello@edgechat.ai](mailto:hello@edgechat.ai)
+[support@getdomainvault.com](mailto:support@getdomainvault.com)
 
 **📞 Phone**
-[+1 (555) 123-4567](tel:+15551234567)
+[+1 (829) 620-3970](tel:+18296203970)
 
 **💬 Support Channel**
-[Discord — EdgeChat Community](https://discord.gg/your-invite)
+[Discord — Domain Vault Community](https://discord.gg/your-invite)
 
 **🐛 Bug Reports**
-[GitHub Issues](https://github.com/your-org/edgechat/issues)
+[GitHub Issues](https://github.com/Bebell-Digital-Solutions/domain-vault/issues)
 
 **🕐 Response Time**
 Within 24 hours, Mon–Fri
 
 <br />
 
-<a href="https://edgechat.ai/download">
-  <img src="assets/edgechat-banner.png" alt="Download EdgeChat" width="100%" />
+<a href="https://getdomainvault.com/download.html">
+  <img src="assets/edgechat-banner.png" alt="Download Domain Vault" width="100%" />
 </a>
 
 </td>
