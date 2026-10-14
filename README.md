@@ -102,11 +102,8 @@ No API keys. No OAuth. Just your data, securely in one place.
 **✉️ Email**
 [support@getdomainvault.com](mailto:support@getdomainvault.com)
 
-**💬 Online Support**
-[getdomainvault.com/support](https://getdomainvault.com/support)
-
 **💬 Support Channel**
-[Discord — Domain Vault Community](https://discord.gg/your-invite)
+[getdomainvault.com/support](https://getdomainvault.com/support)
 
 **🐛 Bug Reports**
 [GitHub Issues](https://github.com/Bebell-Digital-Solutions/domain-vault/issues/new)
