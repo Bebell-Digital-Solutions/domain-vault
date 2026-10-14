@@ -102,8 +102,8 @@ No API keys. No OAuth. Just your data, securely in one place.
 **✉️ Email**
 [support@getdomainvault.com](mailto:support@getdomainvault.com)
 
-**📞 Phone**
-[+1 (829) 620-3970](tel:+18296203970)
+**💬 Online Support**
+[getdomainvault.com/support](https://getdomainvault.com/support)
 
 **💬 Support Channel**
 [Discord — Domain Vault Community](https://discord.gg/your-invite)
