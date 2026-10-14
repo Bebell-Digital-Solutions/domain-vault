@@ -260,10 +260,21 @@
                     
                     <!-- Header -->
                     <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-6">
-                        <div class="flex items-center gap-3">
-                            <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" alt="Domain Vault" class="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,80,17,0.4)]">
-                            <h1 class="text-xl font-tech text-brand-textMain tracking-wide">DOMAIN VAULT</h1>
-                        </div>
+                        <!-- Left: Brand -->
+                        <a href="/" class="group flex items-center gap-3 text-brand-textMain font-semibold uppercase tracking-wider font-tech hover:opacity-80 transition-opacity">
+                            <div class="relative w-10 h-10">
+                                <!-- Default logo -->
+                                <img src="https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png" 
+                                     alt="Domain Vault Logo" 
+                                     class="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,80,17,0.4)] transition-opacity duration-300 group-hover:opacity-0" />
+                                     
+                                <!-- Hover logo -->
+                                <img src="https://cdn.shopify.com/s/files/1/0242/0175/6777/files/domain-vault-animation_4a310db7-d278-4355-9393-c03224d066ec.gif?v=1776589612" 
+                                     alt="Domain Vault Logo Hover" 
+                                     class="absolute inset-0 w-full h-full object-contain transition-opacity duration-300 opacity-0 group-hover:opacity-100" />
+                            </div>
+                            <h1 class="text-xl tracking-wide">DOMAIN VAULT</h1>
+                        </a>
                         
                         <div class="flex items-center gap-3 w-full sm:w-auto">
                             <button id="open-report-btn" class="flex-1 sm:flex-none text-center px-4 py-2.5 text-sm font-medium text-brand-textMain bg-brand-bgHover border border-brand-border hover:border-brand-primary hover:text-brand-primary rounded-md transition-all shadow-sm">
