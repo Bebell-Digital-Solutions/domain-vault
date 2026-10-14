@@ -1,6 +1,6 @@
 
 <div align="center">
-  <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/domain-vault.png" alt="DOMAIN VAULT Logo" width="350" />  
+  <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/domain-vault-logo-horizontal.png" alt="DOMAIN VAULT Logo" width="350" />  
   
 
   <div align="center">
