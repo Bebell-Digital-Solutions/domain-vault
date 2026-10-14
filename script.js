@@ -1109,6 +1109,9 @@
                 }
             });
             renderAll();
+            // The Downloads page is drawn on demand; redraw it in the new language.
+            const downloadsPage = document.getElementById('page-downloads');
+            if (downloadsPage && downloadsPage.classList.contains('active')) renderDownloads();
             lucide.createIcons();
         };
 
@@ -2156,10 +2159,11 @@
             const builds = (window.DOMAIN_VAULT_CONFIG && window.DOMAIN_VAULT_CONFIG.downloads) || {};
             const ua = navigator.userAgent;
             const mine = /Mac/i.test(ua) ? 'macos' : /Win/i.test(ua) ? 'windows' : /Linux|X11/i.test(ua) ? 'linux' : null;
+            const es = settings.language === 'es';
             const platforms = [
-                { key: 'macos', name: 'macOS', icon: 'fa-apple', note: 'macOS 11 or later · Apple Silicon and Intel. First launch: System Settings → Privacy & Security → Open Anyway' },
-                { key: 'windows', name: 'Windows', icon: 'fa-windows', note: 'Windows 10 or later · 64-bit' },
-                { key: 'linux', name: 'Linux', icon: 'fa-linux', note: 'Ubuntu / Debian (.deb), or any distribution (.AppImage)' }
+                { key: 'macos', name: 'macOS', icon: 'fa-apple', note: es ? 'macOS 11 o posterior · Apple Silicon e Intel' : 'macOS 11 or later · Apple Silicon and Intel' },
+                { key: 'windows', name: 'Windows', icon: 'fa-windows', note: es ? 'Windows 10 o posterior · 64 bits' : 'Windows 10 or later · 64-bit' },
+                { key: 'linux', name: 'Linux', icon: 'fa-linux', note: es ? 'Ubuntu / Debian (.deb), o cualquier distribución (.AppImage)' : 'Ubuntu / Debian (.deb), or any distribution (.AppImage)' }
             ];
             const banner = document.getElementById('desktopBanner');
             if (banner) banner.style.display = window.domainVaultDesktop ? '' : 'none';
@@ -2179,7 +2183,61 @@
                     ${alt ? `<a class="field-hint" style="display:block; margin-top:10px; color:var(--primary);" href="${safe(alt.url)}" rel="noopener">${escapeHTML(t.orDownload)} ${escapeHTML(alt.label)}</a>` : ''}
                 </div>`;
             }).join('');
+            renderInstallGuide(mine, es);
             lucide.createIcons();
+        }
+
+        /** Step-by-step: opening the desktop app the first time (same text as the website's downloads page). */
+        function renderInstallGuide(mine, es) {
+            const box = document.getElementById('installGuide');
+            if (!box) return;
+            const G = es ? {
+                title: 'Guía de instalación',
+                intro: 'Domain Vault es seguro de instalar. Como es una app nueva, tu computadora puede pedirte que lo confirmes la primera vez que la abras.',
+                mac: ['La primera vez, macOS muestra <b>“No se abrió Domain Vault”</b> porque Apple aún no la ha revisado. Solo hay que permitirla una vez.',
+                    ['Abre el archivo <b>.dmg</b> y arrastra <b>Domain Vault</b> a <b>Aplicaciones</b>.',
+                     'Abre Domain Vault. Cuando aparezca el aviso, pulsa <b>OK / Listo</b> (no “Trasladar a la papelera”).',
+                     'Abre <b>Ajustes del Sistema → Privacidad y seguridad</b> y baja hasta <b>Seguridad</b>.',
+                     'Junto a <i>“Se bloqueó Domain Vault…”</i>, pulsa <b>Abrir igualmente</b> y confirma con tu contraseña o Touch ID.',
+                     'Pulsa <b>Abrir igualmente</b> otra vez. Listo: desde ahora se abre normalmente.'],
+                    '¿No ves “Abrir igualmente”?', 'El botón aparece durante una hora después de intentar abrir la app. Ábrela de nuevo y vuelve a Privacidad y seguridad. O, en la app Terminal, ejecuta:'],
+                win: ['Windows puede mostrar <b>“Windows protegió su PC”</b> (SmartScreen) porque la app es nueva. Solo hay que permitirla una vez.',
+                    ['Abre el archivo <b>DomainVault-Setup</b> descargado.', 'Si aparece la ventana azul, pulsa <b>Más información</b>.', 'Pulsa <b>Ejecutar de todas formas</b>.', 'Sigue el instalador. Domain Vault se añade al menú Inicio y al escritorio.'],
+                    '¿Tu antivirus lo bloquea?', 'Permite el archivo una vez en tu antivirus, o descárgalo de nuevo desde aquí: el instalador solo viene de nuestra publicación oficial en GitHub.'],
+                lin: ['Dos formatos: <b>.deb</b> para Ubuntu, Debian y Mint, y <b>AppImage</b> para otras distribuciones.',
+                    ['<b>.deb:</b> doble clic para abrirlo en el instalador de software, o <code>sudo apt install ./DomainVault-*.deb</code>.', 'Abre Domain Vault desde el menú de aplicaciones.', '<b>AppImage:</b> clic derecho → <b>Propiedades → Permisos</b> → <b>Permitir ejecutar como programa</b>, o <code>chmod +x DomainVault-*.AppImage</code>.'],
+                    '¿El AppImage no arranca en Ubuntu 24.04?', 'Ubuntu 24.04 restringe los AppImage. Usa el paquete <b>.deb</b>: configura los permisos que la app necesita.']
+            } : {
+                title: 'Installation guide',
+                intro: "Domain Vault is safe to install. Because it's a new app, your computer may ask you to confirm the first time you open it.",
+                mac: ['The first time, macOS shows <b>“Domain Vault” Not Opened</b> because Apple hasn\'t reviewed it yet. You only need to allow it once.',
+                    ['Open the <b>.dmg</b> file and drag <b>Domain Vault</b> into <b>Applications</b>.',
+                     'Open Domain Vault. When the warning appears, click <b>Done</b> (not “Move to Trash”).',
+                     'Open <b>System Settings → Privacy &amp; Security</b> and scroll down to <b>Security</b>.',
+                     'Next to <i>“Domain Vault” was blocked…</i>, click <b>Open Anyway</b> and confirm with your password or Touch ID.',
+                     'Click <b>Open Anyway</b> once more. Done: from now on it opens normally.'],
+                    "Don't see “Open Anyway”?", 'The button appears for about an hour after you try to open the app. Open it again, then go back to Privacy &amp; Security. Or, in the Terminal app, run:'],
+                win: ['Windows may show <b>“Windows protected your PC”</b> (SmartScreen) because the app is new. You only need to allow it once.',
+                    ['Open the downloaded <b>DomainVault-Setup</b> file.', 'If the blue window appears, click <b>More info</b>.', 'Click <b>Run anyway</b>.', 'Follow the installer. Domain Vault is added to the Start menu and the desktop.'],
+                    'Your antivirus blocks it?', 'Allow the file once in your antivirus, or download it again from here: the installer only comes from our official GitHub release.'],
+                lin: ['Two formats: <b>.deb</b> for Ubuntu, Debian and Mint, and an <b>AppImage</b> for other distributions.',
+                    ['<b>.deb:</b> double-click to open it in Software Install, or run <code>sudo apt install ./DomainVault-*.deb</code>.', 'Open Domain Vault from your applications menu.', '<b>AppImage:</b> right-click → <b>Properties → Permissions</b> → <b>Allow executing file as program</b>, or run <code>chmod +x DomainVault-*.AppImage</code>.'],
+                    'AppImage does not start on Ubuntu 24.04?', 'Ubuntu 24.04 restricts AppImages. Use the <b>.deb</b> package instead: it sets up the permissions the app needs.']
+            };
+            // All text above is ours, not user data, so it is written as HTML.
+            const card = (key, name, icon, [note, steps, moreTitle, more], extra = '') => `
+                <div class="guide-card${key === mine ? ' recommended' : ''}">
+                    <h4><i class="fa-brands ${icon}"></i>${name}</h4>
+                    <p class="guide-note">${note}</p>
+                    <ol>${steps.map(s => `<li>${s}</li>`).join('')}</ol>
+                    <details><summary>${moreTitle}</summary><p>${more}</p>${extra}</details>
+                </div>`;
+            box.innerHTML = `<h3>${G.title}</h3><p>${G.intro}</p>
+                <div class="guide-grid">
+                    ${card('macos', 'macOS', 'fa-apple', G.mac, '<pre><code>xattr -dr com.apple.quarantine "/Applications/Domain Vault.app"</code></pre>')}
+                    ${card('windows', 'Windows', 'fa-windows', G.win)}
+                    ${card('linux', 'Linux', 'fa-linux', G.lin)}
+                </div>`;
         }
 
         // --- ACTIVATION LINKS (paid before signing up) ---

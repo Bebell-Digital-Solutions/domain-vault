@@ -134,6 +134,8 @@ async function reload(page) {
   // Downloads open inside the dashboard, from config.js.
   await page.click('.sidebar .menu-item[data-page="downloads"]');
   await page.waitForSelector('#downloadCards .download-card');
+  ok("the app's Downloads page has the install guide",
+    await page.locator('#installGuide .guide-card').count() === 3 && /Open Anyway/.test(await page.textContent('#installGuide')));
   ok('downloads open inside the dashboard',
     await page.locator('#downloadCards .download-card').count() === 3 &&
     await page.locator('#downloadCards a[href*="releases/download"]').count() >= 3 &&
