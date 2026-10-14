@@ -90,7 +90,7 @@ No API keys. No OAuth. Just your data, securely in one place.
 ---
 <table>
 <tr>
-<td valign="top" width="45%">
+<td valign="center" width="45%">
 
 <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/domain-safe-banner.webp?updatedAt=1789777371782" alt="Domain Vault Safe" width="100%" />
 
@@ -113,8 +113,6 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 **🕐 Response Time**
 Within 24 hours, Mon–Fri
-
-<br />
 
 <a href="https://getdomainvault.com/download.html">
   <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/domain-vualt-download-banner.png" alt="Download Domain Vault" width="100%" />
