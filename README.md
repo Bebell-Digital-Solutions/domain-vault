@@ -109,7 +109,7 @@ No API keys. No OAuth. Just your data, securely in one place.
 [Discord — Domain Vault Community](https://discord.gg/your-invite)
 
 **🐛 Bug Reports**
-[GitHub Issues](https://github.com/Bebell-Digital-Solutions/domain-vault/issues)
+[GitHub Issues](https://github.com/Bebell-Digital-Solutions/domain-vault/issues/new)
 
 **🕐 Response Time**
 Within 24 hours, Mon–Fri
