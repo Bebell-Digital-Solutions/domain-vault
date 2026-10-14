@@ -99,16 +99,16 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 ## 📬 Contact Us
 
-**✉️ Email**
+**✉️ Email:** 
 [support@getdomainvault.com](mailto:support@getdomainvault.com)
 
-**💬 Support Channel**
+**💬 Support Channel:** 
 [getdomainvault.com/support](https://getdomainvault.com/support)
 
-**🐛 Bug Reports**
+**🐛 Bug Reports:** 
 [GitHub Issues](https://github.com/Bebell-Digital-Solutions/domain-vault/issues/new)
 
-**🕐 Response Time**
+**🕐 Response Time:** 
 Within 24 hours, Mon–Fri
 
 <a href="https://getdomainvault.com/download.html">
