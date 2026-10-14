@@ -117,7 +117,7 @@ Within 24 hours, Mon–Fri
 <br />
 
 <a href="https://getdomainvault.com/download.html">
-  <img src="assets/edgechat-banner.png" alt="Download Domain Vault" width="100%" />
+  <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/domain-vualt-download-banner.png" alt="Download Domain Vault" width="100%" />
 </a>
 
 </td>
