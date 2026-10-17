@@ -31,48 +31,16 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 ## 🚀 Key Features
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>📊 All-in-One Dashboard</h3>
-      <p>View your entire domain portfolio at a glance, including total domains, annual costs, upcoming renewals, and provider distribution.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>📅 Automated Renewals Calendar</h3>
-      <p>Sync expiration dates directly to Google Calendar or download <code>.ics</code> files. Get WhatsApp reminders before you lose valuable digital real estate.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🏢 Multi-Provider Vault</h3>
-      <p>Store secure credentials for GoDaddy, Namecheap, Cloudflare, IONOS, and custom registrars in one encrypted vault.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🔐 Zero-Knowledge Security</h3>
-      <p>Your vault lives in a Supabase Postgres database protected by Row-Level Security (RLS) hosted on AWS, meaning only you can read your rows. Credential storage uses zero-knowledge AES-256 client-side encryption.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🌐 Domain Lookup</h3>
-      <p>Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🌐 Live DNS Inspector</h3>
-      <p>Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>📈 Financial Reporting</h3>
-      <p>Track renewal costs by month, visualize your true domain investment, and export comprehensive CSV reports to hand off to your accounting team.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🌍 Bilingual UI</h3>
-      <p>Seamlessly switch between English and Español with one click.</p>
-    </td>
-  </tr>
-</table>
+| | | |
+|---|---|---|
+| <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/calendar-clock.webp" width="60"> | <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Network.webp" width="60"> | <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/bar-chart.webp" width="60"> |
+| **Renewal Calendar** | **Live DNS Inspector** | **Cost & Investment Tracking** |
+| See every renewal on a monthly grid. Export to Google Calendar or download .ics files. Get auto-generated alerts 30 days before expiry. | Query A, AAAA, MX, TXT, CNAME, and NS records directly from your dashboard. Verify propagation without opening a terminal. | Annual renewal totals, monthly cost charts, and lifetime investment per domain. Export filtered CSV reports for accounting. |
+| <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/key-round.webp" width="60"> | <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/bell.webp" width="60"> | <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Network.webp" width="60"> |
+| **Provider Credential Vault** | **Smart Expiry Alerts** | **English & Español** |
+| Registrar usernames, passwords, and account IDs in one place. No more hunting through password managers when it's time to renew. | Persistent notifications fire 30 days out and escalate on the day of expiry. Badge counts on sidebar and header. Dismiss when handled. | Full UI translation with one click. Built for teams and freelancers who work in more than one language. |
+
+
 
 
  <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/mediamodifier_image.png" alt="DOMAIN VAULT Banner" width="100%" />
