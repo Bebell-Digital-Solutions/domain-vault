@@ -47,6 +47,8 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 * **🌍 Bilingual UI:** Seamlessly switch between English and Español with one click.
 
+
+ <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/mediamodifier_image.png" alt="DOMAIN VAULT Banner" width="100%" />
 ---
 
 ## 💡 How It Works (Zero-Config Workflow)
