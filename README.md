@@ -86,6 +86,30 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 ---
 
+<div align="center">
+
+## 💰 Planes y Precios
+
+</div>
+
+Elige el plan que mejor se adapte a tu nivel de práctica profesional. Todos incluyen hosting, dominio y soporte premium.
+
+| Plan | Precio | Configuración Inicial | Características |
+|------|--------|----------------------|-----------------|
+| **Start-Up** | $48.77/mes | $295 USD | 1 Landing Page (hasta 2 págs), Dominio + SSL, 2 GB SSD, 1 Correo Profesional, Formulario + Double Opt-In, Chat Widget, Portal de Cliente |
+| **Básico** ⭐ | $78.77/mes | $450 USD | **Sistema de Reservas Integrado**, Sitio Web Completo (hasta 8 págs), 5 GB SSD, Correo Prof. + 1 Reenvío, Chat en Vivo & Exit Pop-Up, Notificaciones Automatizadas, SEO Básico |
+| **Agency** | $150.77/mes | $595 USD | **Asistente Inteligente (Bot) 🤖**, Sitio Web Pro (hasta 12 págs), Reservas & 8 GB SSD, Email Marketing, Flujo de Bienvenida & Reportes, SEO Avanzado + 1 Artículo Blog/mes, Soporte VIP |
+
+<div align="center">
+
+[![Pago seguro con PayPal](https://bucket.mlcdn.com/a/3336/3336910/images/a55a916fae27396be180e733423f570f40afb57a.png)](https://www.paypal.com)
+
+</div>
+
+> *Pagos seguros procesados a través de PayPal. Renovación anual de dominios y correos: $95 USD.*
+
+---
+
 ## ❓ Frequently Asked Questions
 
 <details>
