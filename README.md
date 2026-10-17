@@ -60,27 +60,63 @@ No API keys. No OAuth. Just your data, securely in one place.
 ## ❓ Frequently Asked Questions
 
 <details>
-  <summary><b>Which domain registrars are currently supported?</b></summary>
+  <summary><b>How does Domain Vault handle my data?</b></summary>
   <br>
-  We currently offer native 1-click API integration for Cloudflare, GoDaddy, Namecheap, AWS Route 53, IONOS, Porkbun, and Google Domains. For unsupported registrars, you can manually add domains and track them via WHOIS lookups.
+  Domain Vault helps you organize your domain information in one place. For security-sensitive information, review our current security documentation before storing credentials. We do not make specific claims about encryption methods or client-side encryption in this FAQ.
 </details>
 
 <details>
-  <summary><b>How often does Domain Vault sync my portfolio?</b></summary>
+  <summary><b>Do I need a paid plan to use Domain Vault?</b></summary>
   <br>
-  By default, the Vault runs a secure background sync every 24 hours to check for status changes, upcoming renewals, and DNS modifications. Paid tiers allow you to force manual syncs at any time directly from the dashboard.
+  Available features and usage limits depend on your plan. Visit our pricing page to compare current plans and find the option that fits your domain portfolio.
 </details>
 
 <details>
-  <summary><b>Is my data and provider login information secure?</b></summary>
+  <summary><b>Can I manage domains from different registrars?</b></summary>
   <br>
-  Absolutely. Your data is stored securely in a Supabase PostgreSQL environment protected by Row-Level Security (RLS). Any provider credentials you choose to store are encrypted client-side using AES-256 before transmission.
+  Yes. You can manually add domains from different registrars and keep their information organized in one place. You do not need a native integration with each registrar to track your domains manually.
 </details>
 
 <details>
-  <summary><b>Do you offer a refund if I'm not satisfied?</b></summary>
+  <summary><b>Does WHOIS automatically fill in my domain details?</b></summary>
   <br>
-  Yes, all our annual plans come with a 14-day money-back guarantee. If you realize Domain Vault isn't the right fit for your workflow within your first two weeks, just reach out to support and we'll issue a full refund, no questions asked.
+  The current WHOIS lookup identifies the domain's registrar. It does not automatically retrieve expiration dates, purchase prices, renewal costs, or other domain details. You can enter and maintain this information manually.
+</details>
+
+<details>
+  <summary><b>Does Domain Vault automatically sync my portfolio?</b></summary>
+  <br>
+  Domain information that you enter manually must be kept up to date by you. Do not rely on Domain Vault to automatically update expiration dates, renewal prices, or DNS records unless an explicitly supported feature provides that functionality.
+</details>
+
+<details>
+  <summary><b>Can I export my data if I want to leave?</b></summary>
+  <br>
+  Yes. You can download your complete Domain Vault data as a CSV or JSON export, giving you a copy of your information to keep for your records or use elsewhere.
+</details>
+
+<details>
+  <summary><b>Who is Domain Vault for?</b></summary>
+  <br>
+  Domain Vault is designed for anyone who needs to keep domain information organized in one place. Whether you own a handful of domains, manage a large portfolio as an investor or developer, or maintain domains for multiple brands, clients, and projects, Domain Vault helps you track your domains, renewal dates, and related costs.
+</details>
+
+<details>
+  <summary><b>Can I sync reminders to my calendar?</b></summary>
+  <br>
+  Yes. You can connect your domain renewal reminders to Google Calendar using the available calendar option, or download an .ics calendar file to import into compatible calendar applications, including Apple Calendar and Microsoft Outlook. Calendar files can be downloaded and imported manually.
+</details>
+
+<details>
+  <summary><b>Do you offer any deals currently?</b></summary>
+  <br>
+  Available deals and promotional offers may change over time. Check our pricing page for the latest plans, offers, and purchase options.
+</details>
+
+<details>
+  <summary><b>Do you offer refunds?</b></summary>
+  <br>
+  Only Lifetime deal (LTD) purchases are eligible for a refund within 14 days of purchase. This refund window does not apply to yearly subscriptions. Please review the applicable purchase terms for details.
 </details>
 </div>
 
