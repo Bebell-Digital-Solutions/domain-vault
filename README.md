@@ -31,15 +31,16 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 ## 🚀 Key Features
 
+
 <table>
   <tr>
-    <td align="center" bgcolor="#1a1a1a">
+    <td align="center" bgcolor="#1a1a1a" style="background-color:#1a1a1a; padding:16px; border-radius:12px 12px 0 0;">
       <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/calendar-clock.webp" width="60">
     </td>
-    <td align="center" bgcolor="#1a1a1a">
+    <td align="center" bgcolor="#1a1a1a" style="background-color:#1a1a1a; padding:16px; border-radius:12px 12px 0 0;">
       <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Network.webp" width="60">
     </td>
-    <td align="center" bgcolor="#1a1a1a">
+    <td align="center" bgcolor="#1a1a1a" style="background-color:#1a1a1a; padding:16px; border-radius:12px 12px 0 0;">
       <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/bar-chart.webp" width="60">
     </td>
   </tr>
@@ -54,13 +55,13 @@ No API keys. No OAuth. Just your data, securely in one place.
     <td>Annual renewal totals, monthly cost charts, and lifetime investment per domain. Export filtered CSV reports for accounting.</td>
   </tr>
   <tr>
-    <td align="center" bgcolor="#1a1a1a">
+    <td align="center" bgcolor="#1a1a1a" style="background-color:#1a1a1a; padding:16px; border-radius:12px 12px 0 0;">
       <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/key-round.webp" width="60">
     </td>
-    <td align="center" bgcolor="#1a1a1a">
+    <td align="center" bgcolor="#1a1a1a" style="background-color:#1a1a1a; padding:16px; border-radius:12px 12px 0 0;">
       <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/bell.webp" width="60">
     </td>
-    <td align="center" bgcolor="#1a1a1a">
+    <td align="center" bgcolor="#1a1a1a" style="background-color:#1a1a1a; padding:16px; border-radius:12px 12px 0 0;">
       <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Network.webp" width="60">
     </td>
   </tr>
