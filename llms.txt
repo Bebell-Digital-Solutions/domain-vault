@@ -1,0 +1,17 @@
+# Domain Vault
+
+> Domain Vault is a dark-mode dashboard for tracking domain renewals, costs, DNS records, and provider credentials. No API keys required.
+
+## Main Pages
+- [Home](https://getdomainvault.com): Product overview and features.
+- [Pricing](https://getdomainvault.com/#pricing): Plans for Personal, Start-up, Business, and Agency.
+- [Downloads](https://getdomainvault.com/downloads.html): Desktop apps for macOS, Windows, and Linux.
+- [Lifetime Deal](https://getdomainvault.com/ltd-pricing): Current promotional offer.
+
+## Key Features
+- [Renewal Calendar](https://getdomainvault.com): Track expirations and export to .ics.
+- [DNS Inspector](https://getdomainvault.com): Live DNS record queries.
+- [Credential Vault](https://getdomainvault.com): Store registrar logins securely.
+
+## Optional
+- [FAQ](https://getdomainvault.com/#faq): Common questions about data, refunds, and sync.
