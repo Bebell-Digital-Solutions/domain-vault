@@ -1,0 +1,22 @@
+# Allow major AI crawlers to your public marketing site
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+# Block crawlers from the application subdomain (if separate)
+# If your app is on app.getdomainvault.com, use a separate robots.txt there
+User-agent: *
+Disallow: /app/
+Disallow: /dashboard/
+Disallow: /settings/
