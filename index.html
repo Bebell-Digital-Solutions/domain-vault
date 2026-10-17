@@ -162,8 +162,9 @@
   "@context": "https://schema.org",
   "@type": "Organization",
   "@id": "https://getdomainvault.com/#organization",
-  "name": "Bebell Digital Solutions",
-  "alternateName": "Domain Vault",
+  "name": "Domain Vault",
+"legalName": "Bebell Digital Solutions",
+"alternateName": ["Domain Vault by Bebell Digital Solutions"],
   "url": "https://getdomainvault.com/",
   "logo": {
     "@type": "ImageObject",
@@ -220,21 +221,89 @@
     "Bilingual UI (English and Español)"
   ],
   "publisher": { "@id": "https://getdomainvault.com/#organization" },
-  "offers": {
-    "@type": "Offer",
-    "price": "29/year",
-    "priceCurrency": "USD",
-    "url": "https://getdomainvault.com/ltd-pricing.html",
-    "availability": "https://schema.org/InStock",
-    "description": "Annual plans with a 14-day money-back guarantee."
-  }
+"offers": {
+  "@type": "AggregateOffer",
+  "lowPrice": 29,
+  "highPrice": 98,
+  "priceCurrency": "USD",
+  "offerCount": 4,
+  "url": "https://getdomainvault.com/#pricing",
+  "availability": "https://schema.org/InStock"
 }
 </script>
-  
+ <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does Domain Vault require API keys?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Domain Vault is built around manual entry and CSV import. It does not use registrar APIs, OAuth, or account connections."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I manage domains from different registrars?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can manually add domains from any registrar — GoDaddy, Namecheap, Cloudflare, Hostinger, IONOS, Porkbun, and others — and keep their information organized in one place."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I export my data?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can download your complete Domain Vault data as a CSV or JSON export at any time."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you offer refunds?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Lifetime Deal (LTD) purchases are eligible for a refund within 14 days of purchase. The refund window does not apply to yearly subscriptions."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I sync reminders to my calendar?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can connect renewal reminders to Google Calendar, or download .ics files for Apple Calendar and Microsoft Outlook."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Who is Domain Vault for?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Domain Vault is for domain investors, freelancers, developers, and agencies who want to organize domain renewals, costs, and registrar details in one place."
+      }
+    }
+  ]
+}
+</script>
 
-
-
-
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://getdomainvault.com/#webpage",
+  "url": "https://getdomainvault.com/",
+  "name": "Domain Vault — Track Every Domain Renewal",
+  "isPartOf": { "@id": "https://getdomainvault.com/#website" },
+  "about": { "@id": "https://getdomainvault.com/#software" },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png"
+  },
+  "inLanguage": "en"
+}
+</script>
 
 
 
