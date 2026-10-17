@@ -31,21 +31,48 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 ## 🚀 Key Features
 
-* **📊 All-in-One Dashboard:** View your entire domain portfolio at a glance, including total domains, annual costs, upcoming renewals, and provider distribution.
-
-* **📅 Automated Renewals Calendar:** Sync expiration dates directly to Google Calendar or download `.ics` files. Get WhatsApp reminders before you lose valuable digital real estate.
-
-* **🏢 Multi-Provider Vault:** Store secure credentials for GoDaddy, Namecheap, Cloudflare, IONOS, and custom registrars in one encrypted vault.
-
-* **🔐 Zero-Knowledge Security:** Your vault lives in a Supabase Postgres database protected by Row-Level Security (RLS) hosted on AWS, meaning only you can read your rows. Credential storage uses zero-knowledge AES-256 client-side encryption.
-
-* **🌐 Domain Lookup:** Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.
-
-* **🌐 Live DNS Inspector:** Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.
-
-* **📈 Financial Reporting:** Track renewal costs by month, visualize your true domain investment, and export comprehensive CSV reports to hand off to your accounting team.
-
-* **🌍 Bilingual UI:** Seamlessly switch between English and Español with one click.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>📊 All-in-One Dashboard</h3>
+      <p>View your entire domain portfolio at a glance, including total domains, annual costs, upcoming renewals, and provider distribution.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>📅 Automated Renewals Calendar</h3>
+      <p>Sync expiration dates directly to Google Calendar or download <code>.ics</code> files. Get WhatsApp reminders before you lose valuable digital real estate.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🏢 Multi-Provider Vault</h3>
+      <p>Store secure credentials for GoDaddy, Namecheap, Cloudflare, IONOS, and custom registrars in one encrypted vault.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🔐 Zero-Knowledge Security</h3>
+      <p>Your vault lives in a Supabase Postgres database protected by Row-Level Security (RLS) hosted on AWS, meaning only you can read your rows. Credential storage uses zero-knowledge AES-256 client-side encryption.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🌐 Domain Lookup</h3>
+      <p>Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🌐 Live DNS Inspector</h3>
+      <p>Query live DNS records (A, TXT, MX, CNAME) directly from the dashboard to verify propagation and structural integrity without opening a terminal.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>📈 Financial Reporting</h3>
+      <p>Track renewal costs by month, visualize your true domain investment, and export comprehensive CSV reports to hand off to your accounting team.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🌍 Bilingual UI</h3>
+      <p>Seamlessly switch between English and Español with one click.</p>
+    </td>
+  </tr>
+</table>
 
 
  <img src="https://ik.imagekit.io/bebell/Domain%20Vault/image-assets/mediamodifier_image.png" alt="DOMAIN VAULT Banner" width="100%" />
