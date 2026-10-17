@@ -31,14 +31,50 @@ No API keys. No OAuth. Just your data, securely in one place.
 
 ## 🚀 Key Features
 
-| | | |
-|---|---|---|
-| <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/calendar-clock.webp" width="60"> | <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Network.webp" width="60"> | <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/bar-chart.webp" width="60"> |
-| **Renewal Calendar** | **Live DNS Inspector** | **Cost & Investment Tracking** |
-| See every renewal on a monthly grid. Export to Google Calendar or download .ics files. Get auto-generated alerts 30 days before expiry. | Query A, AAAA, MX, TXT, CNAME, and NS records directly from your dashboard. Verify propagation without opening a terminal. | Annual renewal totals, monthly cost charts, and lifetime investment per domain. Export filtered CSV reports for accounting. |
-| <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/key-round.webp" width="60"> | <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/bell.webp" width="60"> | <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Network.webp" width="60"> |
-| **Provider Credential Vault** | **Smart Expiry Alerts** | **English & Español** |
-| Registrar usernames, passwords, and account IDs in one place. No more hunting through password managers when it's time to renew. | Persistent notifications fire 30 days out and escalate on the day of expiry. Badge counts on sidebar and header. Dismiss when handled. | Full UI translation with one click. Built for teams and freelancers who work in more than one language. |
+<table>
+  <tr>
+    <td align="center" bgcolor="#1a1a1a">
+      <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/calendar-clock.webp" width="60">
+    </td>
+    <td align="center" bgcolor="#1a1a1a">
+      <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Network.webp" width="60">
+    </td>
+    <td align="center" bgcolor="#1a1a1a">
+      <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/bar-chart.webp" width="60">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Renewal Calendar</strong></td>
+    <td align="center"><strong>Live DNS Inspector</strong></td>
+    <td align="center"><strong>Cost &amp; Investment Tracking</strong></td>
+  </tr>
+  <tr>
+    <td>See every renewal on a monthly grid. Export to Google Calendar or download .ics files. Get auto-generated alerts 30 days before expiry.</td>
+    <td>Query A, AAAA, MX, TXT, CNAME, and NS records directly from your dashboard. Verify propagation without opening a terminal.</td>
+    <td>Annual renewal totals, monthly cost charts, and lifetime investment per domain. Export filtered CSV reports for accounting.</td>
+  </tr>
+  <tr>
+    <td align="center" bgcolor="#1a1a1a">
+      <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/key-round.webp" width="60">
+    </td>
+    <td align="center" bgcolor="#1a1a1a">
+      <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/bell.webp" width="60">
+    </td>
+    <td align="center" bgcolor="#1a1a1a">
+      <img src="https://ik.imagekit.io/bebell/Domain%20Vault/domain-assets-logos/Network.webp" width="60">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Provider Credential Vault</strong></td>
+    <td align="center"><strong>Smart Expiry Alerts</strong></td>
+    <td align="center"><strong>English &amp; Español</strong></td>
+  </tr>
+  <tr>
+    <td>Registrar usernames, passwords, and account IDs in one place. No more hunting through password managers when it's time to renew.</td>
+    <td>Persistent notifications fire 30 days out and escalate on the day of expiry. Badge counts on sidebar and header. Dismiss when handled.</td>
+    <td>Full UI translation with one click. Built for teams and freelancers who work in more than one language.</td>
+  </tr>
+</table>
 
 
 
