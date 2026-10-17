@@ -144,6 +144,206 @@
         }
     </script>
 
+
+<!-- Language alternates -->
+<link rel="alternate" hreflang="en" href="https://getdomainvault.com/">
+<link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/">
+<link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/">
+
+<!-- Organization (same @id everywhere) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://getdomainvault.com/#organization",
+  "name": "Domain Vault",
+  "legalName": "Bebell Digital Solutions",
+  "alternateName": ["Domain Vault by Bebell Digital Solutions"],
+  "url": "https://getdomainvault.com/",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png"
+  },
+  "description": "Domain Vault is a secure domain portfolio manager built by Bebell Digital Solutions.",
+  "email": "support@getdomainvault.com",
+  "contactPoint": [{
+    "@type": "ContactPoint",
+    "contactType": "customer support",
+    "email": "support@getdomainvault.com",
+    "telephone": "+1-829-620-3970",
+    "availableLanguage": ["English", "Spanish"],
+    "areaServed": "Worldwide"
+  }],
+  "sameAs": [
+    "https://github.com/Bebell-Digital-Solutions/domain-vault"
+  ]
+}
+</script>
+
+<!-- WebSite (same @id; bilingual) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://getdomainvault.com/#website",
+  "url": "https://getdomainvault.com/",
+  "name": "Domain Vault",
+  "description": "Secure domain portfolio manager for domain investors, developers, and agencies.",
+  "publisher": { "@id": "https://getdomainvault.com/#organization" },
+  "inLanguage": ["en", "es"]
+}
+</script>
+
+<!-- WebPage (Spanish homepage — unique @id) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://getdomainvault.com/es/#webpage",
+  "url": "https://getdomainvault.com/es/",
+  "name": "Domain Vault — Controla cada renovación de dominio",
+  "description": "Domain Vault es un gestor seguro de portafolios de dominios. Rastrea renovaciones, costos, registros DNS y credenciales de registradores en un panel oscuro diseñado para propietarios de dominios.",
+  "isPartOf": { "@id": "https://getdomainvault.com/#website" },
+  "about": { "@id": "https://getdomainvault.com/#software" },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://bucket.mlcdn.com/a/3336/3336910/images/524bf1f1731bc1e9a78fb265c480b6b1bf1a3e89.png"
+  },
+  "inLanguage": "es"
+}
+</script>
+
+<!-- SoftwareApplication (same @id — one product, not two) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": "https://getdomainvault.com/#software",
+  "name": "Domain Vault",
+  "applicationCategory": "BusinessApplication",
+  "applicationSubCategory": "Domain Portfolio Manager",
+  "operatingSystem": "Web, Windows, macOS, Linux",
+  "url": "https://getdomainvault.com/",
+  "downloadUrl": "https://getdomainvault.com/es/descargas",
+  "description": "Domain Vault es un centro de control seguro para dominios, registros DNS y calendarios de renovación. Rastrea renovaciones, inspecciona DNS en vivo, almacena credenciales de registradores con cifrado AES-256 de conocimiento cero y sincroniza vencimientos con Google Calendar.",
+  "featureList": [
+    "Panel integral de portafolio de dominios",
+    "Calendario de renovaciones con sincronización a Google Calendar y .ics",
+    "Bóveda multi-proveedor para GoDaddy, Namecheap, Cloudflare, IONOS y más",
+    "Cifrado de credenciales AES-256 del lado del cliente con conocimiento cero",
+    "Inspector de DNS en vivo (A, TXT, MX, CNAME)",
+    "Reportes financieros con exportación CSV",
+    "Interfaz bilingüe (Inglés y Español)"
+  ],
+  "publisher": { "@id": "https://getdomainvault.com/#organization" },
+  "inLanguage": ["en", "es"],
+  "offers": {
+    "@type": "AggregateOffer",
+    "lowPrice": 29,
+    "highPrice": 98,
+    "priceCurrency": "USD",
+    "offerCount": 4,
+    "url": "https://getdomainvault.com/es/precio-oferta",
+    "availability": "https://schema.org/InStock"
+  }
+}
+</script>
+
+<!-- FAQPage (ONLY if visible Spanish FAQ exists on /es/) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://getdomainvault.com/es/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "¿Cómo maneja Domain Vault mis datos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Domain Vault te ayuda a organizar la información de tus dominios en un solo lugar. Para información sensible, revisa nuestra documentación de seguridad actual antes de almacenar credenciales."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Necesito un plan de pago para usar Domain Vault?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Las funciones disponibles y los límites de uso dependen de tu plan. Visita nuestra página de precios para comparar los planes actuales y encontrar la opción que se adapte a tu portafolio."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo gestionar dominios de diferentes registradores?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. Puedes agregar dominios manualmente desde diferentes registradores y mantener su información organizada en un solo lugar. No necesitas una integración nativa con cada registrador para rastrear tus dominios manualmente."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿WHOIS completa automáticamente los detalles de mi dominio?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La búsqueda WHOIS actual identifica el registrador del dominio. No recupera automáticamente fechas de vencimiento, precios de compra, costos de renovación u otros detalles. Puedes ingresar y mantener esta información manualmente."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Domain Vault sincroniza automáticamente mi portafolio?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La información que ingresas manualmente debe mantenerse actualizada por ti. No dependas de Domain Vault para actualizar automáticamente fechas de vencimiento, precios de renovación o registros DNS, a menos que una función explícitamente soportada lo haga."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo exportar mis datos si quiero irme?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. Puedes descargar todos tus datos de Domain Vault como exportación CSV o JSON, obteniendo una copia de tu información para conservarla o usarla en otro lugar."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Para quién es Domain Vault?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Domain Vault está diseñado para cualquier persona que necesite mantener la información de dominios organizada en un solo lugar. Ya sea que poseas unos pocos dominios, gestiones un portafolio grande como inversionista o desarrollador, o mantengas dominios para múltiples marcas, clientes y proyectos, Domain Vault te ayuda a rastrear tus dominios, fechas de renovación y costos relacionados."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo sincronizar recordatorios con mi calendario?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. Puedes conectar tus recordatorios de renovación a Google Calendar usando la opción disponible, o descargar un archivo .ics para importarlo en aplicaciones compatibles, incluyendo Apple Calendar y Microsoft Outlook."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Ofrecen ofertas actualmente?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Las ofertas y promociones disponibles pueden cambiar con el tiempo. Consulta nuestra página de precios para ver los planes, ofertas y opciones de compra más recientes."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Ofrecen reembolsos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Solo las compras del Lifetime Deal (LTD) son elegibles para reembolso dentro de los 14 días posteriores a la compra. Este período de reembolso no aplica a las suscripciones anuales. Revisa los términos de compra aplicables para más detalles."
+      }
+    }
+  ]
+}
+</script>
+
+
+
+    
+
     <style>
         /* Custom scrollbar for webkit to match the dark aesthetic */
         ::-webkit-scrollbar { width: 8px; }
