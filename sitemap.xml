@@ -15,41 +15,41 @@
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/downloads.html</loc>
+    <loc>https://getdomainvault.com/downloads</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/downloads.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/descargas.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/downloads.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/downloads"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/descargas"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/downloads/>
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/ltd-pricing.html</loc>
+    <loc>https://getdomainvault.com/ltd-pricing</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/ltd-pricing.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/precio-oferta.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/ltd-pricing.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/ltd-pricing"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/precio-oferta"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/ltd-pricing"/>
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/status.html</loc>
+    <loc>https://getdomainvault.com/status</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/support.html</loc>
+    <loc>https://getdomainvault.com/support</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/tools/domain-lookup.html</loc>
+    <loc>https://getdomainvault.com/tools/domain-lookup</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -65,33 +65,33 @@
   <!-- ============ ENGLISH POLICIES ============ -->
 
   <url>
-    <loc>https://getdomainvault.com/p/privacy.html</loc>
+    <loc>https://getdomainvault.com/p/privacy</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/privacy.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/privacidad.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/privacy.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/privacy"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/privacidad"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/privacy"/>
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/p/terms.html</loc>
+    <loc>https://getdomainvault.com/p/terms</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/terms.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/terminos.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/terms.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/terms"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/terminos"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/terms"/>
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/p/refund.html</loc>
+    <loc>https://getdomainvault.com/p/refund</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/refund.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/reembolsos.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/refund.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/refund"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/reembolsos"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/refund"/>
   </url>
 
   <!-- ============ SPANISH ============ -->
@@ -107,23 +107,23 @@
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/es/descargas.html</loc>
+    <loc>https://getdomainvault.com/es/descargas</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/downloads.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/descargas.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/downloads.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/downloads"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/descargas"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/downloads"/>
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/es/precio-oferta.html</loc>
+    <loc>https://getdomainvault.com/es/precio-oferta</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/ltd-pricing.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/precio-oferta.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/ltd-pricing.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/ltd-pricing"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/precio-oferta"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/ltd-pricing"/>
   </url>
 
   <url>
@@ -137,23 +137,23 @@
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/es/p/terminos.html</loc>
+    <loc>https://getdomainvault.com/es/p/terminos</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/terms.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/terminos.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/terms.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/terms"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/terminos"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/terms"/>
   </url>
 
   <url>
-    <loc>https://getdomainvault.com/es/p/reembolsos.html</loc>
+    <loc>https://getdomainvault.com/es/p/reembolsos</loc>
     <lastmod>2026-10-17</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/refund.html"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/reembolsos.html"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/refund.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://getdomainvault.com/p/refund"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://getdomainvault.com/es/p/reembolsos"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://getdomainvault.com/p/refund"/>
   </url>
 
 </urlset>
