@@ -370,9 +370,75 @@ ok("…and goes back to the original text", r.success && r.templates.find((t) =>
 r = await walkInApi.call("adminSaveEmail", { key: "welcome_active", template: { subject: "x", heading: "", body: "", button: "" } });
 ok("customers cannot edit emails", r.success === false && /administrators only/i.test(r.message));
 
+// ======================================================== license codes
+console.log("--- license codes ---");
+r = await ADMIN.call("adminCreateLicenseBatch", { marketplace: "appsumo", size: 6, label: `smoke ${stamp}` });
+ok("admin creates a batch; the plain codes come back once", r.success && r.codes.length === 6 &&
+  r.codes.every((c) => /^DVAS-[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){3}$/.test(c)) &&
+  sql(`select count(*) from license_codes where batch_id = '${r.batch.id}'`) === "6" &&
+  !sql(`select string_agg(code_hash, '') from license_codes where batch_id = '${r.batch.id}'`).includes(r.codes[0].replace(/-/g, "")), r.message);
+const codes = r.codes, batchId = r.batch.id;
+const buyer = `buyer-${stamp}@example.com`;
+const BUYER = browser().api;
+r = await BUYER.call("registerUser", { email: buyer, password: PW, licenseCode: codes[0].toLowerCase().replace(/-/g, " ") });
+ok("signing up with a code activates the account with Personal (approval still on)", r.success && r.licensePlan === "Personal" &&
+  sql(`select status || '/' || plan from profiles where email = '${buyer}'`) === "active/Personal", r.message);
+r = await BUYER.call("loginUser", { email: buyer, password: PW, licenseCode: codes[1] });
+ok("logging in with a second code: Start-up", r.success && r.licensePlan === "Start-up", r.licenseMessage);
+r = await BUYER.call("redeemLicenseCode", { code: codes[2] });
+r = await BUYER.call("redeemLicenseCode", { code: codes[3] });
+ok("four codes stack to Agency", r.success && r.plan === "Agency" && r.codes === 4, r.message);
+r = await BUYER.call("redeemLicenseCode", { code: codes[4] });
+ok("a fifth code is refused", r.success === false && /4 codes/.test(r.message), r.message);
+r = await walkInApi.call("redeemLicenseCode", { code: codes[0] });
+ok("a used code cannot be redeemed by someone else", r.success === false && /already been redeemed/.test(r.message), r.message);
+r = await walkInApi.call("redeemLicenseCode", { code: "DVAS-0000-0000-0000-0000" });
+ok("an unknown code is refused clearly", r.success === false && /not valid/.test(r.message), r.message);
+r = await BUYER.call("getLicenseCodes", {});
+ok("the buyer sees their codes, masked", r.success && r.active === 4 && r.codes.every((c) => /^[A-Z0-9]{4}$/.test(c.hint) && c.marketplace === "appsumo"));
+r = await ADMIN.call("adminSetLicenseCode", { code: codes[3], revoke: true, reason: "refunded on AppSumo" });
+ok("revoking a refunded code lowers the plan to Business", r.success && r.code.status === "revoked" &&
+  sql(`select plan from profiles where email = '${buyer}'`) === "Business", r.message);
+r = await ADMIN.call("adminFindLicenseCode", { code: codes[0] });
+ok("admin looks up a code and sees who redeemed it", r.success && r.code.status === "redeemed" && r.code.redeemedBy.startsWith(buyer));
+r = await ADMIN.call("adminRevokeUnusedCodes", { batchId });
+const counts = r.batches?.find((b) => b.id === batchId)?.counts;
+ok("withdrawing a batch stops its unused codes only", counts && counts.revoked === 3 && counts.redeemed === 3, JSON.stringify(counts));
+r = await walkInApi.call("adminCreateLicenseBatch", { marketplace: "appsumo", size: 1 });
+ok("customers cannot create codes", r.success === false && /administrators only/i.test(r.message));
+
+// =========================================================== csv import
+console.log("--- csv import ---");
+const imp = (rows, extra = {}) => BUYER.call("importDomains", { rows, ...extra });
+r = await imp([
+  { line: 2, domain: "Imported-One.com", provider: "Namecheap", purchaseDate: "2024-03-15", renewalDate: "2027-03-15", purchasePrice: 10.98, renewalPrice: 15.98, autoRenew: true },
+  { line: 3, domain: "https://www.imported-two.io/", provider: "Porkbun", renewalDate: "2027-01-02" },
+  { line: 4, domain: "not a domain" },
+  { line: 5, domain: "imported-one.com" },
+  { line: 6, domain: "bad-date.com", renewalDate: "someday" },
+]);
+ok("import adds the good rows and reports the bad ones by line", r.success && r.added === 2 && r.errorCount === 3 &&
+  r.errors.map((e) => e.line).join() === "4,5,6" && r.providersCreated === 2, JSON.stringify(r));
+r = await BUYER.call("getUserData", {});
+const one = r.domains.find((d) => d.name === "imported-one.com");
+ok("imported values are stored", one && one.renewalDate === "2027-03-15" && one.renewalPrice === 15.98 && one.autoRenew === true &&
+  r.domains.some((d) => d.name === "imported-two.io") && r.providers.some((p) => p.name === "Porkbun"));
+r = await imp([{ line: 2, domain: "imported-one.com", renewalDate: "2028-03-15", renewalPrice: 20 }]);
+ok("domains already in the vault are skipped by default", r.success && r.skipped === 1 && r.added === 0);
+r = await imp([{ line: 2, domain: "imported-one.com", renewalDate: "2028-03-15", renewalPrice: 20 }], { updateExisting: true });
+r = await BUYER.call("getUserData", {});
+ok("…or updated when asked", r.domains.find((d) => d.name === "imported-one.com")?.renewalDate === "2028-03-15");
+sql(`update profiles set plan_override = 'Personal' where email = '${buyer}'; select recompute_plan(id) from profiles where email = '${buyer}';`);
+r = await imp(Array.from({ length: 6 }, (_, i) => ({ line: i + 2, domain: `limit-${i}-${stamp}.com` })));
+ok("the plan's domain limit is respected: extra rows are reported, not saved",
+  r.success && r.added === 3 && r.errorCount === 3 && /limit of 5/.test(r.errors[0].message), JSON.stringify(r));
+r = await walkInApi.call("importDomains", { vaultId: sql(`select id from profiles where email = '${buyer}'`), rows: [{ domain: "x.com" }] });
+ok("nobody imports into a vault that is not theirs", r.success === false && /access/i.test(r.message), r.message);
+
 // ============================================================== cleanup
 sql(`delete from admin_audit_log where admin_email = '${adminEmail}';
-     delete from auth.users where email in ('${email}', '${adminEmail}', '${newcomer}', '${walkIn}');
+     delete from auth.users where email in ('${email}', '${adminEmail}', '${newcomer}', '${walkIn}', '${buyer}');
+     delete from license_batches where label like 'smoke %';
      update plan_prices set amount = null, lifetime_amount = null;
      update billing_config set unpaid_plan = 'Personal', require_approval = true;
      delete from rate_limits;`);

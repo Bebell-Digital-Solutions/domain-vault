@@ -33,7 +33,7 @@ const PURCHASE_STATUSES = [
 
 const SITE_URL = Deno.env.get("SITE_URL") ?? "";
 
-async function audit(
+export async function audit(
   admin: Caller,
   action: string,
   target: { id: string | null; email: string | null } | null,

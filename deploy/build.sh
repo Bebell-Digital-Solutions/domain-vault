@@ -46,11 +46,12 @@ case "$target" in
 /app/*    $APP_ORIGIN/:splat  301
 /app      $APP_ORIGIN/        301
 /pricing  /#pricing           301
+/redeem   $APP_ORIGIN/redeem  301
 EOF
     ;;
   app)
     rm -rf "$out" && mkdir -p "$out"
-    cp app/index.html app/admin.html app/admin.js config.js api.js script.js "$out"/
+    cp app/index.html app/admin.html app/admin.js app/redeem.html config.js api.js script.js "$out"/
     # In the repository the app lives in /app/ and loads its scripts from ../;
     # here it sits at the root, next to them. Links back to the main site
     # (downloads, legal pages) get the site's domain.

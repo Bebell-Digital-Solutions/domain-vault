@@ -170,6 +170,7 @@
     tools: () => loadCatalog(),
     search: () => loadRegistrars(),
     emails: () => loadEmails(),
+    licenses: () => loadBatches(),
     support: () => loadSupport(),
     audit: () => loadAudit(),
   };
@@ -367,6 +368,23 @@
         case "edit-tool":
           editCatalogItem(id);
           break;
+        case "withdraw-batch": {
+          const b = (state.batches || []).find((x) => x.id === id);
+          if (b && confirm(`Withdraw the ${b.counts.available} unused codes of this ${b.marketplace} batch? They stop working; redeemed codes keep working.`)) {
+            const res = await call("adminRevokeUnusedCodes", { batchId: id });
+            if (res) { renderBatches(res); toast("Unused codes withdrawn."); }
+          }
+          break;
+        }
+        case "revoke-code":
+        case "reinstate-code": {
+          const revoke = btn.dataset.act === "revoke-code";
+          const reason = revoke ? prompt("Why? (e.g. refunded on AppSumo)", "refunded on the marketplace") : "";
+          if (revoke && reason === null) break;
+          const res = await call("adminSetLicenseCode", { code: $("codeLookup").value, revoke, reason });
+          if (res) { renderCode(res.code); toast(revoke ? "Code revoked; the account's plan was updated." : "Code reinstated."); loadBatches(); }
+          break;
+        }
         case "edit-registrar":
           editRegistrar(id);
           break;
@@ -792,6 +810,82 @@
     } finally {
       $("pricesRefresh").disabled = false;
     }
+  });
+
+  /* ------------------------------------------------------- license codes */
+
+  async function loadBatches() {
+    const res = await call("adminListLicenseBatches");
+    if (res) renderBatches(res);
+  }
+
+  function renderBatches(res) {
+    state.batches = res.batches || [];
+    const name = (m) => ({ appsumo: "AppSumo", saaszilla: "SaaSZilla" })[m] || m;
+    $("batchRows").innerHTML = state.batches.length ? state.batches.map((b) => `<tr>
+        <td class="font-medium text-white">${h(name(b.marketplace))}</td>
+        <td class="text-xs text-slate-300">${h(b.label || "—")}</td>
+        <td class="text-xs text-slate-400">${h(when(b.created_at))}</td>
+        <td class="text-right font-mono">${h(b.size)}</td>
+        <td class="text-right font-mono text-emerald-400">${h(b.counts.redeemed)}</td>
+        <td class="text-right font-mono">${h(b.counts.available)}</td>
+        <td class="text-right font-mono text-red-400">${h(b.counts.revoked)}</td>
+        <td>${b.counts.available ? `<button class="${BAD_BTN}" data-act="withdraw-batch" data-id="${h(b.id)}">Withdraw unused</button>` : ""}</td>
+      </tr>`).join("") : emptyRow(8, "No codes yet. Create the first batch with the form.");
+    icons();
+  }
+
+  function downloadText(filename, text) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  $("batchMarketplace").addEventListener("change", () => {
+    $("batchMarketplaceOther").hidden = $("batchMarketplace").value !== "other";
+  });
+
+  $("batchForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const marketplace = $("batchMarketplace").value === "other" ? $("batchMarketplaceOther").value : $("batchMarketplace").value;
+    const size = Number($("batchSize").value);
+    if (!confirm(`Create ${size.toLocaleString()} ${marketplace} codes? The CSV downloads once.`)) return;
+    $("batchCreate").disabled = true;
+    try {
+      const res = await call("adminCreateLicenseBatch", { marketplace, size, label: $("batchLabel").value });
+      if (!res) return;
+      // One column, no header: what AppSumo's upload asks for.
+      const csv = res.codes.join("\r\n") + "\r\n";
+      const file = `domain-vault-${res.batch.marketplace}-${res.codes.length}-codes-${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadText(file, csv);
+      // Kept in this tab only, for a second download if the first went astray.
+      $("batchAgain").hidden = false;
+      $("batchAgain").onclick = () => downloadText(file, csv);
+      toast(`${res.codes.length} codes created; ${file} downloaded.`);
+      loadBatches();
+    } finally {
+      $("batchCreate").disabled = false;
+    }
+  });
+
+  function renderCode(c) {
+    const color = { available: "text-slate-300", redeemed: "text-emerald-400", revoked: "text-red-400" }[c.status] || "";
+    $("codeResult").innerHTML = `<div class="border border-surface-border rounded-lg p-3 space-y-1">
+        <div>Code ••••-${h(c.hint)} · <b class="${color}">${h(c.status)}</b> · ${h((c.batch && c.batch.marketplace) || "")} ${c.batch && c.batch.label ? "(" + h(c.batch.label) + ")" : ""}</div>
+        ${c.redeemedBy ? `<div class="text-xs text-slate-400">Redeemed by ${h(c.redeemedBy)} on ${h(when(c.redeemedAt))}</div>` : ""}
+        ${c.revokedAt ? `<div class="text-xs text-slate-400">Revoked ${h(when(c.revokedAt))}: ${h(c.revokeReason || "")}</div>` : ""}
+        <div class="pt-2">${c.status === "revoked"
+          ? `<button type="button" class="${GOOD_BTN}" data-act="reinstate-code">Reinstate</button>`
+          : `<button type="button" class="${BAD_BTN}" data-act="revoke-code">Revoke (refunded)</button>`}</div>
+      </div>`;
+  }
+
+  $("codeLookupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("codeResult").textContent = "";
+    const res = await call("adminFindLicenseCode", { code: $("codeLookup").value });
+    if (res) renderCode(res.code);
   });
 
   /* -------------------------------------------------------------- emails */

@@ -20,7 +20,7 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { type Caller, clientIp, HttpError, rateLimit, serviceClient } from "../_shared/db.ts";
 import { decryptSecret, encryptSecret, KEY_VERSION } from "../_shared/crypto.ts";
-import { BadRequest, isUuid, isValidEmail, str } from "../_shared/validate.ts";
+import { BadRequest, isUuid, isValidDomain, isValidEmail, str } from "../_shared/validate.ts";
 import { sendTemplate } from "../_shared/email.ts";
 
 const SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/+$/, "");
@@ -711,4 +711,103 @@ export async function redeemInvite(req: Request, token: unknown, user: { id: str
   const { data: owner } = await admin.from("profiles").select("email").eq("id", ownerId).maybeSingle();
   await logActivity(ownerId as string, user, "team.join", user.email);
   return { ok: true as const, vaultId: ownerId as string, ownerEmail: owner?.email ?? "" };
+}
+
+// ---------------------------------------------------------------------------
+// Bulk import (CSV, parsed in the browser)
+// ---------------------------------------------------------------------------
+
+const MAX_IMPORT = 5000;
+
+/**
+ * Add many domains at once. Each row is checked on its own: bad rows are
+ * reported with their line number and the rest still import. Domains the
+ * vault already has are skipped, or updated when asked. The plan's domain
+ * limit is respected: rows beyond it are reported, not half-saved.
+ */
+// deno-lint-ignore no-explicit-any
+export async function importDomains(caller: Caller, db: SupabaseClient, p: any) {
+  const vault = await resolveVault(caller, p?.vaultId);
+  requirePerm(vault, "editDomains", "add domains");
+  const input = Array.isArray(p?.rows) ? p.rows : [];
+  if (input.length === 0) throw new BadRequest("The file has no domains.");
+  if (input.length > MAX_IMPORT) throw new BadRequest(`At most ${MAX_IMPORT.toLocaleString("en-US")} domains per import.`);
+  const updateExisting = p?.updateExisting === true;
+
+  const admin = serviceClient();
+  const [{ data: existing }, { data: limitRow }, { data: providerRows }] = await Promise.all([
+    admin.from("domains").select("id, name").eq("user_id", vault.ownerId),
+    admin.from("plan_limits").select("domain_limit").eq("plan", vault.plan).maybeSingle(),
+    admin.from("providers").select("name").eq("user_id", vault.ownerId),
+  ]);
+  const byName = new Map((existing ?? []).map((d) => [d.name.toLowerCase(), d.id as string]));
+  const limit = limitRow?.domain_limit ?? null;
+  let slots = limit === null ? Infinity : Math.max(0, limit - byName.size);
+
+  const errors: { line: number; domain: string; message: string }[] = [];
+  const rows: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
+  let skipped = 0, updated = 0, added = 0;
+
+  input.forEach((r: Record<string, unknown>, i: number) => {
+    const line = Number.isInteger(r?.line) ? Number(r.line) : i + 2;
+    const name = String(r?.domain ?? "").trim().toLowerCase()
+      .replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/[/?#].*$/, "");
+    if (!isValidDomain(name)) return errors.push({ line, domain: name, message: "not a valid domain name" });
+    if (seen.has(name)) return errors.push({ line, domain: name, message: "listed twice in the file" });
+    seen.add(name);
+    let row: Record<string, unknown>;
+    try {
+      row = {
+        name,
+        provider_name: str(r.provider, 120),
+        purchase_date: dateOrNull(r.purchaseDate, "Purchase date"),
+        renewal_date: dateOrNull(r.renewalDate, "Renewal date"),
+        purchase_price: amount(r.purchasePrice, "Purchase price"),
+        renewal_price: amount(r.renewalPrice, "Renewal price"),
+        auto_renew: r.autoRenew === true,
+      };
+    } catch (e) {
+      return errors.push({ line, domain: name, message: (e as Error).message });
+    }
+    const id = byName.get(name);
+    if (id) {
+      if (!updateExisting) { skipped++; return; }
+      rows.push({ id, user_id: vault.ownerId, ...row });
+      updated++;
+    } else {
+      if (slots <= 0) {
+        return errors.push({ line, domain: name, message: `over the ${vault.plan} plan's limit of ${limit} domains` });
+      }
+      slots--;
+      rows.push({ id: crypto.randomUUID(), user_id: vault.ownerId, ...row });
+      added++;
+    }
+  });
+
+  for (let i = 0; i < rows.length; i += 1000) {
+    const { error } = await db.from("domains").upsert(rows.slice(i, i + 1000), { onConflict: "id" });
+    if (error) throw writeError(error, vault, "domain");
+  }
+
+  // Providers named in the file that the vault does not have yet.
+  let providersCreated = 0;
+  if (vault.can.editProviders) {
+    const have = new Set((providerRows ?? []).map((r) => r.name.trim().toLowerCase()));
+    const fresh = new Map<string, string>();
+    for (const r of rows) {
+      const n = r.provider_name as string | null;
+      if (n && !have.has(n.toLowerCase()) && !fresh.has(n.toLowerCase())) fresh.set(n.toLowerCase(), n);
+    }
+    if (fresh.size) {
+      const { data } = await db.from("providers")
+        .insert([...fresh.values()].map((name) => ({ user_id: vault.ownerId, name }))).select("id");
+      providersCreated = data?.length ?? 0;
+    }
+  }
+
+  if (!vault.isOwner && (added || updated)) {
+    await logActivity(vault.ownerId, caller, "domain.import", `${added} added, ${updated} updated`);
+  }
+  return { success: true, added, updated, skipped, providersCreated, errors: errors.slice(0, 200), errorCount: errors.length };
 }

@@ -247,6 +247,82 @@ async function reload(page) {
   await ctx.close();
 }
 
+// ------------------------------------------- license codes and csv import
+{
+  const errors = [];
+  const ctx = await newContext({ viewport: { width: 1400, height: 900 } });
+  const page = await ctx.newPage(); watch(page, errors);
+
+  // Admin creates codes; the CSV downloads (one column, no header).
+  await login(page, admin);
+  await page.goto(SITE + '/app/admin.html');
+  await page.waitForSelector('#appView:not([hidden])', { timeout: 15000 });
+  await page.click('.tab[data-tab="licenses"]');
+  await page.fill('#batchSize', '3');
+  await page.fill('#batchLabel', `ui ${t}`);
+  const [csvDownload] = await Promise.all([page.waitForEvent('download'), page.click('#batchCreate')]);
+  const codes = readFileSync(await csvDownload.path(), 'utf8').trim().split(/\r?\n/);
+  ok('admin creates codes and gets a one-column CSV', codes.length === 3 && codes.every((c) => /^DVAS-/.test(c)), codes[0]);
+  await page.waitForFunction(() => document.querySelectorAll('#batchRows tr').length >= 1);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/admin-licenses.png`, fullPage: true });
+  await ctx.clearCookies();
+  await page.evaluate(() => localStorage.clear());
+
+  // A buyer follows AppSumo's redeem link with the code.
+  sql('delete from rate_limits;');
+  const buyer = `ui-buyer-${t}@example.com`;
+  await page.goto(SITE + `/app/redeem.html?code=${codes[0]}`);
+  await page.waitForSelector('#authLicenseGroup', { state: 'visible' });
+  ok('the redeem link opens sign-up with the code filled in',
+    await page.inputValue('#authLicenseCode') === codes[0] && await page.locator('#registerFields').isVisible() && !page.url().includes('code='));
+  await page.fill('#authEmail', buyer);
+  await page.fill('#authPassword', PW);
+  await page.click('#authSubmitBtn');
+  await page.waitForFunction(() => /plan is active/.test(document.getElementById('authMessage').textContent), null, { timeout: 20000 });
+  ok('signing up with the code activates the account', sql(`select status || '/' || plan from profiles where email='${buyer}'`) === 'active/Personal');
+  await page.waitForTimeout(3500);
+  await page.fill('#authEmail', buyer);
+  await page.fill('#authPassword', PW);
+  await page.click('#authSubmitBtn');
+  await page.waitForSelector('#auth-overlay', { state: 'hidden', timeout: 20000 });
+  await page.waitForLoadState('networkidle');
+
+  // Settings → License keys: a second code.
+  await page.click('.sidebar .menu-item[data-page="settings"]');
+  await page.waitForFunction(() => /1 of 4 codes/.test(document.getElementById('licenseSlots').textContent), null, { timeout: 15000 });
+  await page.fill('#licenseCodeInput', codes[1]);
+  await page.click('#licenseRedeemBtn');
+  await page.waitForFunction(() => /2 of 4 codes/.test(document.getElementById('licenseSlots').textContent), null, { timeout: 15000 });
+  ok('a second code in Settings upgrades to Start-up', (await page.textContent('#userPlanBadgeText')) === 'START-UP');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/license-keys.png` });
+
+  // Import domains from a CSV file.
+  await page.click('.sidebar .menu-item[data-page="domains"]');
+  await page.click('#importDomainsBtn');
+  const [tpl] = await Promise.all([page.waitForEvent('download'), page.click('#importTemplateBtn')]);
+  ok('the template downloads', readFileSync(await tpl.path(), 'utf8').startsWith('domain,provider,purchase_date'));
+  const csv = 'Domain Name;Registrar;Expiration Date;Auto Renew;Renewal Price\n' +
+    `ui-import-a-${t}.com;Namecheap;25/12/2027;Yes;"15,98"\n` +
+    `ui-import-b-${t}.net;Porkbun;01/02/2028;no;12.5\n` +
+    'not a domain;x;;;\n';
+  await page.setInputFiles('#importFile', { name: 'export.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await page.waitForSelector('#importPreview:not([hidden])');
+  ok('the preview reads registrar columns, day-first dates and decimal commas',
+    /3<\/b> rows/.test(await page.innerHTML('#importSummary')) && /day\/month\/year/.test(await page.textContent('#importSummary')) &&
+    (await page.textContent('#importRows')).includes('2027-12-25') && (await page.textContent('#importRows')).includes('15.98'));
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/import-preview.png` });
+  await page.click('#importRunBtn');
+  await page.waitForSelector('#importResult:not([hidden])', { timeout: 20000 });
+  ok('import adds the good rows', sql(`select count(*) from domains d join profiles p on p.id = d.user_id where p.email='${buyer}' and d.name like 'ui-import-%'`) === '2' &&
+    sql(`select renewal_date || '/' || renewal_price || '/' || auto_renew from domains where name = 'ui-import-a-${t}.com'`) === '2027-12-25/15.98/true');
+  await page.click('#importModal .modal-close');
+  await page.locator('#domainsTableBody tr', { hasText: `ui-import-a-${t}.com` }).waitFor({ timeout: 15000 }).catch(() => {});
+  ok('the imported domains are on screen', await page.locator('#domainsTableBody tr', { hasText: `ui-import-a-${t}.com` }).count() === 1);
+  ok('codes and import: no JavaScript errors', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+  sql(`delete from license_batches where label = 'ui ${t}';`);
+}
+
 // ------------------------------------------------------------ team vaults
 {
   const errors = [];

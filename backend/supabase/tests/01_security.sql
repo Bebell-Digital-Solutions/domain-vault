@@ -794,3 +794,37 @@ begin
     else 'FAIL t46 anonBlocked=' || anon_read || ' userBlocked=' || user_write || ' badLinkRefused=' || bad_link
          || ' registrars=' || n_reg || ' prices=' || n_price end;
 end $$;
+
+\echo '--- T47: license codes stack to Agency, at most 4, one owner each; a refund lowers the plan'
+do $$
+declare u1 uuid := 'c3c3c3c3-0000-4000-8000-000000000047'; u2 uuid := 'd4d4d4d4-0000-4000-8000-000000000047';
+        b uuid; r record; plans text := ''; fifth text := 'none'; stolen text := 'none'; again text := 'none';
+        anon_read boolean := false; st text;
+begin
+  insert into auth.users (id, email) values (u1, 'codes1@example.com'), (u2, 'codes2@example.com');
+  insert into public.license_batches (marketplace, size) values ('appsumo', 6) returning id into b;
+  insert into public.license_codes (code_hash, batch_id, hint)
+  select lpad(to_hex(i), 64, '0'), b, 'AB' || lpad(i::text, 2, '0') from generate_series(1, 6) i;
+
+  for i in 1..4 loop
+    select * into r from public.redeem_license_code(lpad(to_hex(i), 64, '0'), u1);
+    plans := plans || r.plan || '/';
+  end loop;
+  begin perform public.redeem_license_code(lpad(to_hex(5), 64, '0'), u1); exception when sqlstate 'P0003' then fifth := 'refused'; end;
+  begin perform public.redeem_license_code(lpad(to_hex(1), 64, '0'), u2); exception when sqlstate 'P0002' then stolen := 'refused'; end;
+  begin perform public.redeem_license_code(lpad(to_hex(1), 64, '0'), u1); exception when sqlstate 'P0001' then again := 'refused'; end;
+
+  perform public.set_license_code_status(lpad(to_hex(4), 64, '0'), true, 'refunded on AppSumo');
+  select status into st from public.profiles where id = u1;
+
+  execute 'set local role anon';
+  begin perform 1 from public.license_codes; exception when insufficient_privilege then anon_read := true; end;
+  execute 'reset role';
+
+  raise notice '%', case
+    when plans = 'Personal/Start-up/Business/Agency/' and fifth = 'refused' and stolen = 'refused' and again = 'refused'
+     and (select plan::text from public.profiles where id = u1) = 'Business' and st = 'active' and anon_read
+    then 'PASS t47 (stacking, cap, single owner, refund lowers the plan, account activated, closed to clients)'
+    else 'FAIL t47 plans=' || plans || ' fifth=' || fifth || ' stolen=' || stolen || ' again=' || again
+         || ' planAfterRefund=' || coalesce((select plan::text from public.profiles where id = u1), '?') || ' status=' || coalesce(st, '?') end;
+end $$;

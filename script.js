@@ -266,6 +266,9 @@
         let pendingPlanChoice = null;   // ?plan=… from the homepage's pricing table
         let pendingBilling = null;      // ?billing=lifetime from the lifetime-deal page
         const CLAIM_KEY = 'dv.claim';   // activation link for a payment made before sign-up
+        const REDEEM_KEY = 'dv.redeem'; // ?redeem link opened while signed in: show Settings → License keys
+        let licenseFieldVisible = false; // the auth card's "License code" field
+        let navigatedSinceLogin = false; // a menu click before the vault finished loading
         const INVITE_KEY = 'dv.invite'; // team invitation link, kept until signed in
         const VAULT_CHOICE_KEY = 'dv.vaultChoice';   // { userId: vault last opened }
         let vaults = [];                 // the user's own vault, then the teams they belong to
@@ -380,8 +383,23 @@
                         showAuthMessage((translations[settings.language] || translations.en).inviteIntro, 'success');
                     }
                 }
+                // Marketplace buyers (AppSumo's "Redeem now" goes to /redeem): the
+                // code field, filled in when the link carries the code.
+                if (params.has('redeem') || params.has('code')) {
+                    const code = params.get('code') || params.get('redeem') || '';
+                    licenseFieldVisible = true;
+                    document.getElementById('authLicenseCode').value = code;
+                    if (window.DomainVaultAPI.session) {
+                        try { sessionStorage.setItem(REDEEM_KEY, code); } catch (e) { /* storage blocked */ }
+                    } else {
+                        setAuthMode('register');
+                        showAuthMessage('Create your account, or switch to Log In if you have one, to redeem your code.', 'success');
+                    }
+                }
                 // Used once: a reload must not reopen the checkout.
-                if (params.has('register') || params.has('plan') || params.has('billing') || params.has('claim') || params.has('invite')) {
+                if (['register', 'plan', 'billing', 'claim', 'invite', 'redeem', 'code'].some(k => params.has(k))) {
+                    params.delete('redeem');
+                    params.delete('code');
                     params.delete('register');
                     params.delete('plan');
                     params.delete('billing');
@@ -403,6 +421,17 @@
             document.getElementById('tab-register').addEventListener('click', () => setAuthMode('register'));
             document.getElementById('authForm').addEventListener('submit', (e) => { e.preventDefault(); handleAuthSubmit(); });
             document.getElementById('forgotPasswordLink').addEventListener('click', () => setAuthMode('forgot'));
+            document.getElementById('haveCodeLink').addEventListener('click', () => {
+                licenseFieldVisible = true;
+                setAuthMode(authMode);
+                document.getElementById('authLicenseCode').focus();
+            });
+            document.getElementById('licenseForm').addEventListener('submit', redeemLicenseCode);
+            document.getElementById('importDomainsBtn').addEventListener('click', openImport);
+            document.getElementById('importTemplateBtn').addEventListener('click', () =>
+                downloadFile('domain-vault-import-template.csv', 'text/csv', IMPORT_TEMPLATE));
+            document.getElementById('importFile').addEventListener('change', readImportFile);
+            document.getElementById('importRunBtn').addEventListener('click', runImport);
             document.getElementById('backToLoginLink').addEventListener('click', () => { recoveryToken = null; setAuthMode('login'); });
             document.getElementById('logoutBtn').addEventListener('click', () => handleLogout());
             document.getElementById('settingsPasswordForm').addEventListener('submit', submitPasswordChange);
@@ -465,6 +494,7 @@
                 item.addEventListener('click', (e) => {
                     const page = e.currentTarget.dataset.page;
                     if (!page) return;   // e.g. the Admin link navigates normally
+                    navigatedSinceLogin = true;
                     setActivePage(page);
                 });
             });
@@ -725,6 +755,8 @@
             show('registerFields', mode === 'register');
             show('forgotPasswordLink', mode === 'login');
             show('backToLoginLink', mode === 'forgot' || mode === 'recover');
+            show('authLicenseGroup', licenseFieldVisible && (mode === 'login' || mode === 'register'));
+            show('haveCodeLink', !licenseFieldVisible && (mode === 'login' || mode === 'register'));
             document.getElementById('authPasswordLabel').textContent = mode === 'recover' ? 'New password' : 'Password';
             document.getElementById('authPassword').setAttribute('autocomplete', mode === 'login' ? 'current-password' : 'new-password');
             document.getElementById('authSubmitBtn').textContent = AUTH_MODES[mode].button;
@@ -739,6 +771,7 @@
         }
 
         function enterApp() {
+            navigatedSinceLogin = false;
             document.getElementById('auth-overlay').style.display = 'none';
             if (matrixInterval) clearInterval(matrixInterval); // Optimize performance
             loadDashboardData();
@@ -788,10 +821,12 @@
             try {
                 const claimToken = pendingClaim();
                 const inviteToken = pendingInvite();
+                const licenseCode = licenseFieldVisible ? document.getElementById('authLicenseCode').value.trim() : '';
                 if (authMode === 'login') {
                     const res = await apiCall('loginUser', {
                         email: email, password: pass,
-                        claimToken: claimToken || undefined, inviteToken: inviteToken || undefined
+                        claimToken: claimToken || undefined, inviteToken: inviteToken || undefined,
+                        licenseCode: licenseCode || undefined
                     });
                     if (res.claimedPlan || res.claimMessage) clearClaim();
                     if (res.joinedVault || res.inviteMessage) clearInvite();
@@ -804,17 +839,23 @@
                         if (res.claimMessage) showToast(res.claimMessage, 'danger');
                         if (res.joinedVault) showToast(`You joined the team of ${res.joinedVault.ownerEmail}.`, 'success');
                         if (res.inviteMessage) showToast(res.inviteMessage, 'danger');
+                        if (res.licensePlan) showToast(`Code redeemed: your ${res.licensePlan} plan is active.`, 'success');
+                        if (res.licenseMessage) showToast(res.licenseMessage, 'danger');
+                        if (res.licensePlan) document.getElementById('authLicenseCode').value = '';
                     } else {
-                        showAuthMessage([res.message, res.claimMessage, res.inviteMessage].filter(Boolean).join(' '), 'danger');
+                        showAuthMessage([res.message, res.claimMessage, res.inviteMessage, res.licenseMessage].filter(Boolean).join(' '), 'danger');
                     }
                 } else if (authMode === 'register') {
                     const place = await fetchLocation();
                     const phone = document.getElementById('authPhone').value;
                     const res = await apiCall('registerUser', {
                         email: email, password: pass, phone: phone, location: place,
-                        claimToken: claimToken || undefined, inviteToken: inviteToken || undefined
+                        claimToken: claimToken || undefined, inviteToken: inviteToken || undefined,
+                        licenseCode: licenseCode || undefined
                     });
                     if (res.success && claimToken) clearClaim();
+                    // Redeemed with the new account: logging in must not try it again.
+                    if (res.licensePlan) document.getElementById('authLicenseCode').value = '';
                     // Kept if it was not used (an existing address): logging in uses it.
                     if (res.joinedVault) clearInvite();
                     showAuthMessage(res.message, res.success ? 'success' : 'danger');
@@ -905,7 +946,10 @@
 
                 applySettings();
                 setLanguage(settings.language);
-                setActivePage('dashboard');
+                // Someone who already clicked through the menu while the vault
+                // loaded stays where they are (that page is redrawn with the data).
+                const current = document.querySelector('.page.active');
+                setActivePage(navigatedSinceLogin && current ? current.id.replace(/^page-/, '') : 'dashboard');
                 renderAll();
                 reportRenewalsToDesktop();
                 if (pendingPlanChoice) {
@@ -914,6 +958,7 @@
                 }
                 redeemPendingClaim();
                 redeemPendingInvite();
+                openPendingRedeem();
             }).catch(err => {
                 showToast("Could not reach the server to load your vault. Reload the page to try again.", "danger");
             });
@@ -1193,6 +1238,7 @@
             if(pageId === 'calendar') renderCalendar();
             if(pageId === 'reports') renderReportsPage();
             if(pageId === 'downloads') renderDownloads();
+            if(pageId === 'settings') loadLicenseCodes();
             if(pageId === 'team') loadTeam();
             if(pageId === 'search') openSearchTool();
             lucide.createIcons();
@@ -2138,12 +2184,14 @@
                 ? `<p class="field-hint" style="margin: 6px 0 14px;"><a href="${PAYPAL_MANAGE_URL}" target="_blank" rel="noopener" style="color: var(--primary);">${t.manageSubscription}</a></p>`
                 : '';
             const payRows = purchases.map(p => {
-                const amount = p.amount === null || p.amount === undefined ? '' : `${Number(p.amount).toFixed(2)} ${p.currency || ''}`;
+                const amount = String(p.txn_id || '').startsWith('codes:') ? ''
+                    : p.amount === null || p.amount === undefined ? '' : `${Number(p.amount).toFixed(2)} ${p.currency || ''}`;
                 const status = String(p.status || '');
-                const kind = p.kind === 'subscription' ? 'yearly payment' : 'lifetime';
+                const codes = String(p.txn_id || '').startsWith('codes:');
+                const kind = codes ? 'lifetime · license codes' : p.kind === 'subscription' ? 'yearly payment' : 'lifetime';
                 return `<div class="purchase-row">
                     <span><strong>${escapeHTML(p.plan || '')}</strong> · ${escapeHTML(kind)} · ${escapeHTML(day(p.created_at))}</span>
-                    <span>${escapeHTML(amount)} · ${escapeHTML(status.charAt(0).toUpperCase() + status.slice(1))}</span>
+                    <span>${amount ? escapeHTML(amount) + ' · ' : ''}${escapeHTML(status.charAt(0).toUpperCase() + status.slice(1))}</span>
                 </div>`;
             }).join('');
             list.innerHTML = subRows + manage + payRows;
@@ -2238,6 +2286,238 @@
                     ${card('windows', 'Windows', 'fa-windows', G.win)}
                     ${card('linux', 'Linux', 'fa-linux', G.lin)}
                 </div>`;
+        }
+
+
+        // --- LICENSE KEYS (AppSumo and other marketplaces) ---
+        // Codes stack for life: 1 Personal, 2 Start-up, 3 Business, 4 Agency.
+
+        async function loadLicenseCodes() {
+            const res = await apiCall('getLicenseCodes', {}).catch(() => null);
+            if (!res || res.success === false) return;
+            const fmt = (d) => d ? new Date(d).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+            const market = (m) => ({ appsumo: 'AppSumo', saaszilla: 'SaaSZilla' })[m] || m;
+            const slots = [];
+            for (let i = 0; i < res.max; i++) {
+                const c = res.codes.filter(x => x.active)[i];
+                slots.push(`<div class="purchase-row"><span><b>Code ${i + 1}</b></span>${c
+                    ? `<span>••••-${escapeHTML(c.hint)} · ${escapeHTML(market(c.marketplace))} · ${escapeHTML(fmt(c.redeemedAt))}</span>`
+                    : '<span style="color:var(--text-muted)">Empty</span>'}</div>`);
+            }
+            res.codes.filter(c => !c.active).forEach(c => slots.push(
+                `<div class="purchase-row"><span style="color:var(--text-muted)">••••-${escapeHTML(c.hint)}</span><span style="color:var(--danger)">Refunded</span></div>`));
+            document.getElementById('licenseSlots').innerHTML = slots.join('') +
+                `<p class="field-hint" style="margin-top:8px;">${res.active} of ${res.max} codes · plan: <b>${escapeHTML(res.plan)}</b></p>`;
+            document.getElementById('licenseForm').hidden = res.active >= res.max;
+        }
+
+        async function redeemLicenseCode(e) {
+            e.preventDefault();
+            const input = document.getElementById('licenseCodeInput');
+            const code = input.value.trim();
+            if (!code) return showToast('Enter your license code.', 'warning');
+            const btn = document.getElementById('licenseRedeemBtn');
+            btn.disabled = true;
+            try {
+                const res = await persist('redeemLicenseCode', { code }, null, false);
+                if (!res) return;
+                input.value = '';
+                showToast(res.message, 'success');
+                await reloadUserData();
+                loadLicenseCodes();
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        /** A ?redeem link opened while signed in: Settings, with the code ready. */
+        function openPendingRedeem() {
+            let code = null;
+            try { code = sessionStorage.getItem(REDEEM_KEY); sessionStorage.removeItem(REDEEM_KEY); } catch (e) { /* storage blocked */ }
+            if (code === null) return;
+            setActivePage('settings');
+            document.getElementById('licenseCodeInput').value = code;
+            document.getElementById('licenseCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // --- IMPORT DOMAINS FROM CSV ---
+
+        const IMPORT_TEMPLATE = 'domain,provider,purchase_date,renewal_date,purchase_price,renewal_price,auto_renew\r\n' +
+            'example.com,Namecheap,2024-03-15,2027-03-15,10.98,15.98,yes\r\n' +
+            'mybrand.io,Porkbun,2025-01-02,2027-01-02,28.12,51.80,no\r\n';
+
+        // Column names as registrars and spreadsheets write them, compared
+        // without case, spaces or punctuation.
+        const IMPORT_COLUMNS = {
+            domain: ['domain', 'domainname', 'name', 'domains', 'url', 'website', 'dominio'],
+            provider: ['provider', 'registrar', 'registrarname', 'providername', 'company', 'proveedor', 'registrador'],
+            purchaseDate: ['purchasedate', 'purchased', 'registrationdate', 'registered', 'registeredon', 'created', 'createddate', 'creationdate', 'datepurchased', 'fechadecompra'],
+            renewalDate: ['renewaldate', 'renews', 'renewal', 'renewson', 'expiry', 'expirydate', 'expiration', 'expirationdate', 'expires', 'expireson', 'expiredate', 'expdate', 'nextrenewal', 'fechaderenovacion', 'vencimiento'],
+            purchasePrice: ['purchaseprice', 'price', 'cost', 'paid', 'purchasecost', 'preciodecompra'],
+            renewalPrice: ['renewalprice', 'renewalcost', 'renewprice', 'annualcost', 'yearlycost', 'preciorenovacion', 'precioderenovacion'],
+            autoRenew: ['autorenew', 'autorenewal', 'autorenewon', 'renewautomatically', 'autorenovacion']
+        };
+
+        /** RFC 4180-ish: quoted fields, doubled quotes, commas/semicolons/tabs. */
+        function parseCsv(text) {
+            text = text.replace(/^﻿/, '');
+            const firstLine = text.split(/\r?\n/, 1)[0] || '';
+            const counts = { ',': 0, ';': 0, '\t': 0 };
+            let quoted = false;
+            for (const ch of firstLine) { if (ch === '"') quoted = !quoted; else if (!quoted && ch in counts) counts[ch]++; }
+            const sep = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+            const rows = [];
+            let row = [], field = '', q = false;
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                if (q) {
+                    if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
+                    else if (ch === '"') q = false;
+                    else field += ch;
+                } else if (ch === '"') q = true;
+                else if (ch === sep) { row.push(field); field = ''; }
+                else if (ch === '\n' || ch === '\r') {
+                    if (ch === '\r' && text[i + 1] === '\n') i++;
+                    row.push(field); field = '';
+                    if (row.some(c => c.trim() !== '')) rows.push(row);
+                    row = [];
+                } else field += ch;
+            }
+            row.push(field);
+            if (row.some(c => c.trim() !== '')) rows.push(row);
+            return rows;
+        }
+
+        function importPrice(v) {
+            let s = String(v || '').replace(/[^0-9.,-]/g, '');
+            if (!s) return '';
+            // "12,99" (decimal comma) vs "1,234.50" (thousands)
+            if (/^\d+,\d{1,2}$/.test(s)) s = s.replace(',', '.');
+            else s = s.replace(/,/g, '');
+            const n = Number(s);
+            return Number.isFinite(n) ? n : null;
+        }
+
+        const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+            ene: 1, abr: 4, ago: 8, dic: 12 };
+
+        /** A date as YYYY-MM-DD; `dayFirst` settles 03/04/2027 for the whole file. */
+        function importDate(v, dayFirst) {
+            const s = String(v || '').trim();
+            if (!s) return '';
+            let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+            if (m) return iso(+m[1], +m[2], +m[3]);
+            m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);
+            if (m) {
+                const y = m[3].length === 2 ? 2000 + +m[3] : +m[3];
+                return dayFirst ? iso(y, +m[2], +m[1]) : iso(y, +m[1], +m[2]);
+            }
+            m = s.toLowerCase().match(/^(\d{1,2})\s+([a-z]{3})[a-z]*\.?,?\s+(\d{4})/) || null;
+            if (m && MONTHS[m[2]]) return iso(+m[3], MONTHS[m[2]], +m[1]);
+            m = s.toLowerCase().match(/^([a-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/);
+            if (m && MONTHS[m[1]]) return iso(+m[3], MONTHS[m[1]], +m[2]);
+            return null;
+            function iso(y, mo, d) {
+                if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+                const dt = new Date(Date.UTC(y, mo - 1, d));
+                return dt.getUTCMonth() === mo - 1 ? dt.toISOString().slice(0, 10) : null;
+            }
+        }
+
+        let importRows = [];
+
+        function openImport() {
+            if (!can('editDomains')) return showToast('You cannot add domains to this vault.', 'warning');
+            importRows = [];
+            document.getElementById('importFile').value = '';
+            document.getElementById('importPreview').hidden = true;
+            document.getElementById('importResult').hidden = true;
+            document.getElementById('importUpdate').checked = false;
+            document.getElementById('importModal').style.display = 'flex';
+            lucide.createIcons();
+        }
+
+        async function readImportFile(e) {
+            const file = e.target.files[0];
+            document.getElementById('importResult').hidden = true;
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) return showToast('That file is too big (5 MB at most).', 'warning');
+            const table = parseCsv(await file.text());
+            if (table.length < 2) return showToast('The file has no rows under the header.', 'warning');
+            const key = (h) => String(h).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+            const header = table[0].map(key);
+            const col = {};
+            for (const [field, names] of Object.entries(IMPORT_COLUMNS)) {
+                const i = header.findIndex(h => names.includes(h));
+                if (i !== -1) col[field] = i;
+            }
+            if (col.domain === undefined) return showToast('No "domain" column found. Use the template, or name a column "domain".', 'danger');
+            const cell = (r, f) => col[f] === undefined ? '' : (r[col[f]] || '').trim();
+            // Day-first dates if any date in the file can only be read that way.
+            const dayFirst = table.slice(1).some(r => ['purchaseDate', 'renewalDate'].some(f => {
+                const m = cell(r, f).match(/^(\d{1,2})[-/.](\d{1,2})[-/.]\d{2,4}/);
+                return m && +m[1] > 12;
+            }));
+            importRows = table.slice(1).map((r, i) => {
+                const auto = cell(r, 'autoRenew').toLowerCase();
+                const row = {
+                    line: i + 2,
+                    domain: cell(r, 'domain').toLowerCase(),
+                    provider: cell(r, 'provider'),
+                    purchaseDate: importDate(cell(r, 'purchaseDate'), dayFirst),
+                    renewalDate: importDate(cell(r, 'renewalDate'), dayFirst),
+                    purchasePrice: importPrice(cell(r, 'purchasePrice')),
+                    renewalPrice: importPrice(cell(r, 'renewalPrice')),
+                    autoRenew: ['yes', 'y', 'true', '1', 'on', 'enabled', 'si', 'sí', 'auto'].includes(auto)
+                };
+                row.problem = !/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(row.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, ''))
+                    ? 'not a domain name'
+                    : row.purchaseDate === null || row.renewalDate === null ? 'date not understood'
+                    : row.purchasePrice === null || row.renewalPrice === null ? 'price not understood'
+                    : !row.renewalDate ? 'no renewal date (it will import; add it later)' : '';
+                return row;
+            });
+            const existing = new Set(domains.map(d => d.name.toLowerCase()));
+            const bad = importRows.filter(r => r.problem && !r.problem.startsWith('no renewal')).length;
+            const already = importRows.filter(r => !r.problem && existing.has(r.domain)).length;
+            document.getElementById('importSummary').innerHTML =
+                `<b>${importRows.length}</b> rows · <b>${importRows.length - bad}</b> ready` +
+                (already ? ` · <b>${already}</b> already in this vault` : '') +
+                (bad ? ` · <span style="color:var(--danger)"><b>${bad}</b> with problems (skipped)</span>` : '') +
+                (dayFirst ? ' · dates read as day/month/year' : '');
+            const money = (n) => n === '' || n === null ? '' : Number(n).toFixed(2);
+            document.getElementById('importRows').innerHTML = importRows.slice(0, 200).map(r => `<tr>
+                <td>${r.line}</td><td>${escapeHTML(r.domain)}</td><td>${escapeHTML(r.provider)}</td>
+                <td>${escapeHTML(r.purchaseDate || '')}</td><td>${escapeHTML(r.renewalDate || '')}</td>
+                <td>${money(r.purchasePrice)} / ${money(r.renewalPrice)}</td><td>${r.autoRenew ? 'yes' : 'no'}</td>
+                <td style="color:${r.problem ? (r.problem.startsWith('no renewal') ? 'var(--warning)' : 'var(--danger)') : existing.has(r.domain) ? 'var(--text-muted)' : 'var(--success)'}">${escapeHTML(r.problem || (existing.has(r.domain) ? 'already in vault' : 'ready'))}</td>
+            </tr>`).join('') + (importRows.length > 200 ? `<tr><td colspan="8" style="color:var(--text-muted)">…and ${importRows.length - 200} more rows</td></tr>` : '');
+            document.getElementById('importPreview').hidden = false;
+        }
+
+        async function runImport() {
+            const rows = importRows.filter(r => !r.problem || r.problem.startsWith('no renewal')).map(r => ({
+                line: r.line, domain: r.domain, provider: r.provider, purchaseDate: r.purchaseDate, renewalDate: r.renewalDate,
+                purchasePrice: r.purchasePrice, renewalPrice: r.renewalPrice, autoRenew: r.autoRenew
+            }));
+            if (!rows.length) return showToast('Nothing to import: every row has a problem.', 'warning');
+            const btn = document.getElementById('importRunBtn');
+            btn.disabled = true;
+            try {
+                const res = await persist('importDomains', vaultPayload({ rows, updateExisting: document.getElementById('importUpdate').checked }), null, false);
+                if (!res) return;
+                const box = document.getElementById('importResult');
+                box.hidden = false;
+                box.innerHTML = `<p style="color:var(--success); margin:0 0 6px;"><b>${res.added}</b> added · <b>${res.updated}</b> updated · <b>${res.skipped}</b> skipped (already in the vault)` +
+                    (res.providersCreated ? ` · <b>${res.providersCreated}</b> new providers` : '') + '</p>' +
+                    (res.errorCount ? `<p style="color:var(--danger); margin:0 0 6px;">${res.errorCount} not imported:</p><ul style="margin:0; padding-left:18px; color:var(--text-muted); font-size:0.9em;">${res.errors.map(x => `<li>Line ${x.line} (${escapeHTML(x.domain)}): ${escapeHTML(x.message)}</li>`).join('')}</ul>` : '');
+                document.getElementById('importPreview').hidden = true;
+                showToast(`Import done: ${res.added} added, ${res.updated} updated.`, 'success');
+                await reloadUserData();
+                reportRenewalsToDesktop();
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         // --- ACTIVATION LINKS (paid before signing up) ---
@@ -2346,6 +2626,7 @@
             document.getElementById('addDomainBtn').hidden = !can('editDomains');
             document.getElementById('addDomainBtnSecondary').hidden = !can('editDomains');
             document.getElementById('addProviderBtn').hidden = !can('editProviders');
+            document.getElementById('importDomainsBtn').hidden = !can('editDomains');
             ['exportCsvBtn', 'exportJsonBtn', 'pageDownloadReportBtn', 'pageEmailReportBtn'].forEach(id => {
                 document.getElementById(id).hidden = !can('export');
             });

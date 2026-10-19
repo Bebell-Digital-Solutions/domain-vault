@@ -554,11 +554,18 @@
                     </div>
                     <p class="field-hint" style="text-align:center;">By creating an account you agree to the <a href="../p/terms" target="_blank" style="color:var(--primary)">Terms</a> and <a href="../p/privacy" target="_blank" style="color:var(--primary)">Privacy Policy</a>.</p>
                 </div>
+                <!-- Marketplace buyers (AppSumo…): their code activates the account and plan. -->
+                <div class="form-group" id="authLicenseGroup" style="display:none;">
+                    <label class="form-label" for="authLicenseCode">License code</label>
+                    <input type="text" id="authLicenseCode" class="form-control" placeholder="DVAS-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" maxlength="80">
+                    <small class="field-hint">From AppSumo or another marketplace. You can add more codes later in Settings.</small>
+                </div>
                 <div style="margin-top:20px;">
                     <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width:100%;">Log In</button>
                 </div>
                 <p class="auth-links">
                     <button type="button" class="link-btn" id="forgotPasswordLink">Forgot your password?</button>
+                    <button type="button" class="link-btn" id="haveCodeLink" style="margin-left:12px;">Have a license code?</button>
                     <button type="button" class="link-btn" id="backToLoginLink" style="display:none;">Back to log in</button>
                 </p>
                 <p id="authMessage" role="status" style="margin-top:15px; text-align:center; display:none; font-size: 0.9em;"></p>
@@ -729,6 +736,9 @@
                 <div class="page-title">
                      <h2 data-translate-key="allDomains">All Domains</h2>
                      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                         <button class="btn btn-secondary" id="importDomainsBtn">
+                            <i data-lucide="file-up"></i> <span>Import CSV</span>
+                        </button>
                          <button class="btn btn-primary" id="addDomainBtnSecondary">
                             <i data-lucide="plus"></i> <span data-translate-key="addNewDomain">Add Domain</span>
                         </button>
@@ -1052,6 +1062,15 @@
                         <h4 data-translate-key="purchases" style="color: var(--text-main); margin-bottom: 8px;">Purchases</h4>
                         <div id="purchasesList"></div>
                     </div>
+                    <div class="card" id="licenseCard">
+                        <h3 class="card-title" style="margin-bottom:6px;">License keys</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 16px;">Bought Domain Vault on AppSumo or another marketplace? Enter your code here. Codes stack, for life: <b>1</b> Personal · <b>2</b> Start-up · <b>3</b> Business · <b>4</b> Agency.</p>
+                        <div id="licenseSlots"></div>
+                        <form id="licenseForm" class="input-group" style="margin-top: 14px;">
+                            <input type="text" id="licenseCodeInput" class="form-control" placeholder="DVAS-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" maxlength="80" aria-label="License code">
+                            <button type="submit" class="btn btn-primary" id="licenseRedeemBtn">Redeem</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1294,6 +1313,39 @@
 
 	
     <!-- DNS Records Modal -->
+    <!-- Import domains from a CSV file -->
+    <div class="modal" id="importModal">
+        <div class="modal-content" style="max-width: 860px;">
+            <div class="modal-header">
+                <h3>Import domains from CSV</h3>
+                <div class="modal-close"><i data-lucide="x"></i></div>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--text-muted); font-size: 0.9em; margin: 0 0 12px;">Columns: <code>domain, provider, purchase_date, renewal_date, purchase_price, renewal_price, auto_renew</code>. Only <b>domain</b> is required; exports from registrars usually work as they are. Dates as YYYY-MM-DD (other common formats work too), auto-renew as yes/no.</p>
+                <p style="margin: 0 0 16px;"><button type="button" class="link-btn" id="importTemplateBtn" style="font-size:0.9em;"><i data-lucide="download" style="width:14px;height:14px;vertical-align:-2px;"></i> Download the template</button></p>
+                <div class="form-group">
+                    <input type="file" id="importFile" class="form-control" accept=".csv,text/csv,text/plain">
+                </div>
+                <div id="importPreview" hidden>
+                    <p id="importSummary" style="margin: 0 0 10px;"></p>
+                    <div class="table-responsive" style="max-height: 320px; overflow: auto; border: 1px solid var(--border); border-radius: 8px;">
+                        <table style="font-size: 0.85em;">
+                            <thead><tr><th>Line</th><th>Domain</th><th>Provider</th><th>Purchased</th><th>Renews</th><th>Price / renewal</th><th>Auto</th><th>Status</th></tr></thead>
+                            <tbody id="importRows"></tbody>
+                        </table>
+                    </div>
+                    <label class="form-check" style="display:flex; gap:8px; align-items:center; margin: 14px 0 0;">
+                        <input type="checkbox" id="importUpdate"> <span>Update domains already in the vault (otherwise they are skipped)</span>
+                    </label>
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 16px;">
+                        <button type="button" class="btn btn-primary" id="importRunBtn"><i data-lucide="upload"></i> <span>Import</span></button>
+                    </div>
+                </div>
+                <div id="importResult" hidden style="margin-top: 14px;"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal" id="dnsModal">
         <div class="modal-content" style="max-width: 700px;">
             <div class="modal-header">
@@ -1360,9 +1412,9 @@
 
     <!-- Backend configuration, API client and the application, shared with
          the admin panel. Paths are relative: this page lives at /app/. -->
-    <script src="../config.js?v=20261014"></script>
-    <script src="../api.js?v=20261014"></script>
-    <script src="../script.js?v=20261014"></script>
+    <script src="../config.js?v=20261020"></script>
+    <script src="../api.js?v=20261020"></script>
+    <script src="../script.js?v=20261020"></script>
 
 
 

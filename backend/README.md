@@ -26,6 +26,8 @@ has to provide and the deployment steps in order.
 | Pay first, sign up after | A payment nobody's account matches (e.g. from the lifetime-deal page) emails the payer a one-time **activation link**; signing up or logging in through it attaches the purchase. |
 | Domain search | `/tools/domain-lookup` (EN), `/es/recursos/buscador-de-dominio` (ES) and the app's Domain Search page. Availability from the registry itself (RDAP via IANA's bootstrap; a DNS check where a registry has no RDAP), prices per registrar and extension from `registrar_prices`: Porkbun's refreshed daily from its public price list, the rest entered in Admin → Domain search, where each registrar's buy link (affiliate link, `{domain}` filled in) is set. Sorted by 5-year cost (first year + 4 renewals). |
 | Status page | `/status` and `/es/estado`. The `status` function probes each part every 5 minutes (pg_cron) and serves 90 days of history. |
+| Marketplace license codes | AppSumo, SaaSZilla…: Admin → License codes creates a batch (1–10,000 codes, downloaded once as a one-column CSV; only SHA-256 fingerprints are stored). Buyers redeem at `app.getdomainvault.com/redeem`, at sign-up/log-in, or in Settings → License keys. Codes stack for life, up to 4: Personal, Start-up, Business, Agency; the account is activated automatically. Admins look up, revoke (refunds) and reinstate codes, or withdraw a batch's unused codes. |
+| CSV import | Domains page → Import CSV, with a template. Registrar exports usually work as-is (column names, day-first dates and decimal commas are recognised). Bad rows are reported by line; existing domains are skipped or updated; the plan limit and team permissions apply. |
 | Customer emails | Every automated email (welcome, activation, team invitation, renewal reminder, purchases, subscriptions) is a template in `_shared/email.ts` with one branded layout. Texts, logo, colour and footer are edited in Admin → Emails (`email_templates`, `email_settings`), with preview and a test send. The password-reset email is Supabase Auth's: Dashboard → Authentication → Email Templates. |
 | Tools & recommendations | Managed in Admin → Tools (`catalog_items`); the app's Tools page and "Recommended providers" read them through `getCatalog`. |
 | Live chat | Admin → Support embeds the helpdesk console (`supportConsoleUrl` in config.js), only for signed-in admins. It has its own login; no helpdesk key passes through our pages. |
@@ -72,7 +74,9 @@ domain-vault/                    (repo root = the website, served by GitHub Page
     │   │   ├── …1009000100_teams.sql          team vaults: members, permissions, seats
     │   │   ├── …1012000100_domain_search.sql  registrars, prices, daily Porkbun refresh
     │   │   ├── …1012000200_status.sql         status checks, 5-minute probe
-    │   │   └── …1013000100_email_templates.sql editable customer emails
+    │   │   ├── …1013000100_email_templates.sql editable customer emails
+    │   │   ├── …1013000200_status_buckets.sql status bars in time slices
+    │   │   └── …1020000100_license_codes.sql  marketplace license codes
     │   ├── functions/
     │   │   ├── _shared/         cors, crypto, validation, db/auth, email + WhatsApp
     │   │   ├── api/             user, team + admin actions (index.ts, vault.ts, admin.ts)
@@ -420,9 +424,9 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 
 | Action | Who | Payload | Notes |
 |---|---|---|---|
-| `registerUser` | public | `email`, `password`, `phone`, `location`, `claimToken?`, `inviteToken?` | Password ≥ 10 chars. 5/hour per IP. With an activation link, attaches the purchase and activates the account. With a team invitation, joins the team and activates the account (`joinedVault`). |
+| `registerUser` | public | `email`, `password`, `phone`, `location`, `claimToken?`, `inviteToken?`, `licenseCode?` | Password ≥ 10 chars. 5/hour per IP. With an activation link, attaches the purchase and activates the account. With a team invitation, joins the team and activates the account (`joinedVault`). |
 | `requestPasswordReset` | public | `email`, `redirectTo?` | Emails a reset link back to `redirectTo` if its origin is in `ALLOWED_ORIGINS`, else `SITE_URL/app/`. Same answer for unknown addresses. 5/hour per IP, 3 per address. |
-| `loginUser` | public | `email`, `password`, `claimToken?`, `inviteToken?` | Returns `user` (incl. `plan`, `isAdmin`) and `session`; `claimedPlan` / `claimMessage`, `joinedVault` / `inviteMessage` when a link was used. |
+| `loginUser` | public | `email`, `password`, `claimToken?`, `inviteToken?`, `licenseCode?` | Returns `user` (incl. `plan`, `isAdmin`) and `session`; `claimedPlan` / `claimMessage`, `joinedVault` / `inviteMessage` when a link was used. |
 | `getCatalog` | public | — | Active tools and recommended providers. |
 | `getPrices` | public | — | Per plan: `amount` (yearly), `lifetimeAmount` (one-time), `currency`; `null` = not for sale that way. |
 | `getUserData` | user | `vaultId?` | Domains and providers of one vault (own by default), the `vault` on screen with the caller's `permissions`, every vault they can open (`vaults`), and their own settings, `plan`, `isAdmin`, `purchases` (with `kind`, `paid_until`) and `subscriptions` (with `paidUntil`). |
@@ -433,6 +437,8 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `revealCredential` | user | `vaultId?`, `providerId` | 10/hour, audited. Needs *see passwords* in a team vault. |
 | `changePassword` | user | `currentPassword`, `newPassword` | Current password checked; ≥ 10 chars. Signs out every other session; `api.js` adopts the returned one. 5 per 15 min. |
 | `claimPurchase` | user | `token` | Redeem an activation link while signed in. 10/hour per IP. |
+| `redeemLicenseCode` / `getLicenseCodes` | user | `code` / — | Redeem a marketplace code (10/hour); list the account's codes, masked. |
+| `importDomains` | user | `vaultId?`, `rows[{ line, domain, provider, purchaseDate, renewalDate, purchasePrice, renewalPrice, autoRenew }]`, `updateExisting?` | Up to 5,000 rows; per-row errors by line; 20 imports/hour. |
 | `getTeam` | user | `vaultId?` | Needs *manage*. Members with permissions and whether they fit the seats, open invitations, `seats{ used, limit }`, last 50 activity entries. |
 | `inviteMember` | user | `vaultId?`, `email`, `permissions{}` | Needs *manage* and a free seat. Emails a one-time link (7 days) and returns it as `inviteUrl`. A manager who is not the owner can only grant what they hold. 20/hour. |
 | `updateMember` / `removeMember` | user | `vaultId?`, `memberId`, `permissions{}` | Needs *manage*; not on yourself. |
@@ -451,6 +457,7 @@ Except the public ones, each needs `Authorization: Bearer <access_token>`.
 | `adminListRegistrars` / `adminSaveRegistrar` / `adminDeleteRegistrar` | admin | `registrar{ id?, name, website, urlTemplate, whois, ssl, notes, sort, active }` / `id` | Domain search registrars; the buy link must be https, `{domain}` / `{tld}` are filled in. Audited. |
 | `adminGetTldPrices` / `adminSaveTldPrices` | admin | `tld`, `rows[{ registrarId, register, renew }]` | Prices for one extension; both blank removes the row. Audited. |
 | `adminRefreshDomainPrices` | admin | — | Reload Porkbun's prices now. Audited. |
+| `adminListLicenseBatches` / `adminCreateLicenseBatch` / `adminFindLicenseCode` / `adminSetLicenseCode` / `adminRevokeUnusedCodes` | admin | `marketplace`, `size`, `label` / `code` / `code`, `revoke`, `reason` / `batchId` | License codes. A new batch returns its codes once. Audited. |
 | `adminListEmails` / `adminSaveEmail` / `adminResetEmail` / `adminSaveEmailBrand` | admin | `key`, `template{ subject, heading, body, button }` / `brand{ logo_url, accent_color, footer_text }` | Customer email texts and brand. Audited. |
 | `adminPreviewEmail` / `adminSendTestEmail` | admin | as above | Render a draft with sample data; send it to yourself (20/hour). |
 | `adminAudit` | admin | `limit?` | Recent admin changes, before and after. |

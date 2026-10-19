@@ -60,6 +60,7 @@ import {
   deleteDomain,
   deleteProvider,
   getTeam,
+  importDomains,
   inviteMember,
   leaveTeam,
   listVaults,
@@ -74,6 +75,15 @@ import {
   updateMember,
   vaultInfo,
 } from "./vault.ts";
+import {
+  adminCreateLicenseBatch,
+  adminFindLicenseCode,
+  adminListLicenseBatches,
+  adminRevokeUnusedCodes,
+  adminSetLicenseCode,
+  getLicenseCodes,
+  redeemCode,
+} from "./licenses.ts";
 
 const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL");
 const ADMIN_PHONE = Deno.env.get("ADMIN_PHONE") ?? null;
@@ -182,7 +192,16 @@ async function registerUser(req: Request, p: any) {
     if (invite.ok) joinedVault = { vaultId: invite.vaultId, ownerEmail: invite.ownerEmail };
     else inviteMessage = invite.message;
   }
-  const activeNow = !needsApproval || Boolean(claimedPlan) || Boolean(joinedVault);
+  // Signing up with a marketplace license code (AppSumo…): the plan applies
+  // and the account is active at once.
+  let licensePlan: string | null = null;
+  let licenseMessage: string | null = null;
+  if (p?.licenseCode && data.user) {
+    const lic = await redeemCode(req, p.licenseCode, data.user.id);
+    if (lic.ok) licensePlan = lic.plan;
+    else licenseMessage = lic.message;
+  }
+  const activeNow = !needsApproval || Boolean(claimedPlan) || Boolean(joinedVault) || Boolean(licensePlan);
 
   if (ADMIN_EMAIL) {
     await sendEmail(
@@ -216,6 +235,13 @@ async function registerUser(req: Request, p: any) {
       message: `Account created and your ${claimedPlan} plan is active. You can log in now.`,
     };
   }
+  if (licensePlan) {
+    return {
+      success: true,
+      licensePlan,
+      message: `Account created and your code is redeemed: your ${licensePlan} plan is active. You can log in now.`,
+    };
+  }
   if (joinedVault) {
     return {
       success: true,
@@ -229,6 +255,7 @@ async function registerUser(req: Request, p: any) {
       needsApproval ? "Account created! Pending admin activation." : "Account created! You can log in now.",
       claimMessage,
       inviteMessage,
+      licenseMessage,
     ].filter(Boolean).join(" "),
   };
 }
@@ -268,6 +295,15 @@ async function loginUser(req: Request, p: any) {
     else inviteMessage = invite.message;
   }
 
+  // Logging in with a license code: redeem first, for the same reason.
+  let licensePlan: string | null = null;
+  let licenseMessage: string | null = null;
+  if (p?.licenseCode) {
+    const lic = await redeemCode(req, p.licenseCode, data.user.id);
+    if (lic.ok) licensePlan = lic.plan;
+    else licenseMessage = lic.message;
+  }
+
   const { data: profile } = await serviceClient()
     .from("profiles")
     .select("id, email, phone, plan, status, is_admin")
@@ -285,6 +321,7 @@ async function loginUser(req: Request, p: any) {
       message: "Account pending activation by Admin.",
       ...(claimMessage ? { claimMessage } : {}),
       ...(inviteMessage ? { inviteMessage } : {}),
+      ...(licenseMessage ? { licenseMessage } : {}),
     };
   }
 
@@ -294,6 +331,8 @@ async function loginUser(req: Request, p: any) {
     ...(claimMessage ? { claimMessage } : {}),
     ...(joinedVault ? { joinedVault } : {}),
     ...(inviteMessage ? { inviteMessage } : {}),
+    ...(licensePlan ? { licensePlan } : {}),
+    ...(licenseMessage ? { licenseMessage } : {}),
     user: {
       id: profile.id,
       email: profile.email,
@@ -709,6 +748,7 @@ const ADMIN_ACTIONS = new Set([
   "adminListCatalog", "adminSaveCatalogItem", "adminDeleteCatalogItem",
   "adminListRegistrars", "adminSaveRegistrar", "adminDeleteRegistrar",
   "adminGetTldPrices", "adminSaveTldPrices", "adminRefreshDomainPrices",
+  "adminListLicenseBatches", "adminCreateLicenseBatch", "adminFindLicenseCode", "adminSetLicenseCode", "adminRevokeUnusedCodes",
   "adminListEmails", "adminSaveEmail", "adminResetEmail", "adminSaveEmailBrand", "adminPreviewEmail", "adminSendTestEmail",
 ]);
 
@@ -772,6 +812,16 @@ Deno.serve(async (req: Request) => {
           return json(req, await adminSaveTldPrices(caller, body));
         case "adminRefreshDomainPrices":
           return json(req, await adminRefreshDomainPrices(caller));
+        case "adminListLicenseBatches":
+          return json(req, await adminListLicenseBatches());
+        case "adminCreateLicenseBatch":
+          return json(req, await adminCreateLicenseBatch(caller, body));
+        case "adminFindLicenseCode":
+          return json(req, await adminFindLicenseCode(body));
+        case "adminSetLicenseCode":
+          return json(req, await adminSetLicenseCode(caller, body));
+        case "adminRevokeUnusedCodes":
+          return json(req, await adminRevokeUnusedCodes(caller, body));
         case "adminListEmails":
           return json(req, await adminListEmails());
         case "adminSaveEmail":
@@ -799,6 +849,9 @@ Deno.serve(async (req: Request) => {
       // One item at a time, in any vault the caller may edit.
       case "saveDomain":
         return json(req, await saveDomain(caller, db, body));
+      case "importDomains":
+        await rateLimit(`import:${caller.id}`, 20, 3600);
+        return json(req, await importDomains(caller, db, body));
       case "deleteDomain":
         return json(req, await deleteDomain(caller, db, body));
       case "saveProvider":
@@ -842,6 +895,14 @@ Deno.serve(async (req: Request) => {
             message: `You joined the team of ${invite.ownerEmail}.`,
           }
           : { success: false, message: invite.message });
+      }
+      case "getLicenseCodes":
+        return json(req, await getLicenseCodes(caller));
+      case "redeemLicenseCode": {
+        const lic = await redeemCode(req, body?.code, caller.id);
+        return json(req, lic.ok
+          ? { success: true, plan: lic.plan, codes: lic.codes, message: `Code redeemed: your plan is now ${lic.plan}.` }
+          : { success: false, message: lic.message });
       }
       case "claimPurchase": {
         const claim = await redeemClaim(req, body?.token, caller.id);

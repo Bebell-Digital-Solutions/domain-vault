@@ -217,6 +217,9 @@
             <button class="tab tab-btn" data-tab="search">
                 <i data-lucide="search" class="w-4 h-4"></i> Domain search
             </button>
+            <button class="tab tab-btn" data-tab="licenses">
+                <i data-lucide="key-round" class="w-4 h-4"></i> License codes
+            </button>
             <button class="tab tab-btn" data-tab="emails">
                 <i data-lucide="mail" class="w-4 h-4"></i> Emails
             </button>
@@ -581,6 +584,53 @@
             </div>
         </section>
 
+        <section id="panel-licenses" data-panel="licenses" class="panel-section" hidden>
+            <p class="text-sm text-slate-400 mb-4 max-w-3xl">Codes for marketplaces (AppSumo, SaaSZilla…). Buyers redeem them at <code class="text-brand">https://app.getdomainvault.com/redeem</code> or in Settings → License keys. Codes stack for life: <b class="text-white">1</b> Personal · <b class="text-white">2</b> Start-up · <b class="text-white">3</b> Business · <b class="text-white">4</b> Agency. The account is activated automatically.</p>
+            <div class="grid gap-6 xl:grid-cols-[1fr_380px] items-start">
+                <div class="space-y-6">
+                    <div class="overflow-x-auto border border-surface-border rounded-lg">
+                        <table class="w-full border-collapse min-w-[720px]">
+                            <thead><tr><th>Marketplace</th><th>Batch</th><th>Created</th><th class="text-right">Codes</th><th class="text-right">Redeemed</th><th class="text-right">Unused</th><th class="text-right">Revoked</th><th>Actions</th></tr></thead>
+                            <tbody id="batchRows"></tbody>
+                        </table>
+                    </div>
+                    <form id="codeLookupForm" class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-3" novalidate>
+                        <h2 class="text-base font-semibold text-white">Look up a code</h2>
+                        <p class="text-xs text-slate-400">For support, or when a marketplace refunds a buyer: revoke the code and the account's plan goes down by one level.</p>
+                        <div class="flex gap-2"><input id="codeLookup" class="input-base font-mono" placeholder="DVAS-XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"><button type="submit" class="btn-secondary btn-base">Find</button></div>
+                        <div id="codeResult" class="text-sm text-slate-300"></div>
+                    </form>
+                </div>
+                <form id="batchForm" class="bg-surface-card border border-surface-border rounded-xl p-5 space-y-4" novalidate>
+                    <h2 class="text-lg font-semibold text-white">Create codes</h2>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="batchMarketplace" class="text-xs text-slate-400 font-medium">Marketplace</label>
+                        <select id="batchMarketplace" class="input-base">
+                            <option value="appsumo">AppSumo (codes start DVAS-)</option>
+                            <option value="saaszilla">SaaSZilla (codes start DVSZ-)</option>
+                            <option value="other">Other…</option>
+                        </select>
+                        <input id="batchMarketplaceOther" class="input-base" placeholder="marketplace name, e.g. dealmirror" hidden>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col gap-1.5">
+                            <label for="batchSize" class="text-xs text-slate-400 font-medium">How many</label>
+                            <input id="batchSize" class="input-base" type="number" min="1" max="10000" step="1" value="1000">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label for="batchLabel" class="text-xs text-slate-400 font-medium">Label (optional)</label>
+                            <input id="batchLabel" class="input-base" maxlength="100" placeholder="Launch, Oct 2026">
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400">AppSumo asks for 1,000 to 10,000 codes. The CSV (one column, no header) downloads straight away. <b class="text-amber-400">It can only be downloaded now:</b> we keep only a fingerprint of each code, so nobody can read them from the database. Keep the file safe.</p>
+                    <div class="flex justify-end gap-3">
+                        <button type="button" id="batchAgain" class="btn-secondary btn-base" hidden><i data-lucide="download" class="w-4 h-4"></i> Download again</button>
+                        <button type="submit" id="batchCreate" class="btn-primary btn-base"><i data-lucide="key-round" class="w-4 h-4"></i> Create codes</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
         <section id="panel-emails" data-panel="emails" class="panel-section" hidden>
             <p class="text-sm text-slate-400 mb-4 max-w-3xl">The automated emails customers receive. Edit the words here; the layout, logo and colour apply to all of them. In the text, a blank line starts a new paragraph, <b class="text-white">**double asterisks**</b> make bold, and <code class="text-brand">{{placeholders}}</code> are filled in for each customer.</p>
             <div class="grid gap-6 xl:grid-cols-[300px_1fr] items-start">
@@ -745,8 +795,8 @@
 
 
 
-    <script src="../config.js?v=20261013"></script>
-    <script src="../api.js?v=20261013"></script>
-    <script src="admin.js?v=20261013"></script>
+    <script src="../config.js?v=20261020"></script>
+    <script src="../api.js?v=20261020"></script>
+    <script src="admin.js?v=20261020"></script>
 </body>
 </html>
