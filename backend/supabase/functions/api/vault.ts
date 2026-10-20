@@ -242,6 +242,11 @@ function dateOrNull(value: unknown, label: string): string | null {
   if (!DATE_RE.test(day) || Number.isNaN(Date.parse(day))) {
     throw new BadRequest(`${label} must be a date (YYYY-MM-DD).`);
   }
+  // A typed "24" for 2024 is year 0024: it would count 2,000 years of renewals.
+  const year = Number(day.slice(0, 4));
+  if (year < 1985 || year > 2100) {
+    throw new BadRequest(`${label}: check the year (${year}). Domains exist from 1985 on.`);
+  }
   return day;
 }
 

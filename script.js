@@ -1509,12 +1509,16 @@
             const totalExp = domains.reduce((s,d) => s + parseFloat(d.renewalPrice||0), 0);
             
             // --- NEW LOGIC FOR TOTAL INVESTMENT ---
+            // Purchase price, plus a renewal for every year between the purchase
+            // and the current renewal date. An impossible year (a typed "24" is
+            // year 0024) counts the purchase only, rather than 2,000 renewals.
+            const plausible = (y) => y >= 1985 && y <= 2100;
             const totalInv = domains.reduce((s, d) => {
                 let spent = parseFloat(d.purchasePrice || 0);
                 if (d.purchaseDate && d.renewalDate) {
                     const pYear = new Date(d.purchaseDate.split('T')[0]).getFullYear();
                     const rYear = new Date(d.renewalDate.split('T')[0]).getFullYear();
-                    const renewalsPaid = Math.max(0, rYear - pYear - 1);
+                    const renewalsPaid = plausible(pYear) && plausible(rYear) ? Math.max(0, rYear - pYear - 1) : 0;
                     spent += (renewalsPaid * parseFloat(d.renewalPrice || 0));
                 }
                 return s + spent;
@@ -1922,6 +1926,12 @@
             }
 
             const id = document.getElementById('domainId').value || newId('dom');
+            for (const [field, label] of [['purchaseDate', 'Purchase date'], ['renewalDate', 'Renewal date']]) {
+                const year = Number((document.getElementById(field).value || '').slice(0, 4));
+                if (year && (year < 1985 || year > 2100)) {
+                    return showToast(`${label}: check the year (${year}).`, 'warning');
+                }
+            }
             const domain = {
                 id: id,
                 name: document.getElementById('domainName').value.trim(),
@@ -2470,7 +2480,8 @@
                     renewalPrice: importPrice(cell(r, 'renewalPrice')),
                     autoRenew: ['yes', 'y', 'true', '1', 'on', 'enabled', 'si', 'sí', 'auto'].includes(auto)
                 };
-                row.problem = !/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(row.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, ''))
+                const badYear = [row.purchaseDate, row.renewalDate].some(v => v && !(+v.slice(0, 4) >= 1985 && +v.slice(0, 4) <= 2100));
+                row.problem = badYear ? 'date year looks wrong' : !/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(row.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, ''))
                     ? 'not a domain name'
                     : row.purchaseDate === null || row.renewalDate === null ? 'date not understood'
                     : row.purchasePrice === null || row.renewalPrice === null ? 'price not understood'

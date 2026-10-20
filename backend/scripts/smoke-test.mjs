@@ -423,6 +423,8 @@ r = await BUYER.call("getUserData", {});
 const one = r.domains.find((d) => d.name === "imported-one.com");
 ok("imported values are stored", one && one.renewalDate === "2027-03-15" && one.renewalPrice === 15.98 && one.autoRenew === true &&
   r.domains.some((d) => d.name === "imported-two.io") && r.providers.some((p) => p.name === "Porkbun"));
+r = await BUYER.call("saveDomain", { domain: { name: `typo-year-${stamp}.com`, purchaseDate: "0024-12-01", renewalDate: "2026-12-02" } });
+ok("a purchase date in year 24 (typed for 2024) is refused", r.success === false && /check the year/.test(r.message), r.message);
 r = await imp([{ line: 2, domain: "imported-one.com", renewalDate: "2028-03-15", renewalPrice: 20 }]);
 ok("domains already in the vault are skipped by default", r.success && r.skipped === 1 && r.added === 0);
 r = await imp([{ line: 2, domain: "imported-one.com", renewalDate: "2028-03-15", renewalPrice: 20 }], { updateExisting: true });

@@ -1174,11 +1174,11 @@
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                         <div class="form-group">
                             <label class="form-label" data-translate-key="purchaseDate">Purchase Date</label>
-                            <input type="date" id="purchaseDate" class="form-control" required>
+                            <input type="date" id="purchaseDate" class="form-control" required min="1985-01-01" max="2100-12-31">
                         </div>
                         <div class="form-group">
                             <label class="form-label" data-translate-key="renewalDate">Renewal Date</label>
-                            <input type="date" id="renewalDate" class="form-control" required>
+                            <input type="date" id="renewalDate" class="form-control" required min="1985-01-01" max="2100-12-31">
                         </div>
                     </div>
 
@@ -1412,9 +1412,9 @@
 
     <!-- Backend configuration, API client and the application, shared with
          the admin panel. Paths are relative: this page lives at /app/. -->
-    <script src="../config.js?v=20261020"></script>
-    <script src="../api.js?v=20261020"></script>
-    <script src="../script.js?v=20261020"></script>
+    <script src="../config.js?v=20261020b"></script>
+    <script src="../api.js?v=20261020b"></script>
+    <script src="../script.js?v=20261020b"></script>
 
 
 
